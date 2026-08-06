@@ -1,11 +1,18 @@
 * text=auto eol=lf
 
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
 *.blade.php diff=html
 *.css diff=css
 *.html diff=html
 *.md diff=markdown
 *.php diff=php
 
-/.github export-ignore
-CHANGELOG.md export-ignore
-.styleci.yml export-ignore
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
