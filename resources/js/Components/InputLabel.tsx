@@ -5,12 +5,15 @@ export default function InputLabel({
     className = '',
     children,
     ...props
-}: LabelHTMLAttributes<HTMLLabelElement> & { value?: string }) {
+}: LabelHTMLAttributes<HTMLLabelElement> & {
+    value?: string;
+}) {
     return (
         <label
             {...props}
             className={
-                `block text-sm font-medium text-gray-700 ` +
+                `mb-2 block text-[11px] font-bold uppercase ` +
+                `tracking-[0.035em] text-[#6c7381] ` +
                 className
             }
         >

@@ -12,7 +12,9 @@ export default forwardRef(function TextInput(
         className = '',
         isFocused = false,
         ...props
-    }: InputHTMLAttributes<HTMLInputElement> & { isFocused?: boolean },
+    }: InputHTMLAttributes<HTMLInputElement> & {
+        isFocused?: boolean;
+    },
     ref,
 ) {
     const localRef = useRef<HTMLInputElement>(null);
@@ -31,11 +33,16 @@ export default forwardRef(function TextInput(
         <input
             {...props}
             type={type}
+            ref={localRef}
             className={
-                'rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ' +
+                `h-[50px] w-full rounded-[10px] border border-[#dce0e8] ` +
+                `bg-white px-5 text-[15px] text-[#252832] outline-none ` +
+                `placeholder:text-[#a9adb6] ` +
+                `transition duration-200 ` +
+                `focus:border-[#4a53d4] focus:ring-2 focus:ring-[#4a53d4]/10 ` +
+                `disabled:cursor-not-allowed disabled:bg-[#f3f4f7] ` +
                 className
             }
-            ref={localRef}
         />
     );
 });
