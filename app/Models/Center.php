@@ -6,6 +6,7 @@ use App\Support\Enums\CenterStatus;
 use Database\Factories\CenterFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Center extends Model
 {
@@ -28,5 +29,10 @@ class Center extends Model
         return [
             'status' => CenterStatus::class,
         ];
+    }
+
+    public function people(): HasMany
+    {
+        return $this->hasMany(Person::class);
     }
 }
