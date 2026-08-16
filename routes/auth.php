@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\ActiveSessionController;
 
 Route::middleware('guest')->group(function () {
     Route::get(
@@ -41,6 +42,15 @@ Route::middleware('auth')->group(function () {
      */
     Route::middleware('password.change.completed')
         ->group(function () {
+            Route::get(
+                'account/sessions',
+                [ActiveSessionController::class, 'index']
+            )->name('account.sessions.index');
+
+            Route::delete(
+                'account/sessions/{sessionKey}',
+                [ActiveSessionController::class, 'destroy']
+            )->name('account.sessions.destroy');
             Route::get(
                 'verify-email',
                 EmailVerificationPromptController::class
