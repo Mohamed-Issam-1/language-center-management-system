@@ -19,6 +19,7 @@ Route::get('/dashboard', function () {
 })
     ->middleware([
         'auth',
+        'tenant.context',
         'password.change.completed',
         'verified',
     ])
@@ -26,6 +27,7 @@ Route::get('/dashboard', function () {
 
 Route::middleware([
     'auth',
+    'tenant.context',
     'password.change.completed',
 ])->group(function () {
     Route::get(
