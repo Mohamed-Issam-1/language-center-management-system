@@ -25,7 +25,10 @@ class AuthenticateUserAccount
             $password
         ): array {
             $user = User::query()
-                ->where('account_login_identifier', $accountLoginIdentifier)
+                ->where(
+                    'account_login_identifier',
+                    $accountLoginIdentifier
+                )
                 ->lockForUpdate()
                 ->first();
 
@@ -61,7 +64,7 @@ class AuthenticateUserAccount
             }
 
             /*
-             * A completed lock period starts a new sequence
+             * An expired account lock starts a new sequence
              * of failed login attempts.
              */
             if ($user->locked_until !== null) {
@@ -72,6 +75,22 @@ class AuthenticateUserAccount
             }
 
             if (! $this->accountMayAuthenticate($user)) {
+                return [
+                    'status' => 'invalid',
+                ];
+            }
+
+            /*
+             * A temporary password may only be used once.
+             *
+             * If the account still requires a password change and
+             * temporary_password_used_at is already populated,
+             * the temporary credential has already been consumed.
+             */
+            if (
+                $user->must_change_password
+                && $user->temporary_password_used_at !== null
+            ) {
                 return [
                     'status' => 'invalid',
                 ];
@@ -94,11 +113,22 @@ class AuthenticateUserAccount
                 ];
             }
 
-            $user->forceFill([
+            $updates = [
                 'failed_login_attempts' => 0,
                 'locked_until' => null,
                 'last_login_at' => $now,
-            ])->save();
+            ];
+
+            /*
+             * The first successful use consumes the temporary password.
+             * The current authenticated session may continue only to
+             * the forced password-change flow.
+             */
+            if ($user->must_change_password) {
+                $updates['temporary_password_used_at'] = $now;
+            }
+
+            $user->forceFill($updates)->save();
 
             return [
                 'status' => 'authenticated',
@@ -137,17 +167,11 @@ class AuthenticateUserAccount
             return false;
         }
 
-        /*
-         * Platform Owner is platform-scoped.
-         */
         if ($user->role->code === SystemRole::PlatformOwner->value) {
             return $user->center_id === null
                 && $user->person_id === null;
         }
 
-        /*
-         * Every other system role is center-scoped.
-         */
         if (
             $user->center_id === null
             || $user->person_id === null

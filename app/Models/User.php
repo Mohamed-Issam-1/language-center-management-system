@@ -39,6 +39,8 @@ class User extends Authenticatable
             'locked_until' => 'datetime',
             'last_login_at' => 'datetime',
             'password_changed_at' => 'datetime',
+            'must_change_password' => 'boolean',
+            'temporary_password_used_at' => 'datetime',
             'deactivated_at' => 'datetime',
             'password' => 'hashed',
         ];

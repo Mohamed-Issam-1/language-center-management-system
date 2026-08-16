@@ -49,6 +49,10 @@ class UserFactory extends Factory
             'locked_until' => null,
             'last_login_at' => null,
             'password_changed_at' => null,
+
+            'must_change_password' => false,
+            'temporary_password_used_at' => null,
+
             'deactivated_at' => null,
 
             'password' => static::$password ??= Hash::make('password'),
@@ -75,6 +79,14 @@ class UserFactory extends Factory
         return $this->state(fn(array $attributes): array => [
             'status' => AccountStatus::Deactivated,
             'deactivated_at' => now(),
+        ]);
+    }
+
+    public function requiresPasswordChange(): static
+    {
+        return $this->state(fn(array $attributes): array => [
+            'must_change_password' => true,
+            'temporary_password_used_at' => null,
         ]);
     }
 }
