@@ -39,15 +39,16 @@ class EstablishTenantContext
             'person',
         ]);
 
+        $systemRole = $user->systemRole();
+
         abort_if(
-            $user->role === null,
+            $systemRole === null,
             403,
             'The authenticated account has no valid system role.'
         );
 
         if (
-            $user->role->code
-            === SystemRole::PlatformOwner->value
+            $systemRole === SystemRole::PlatformOwner
         ) {
             $this->establishPlatformContext(
                 $user

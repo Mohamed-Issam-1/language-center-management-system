@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Support\Enums;
+
+enum SystemPermission: string
+{
+    case ManageCenters = 'manage_centers';
+
+    case ManageCenterOwnerAccounts = 'manage_center_owner_accounts';
+
+    case ManageStaffAccounts = 'manage_staff_accounts';
+
+    case ManageStudentAccounts = 'manage_student_accounts';
+
+    case ManageStudentRecords = 'manage_student_records';
+
+    case ViewStudentRecords = 'view_student_records';
+
+    case ViewFinancialData = 'view_financial_data';
+
+    case ManageFinancialOperations = 'manage_financial_operations';
+
+    case ViewReports = 'view_reports';
+}

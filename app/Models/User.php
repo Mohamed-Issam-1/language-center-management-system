@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Support\Authorization\RolePermissionRegistry;
 use App\Support\Enums\AccountStatus;
+use App\Support\Enums\SystemPermission;
+use App\Support\Enums\SystemRole;
 use App\Support\Traits\HasCenterScope;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -60,5 +63,39 @@ class User extends Authenticatable
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    public function systemRole(): ?SystemRole
+    {
+        $this->loadMissing('role');
+
+        if ($this->role === null) {
+            return null;
+        }
+
+        return SystemRole::tryFrom(
+            $this->role->code
+        );
+    }
+
+    public function hasSystemRole(
+        SystemRole $role
+    ): bool {
+        return $this->systemRole() === $role;
+    }
+
+    public function hasPermission(
+        SystemPermission $permission
+    ): bool {
+        $role = $this->systemRole();
+
+        if ($role === null) {
+            return false;
+        }
+
+        return RolePermissionRegistry::allows(
+            $role,
+            $permission
+        );
     }
 }

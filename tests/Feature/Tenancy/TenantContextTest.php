@@ -248,6 +248,35 @@ class TenantContextTest extends TestCase
             ]);
     }
 
+    public function test_account_with_unknown_system_role_is_rejected(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $unknownRole = Role::query()->create([
+            'code' => 'unknown_role',
+            'name' => 'Unknown Role',
+        ]);
+
+        $user = User::factory()->create([
+            'center_id' => $center->id,
+            'person_id' => $person->id,
+            'role_id' => $unknownRole->id,
+            'status' => AccountStatus::Active,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->getJson('/_test/tenant-context');
+
+        $response->assertForbidden();
+    }
+
     private function createCenterScopedUser(
         SystemRole $role,
         CenterStatus $centerStatus = CenterStatus::Active
