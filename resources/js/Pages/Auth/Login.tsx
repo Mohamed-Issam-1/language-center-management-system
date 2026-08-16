@@ -10,6 +10,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import PasswordInput from '@/Components/Auth/PasswordInput';
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import LanguageToggle from '@/Components/Auth/LanguageToggle';
 
 import GuestLayout from '@/Layouts/GuestLayout';
 
@@ -50,7 +51,7 @@ export default function Login({
 
         if (!data.login_identifier.trim()) {
             setClientError(
-                'Please enter your login ID.',
+                'Please enter your email address.',
             );
             return;
         }
@@ -71,160 +72,184 @@ export default function Login({
         <GuestLayout>
             <Head title="Sign In" />
 
-            {/* Desktop logo */}
-            <div className="mb-8 hidden lg:block">
-                <ApplicationLogo className="h-auto w-[205px] text-[#073e95]" />
-            </div>
-
-            <div className="mb-8">
-                <h1 className="text-[30px] font-bold tracking-[-0.035em] text-[#22252d]">
-                    Sign In
-                </h1>
-
-                <p className="mt-1.5 text-[14px] text-[#adb2be]">
-                    Enter your credentials to access your
-                    account.
-                </p>
-            </div>
-
-            {status && (
-                <div className="mb-5 rounded-[10px] border border-[#a4dfbc] bg-[#f0fbf4] px-4 py-3 text-sm text-[#17984c]">
-                    {status}
-                </div>
-            )}
-
-            {(clientError ||
-                errors.login_identifier) && (
-                <div className="mb-5 flex min-h-[46px] items-center gap-2.5 rounded-[10px] border border-[#ff9d9d] bg-[#fff0f0] px-4 text-[13px] text-[#ef3434]">
-                    <WarningIcon />
-
-                    <span>
-                        {clientError ||
-                            errors.login_identifier}
-                    </span>
-                </div>
-            )}
-
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel
-                        htmlFor="login_identifier"
-                        value="Login ID"
-                    />
-
-                    <TextInput
-                        id="login_identifier"
-                        type="text"
-                        name="login_identifier"
-                        value={data.login_identifier}
-                        placeholder="Enter your login ID"
-                        autoComplete="username"
-                        isFocused
-                        onChange={(e) =>
-                            setData(
-                                'login_identifier',
-                                e.target.value,
-                            )
-                        }
-                    />
-
-                    {data.login_identifier && (
-                        <InputError
-                            message={
-                                errors.login_identifier
-                            }
+            <div className="flex min-h-full flex-1 flex-col">
+                <div className="pt-[48px]">
+                    {/* Desktop logo */}
+                    <div className="mb-[28px] hidden lg:block">
+                        <ApplicationLogo
+                            variant="blue"
+                            className="h-auto w-[215px]"
                         />
+                    </div>
+
+                    {/* Heading */}
+                    <div>
+                        <h1 className="text-[34px] font-bold leading-tight tracking-[-0.035em] text-[#22252d]">
+                            Sign In
+                        </h1>
+
+                        <p className="mt-[9px] text-[16px] leading-[24px] text-[#adb2be]">
+                            Enter your credentials to access your account.
+                        </p>
+                    </div>
+
+                    {status && (
+                        <div className="mt-6 rounded-[10px] border border-[#a4dfbc] bg-[#f0fbf4] px-4 py-3 text-[14px] text-[#17984c]">
+                            {status}
+                        </div>
                     )}
-                </div>
 
-                <div className="mt-[18px]">
-                    <InputLabel
-                        htmlFor="password"
-                        value="Password"
-                    />
+                    {(clientError ||
+                        errors.login_identifier) && (
+                        <div className="mt-6 flex min-h-[48px] items-center gap-2.5 rounded-[10px] border border-[#ff9d9d] bg-[#fff0f0] px-4 text-[14px] text-[#ef3434]">
+                            <WarningIcon />
 
-                    <PasswordInput
-                        id="password"
-                        name="password"
-                        value={data.password}
-                        placeholder="Enter your password"
-                        autoComplete="current-password"
-                        onChange={(e) =>
-                            setData(
-                                'password',
-                                e.target.value,
-                            )
-                        }
-                    />
+                            <span>
+                                {clientError ||
+                                    errors.login_identifier}
+                            </span>
+                        </div>
+                    )}
 
-                    <InputError
-                        message={errors.password}
-                    />
-                </div>
+                    {/* No Demo box */}
+                    <form
+                        onSubmit={submit}
+                        className="mt-[30px]"
+                    >
+                        <div>
+                            <InputLabel
+                                htmlFor="login_identifier"
+                                value="Email Address"
+                            />
 
-                <div className="mt-[13px] flex items-center justify-between">
-                    <label className="flex cursor-pointer items-center gap-2">
-                        <Checkbox
-                            name="remember"
-                            checked={data.remember}
-                            onChange={(e) =>
-                                setData(
-                                    'remember',
-                                    e.target.checked,
-                                )
-                            }
-                        />
+                            <TextInput
+                                id="login_identifier"
+                                type="text"
+                                name="login_identifier"
+                                value={
+                                    data.login_identifier
+                                }
+                                placeholder="name@center.com"
+                                autoComplete="username"
+                                isFocused
+                                onChange={(e) =>
+                                    setData(
+                                        'login_identifier',
+                                        e.target.value,
+                                    )
+                                }
+                            />
 
-                        <span className="text-[13px] text-[#858b97]">
-                            Remember me
-                        </span>
-                    </label>
-
-                    {canResetPassword && (
-                        <Link
-                            href={route(
-                                'password.request',
+                            {data.login_identifier && (
+                                <InputError
+                                    message={
+                                        errors.login_identifier
+                                    }
+                                />
                             )}
-                            className="text-[13px] font-semibold text-[#3842c9] transition hover:text-[#252fac]"
-                        >
-                            Forgot password?
-                        </Link>
-                    )}
+                        </div>
+
+                        <div className="mt-[20px]">
+                            <InputLabel
+                                htmlFor="password"
+                                value="Password"
+                            />
+
+                            <PasswordInput
+                                id="password"
+                                name="password"
+                                value={data.password}
+                                placeholder="Enter your password"
+                                autoComplete="current-password"
+                                onChange={(e) =>
+                                    setData(
+                                        'password',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+
+                            <InputError
+                                message={
+                                    errors.password
+                                }
+                            />
+                        </div>
+
+                        <div className="mt-[14px] flex items-center justify-between">
+                            <label className="flex cursor-pointer items-center gap-[9px]">
+                                <Checkbox
+                                    name="remember"
+                                    checked={
+                                        data.remember
+                                    }
+                                    onChange={(e) =>
+                                        setData(
+                                            'remember',
+                                            e.target.checked,
+                                        )
+                                    }
+                                />
+
+                                <span className="text-[15px] text-[#858b97]">
+                                    Remember me
+                                </span>
+                            </label>
+
+                            {canResetPassword && (
+                                <Link
+                                    href={route(
+                                        'password.request',
+                                    )}
+                                    className="text-[15px] font-semibold text-[#3842c9] transition hover:text-[#252fac]"
+                                >
+                                    Forgot password?
+                                </Link>
+                            )}
+                        </div>
+
+                        <div className="mt-[26px]">
+                            <PrimaryButton
+                                disabled={processing}
+                            >
+                                {processing ? (
+                                    <>
+                                        <Spinner />
+                                        Signing in...
+                                    </>
+                                ) : (
+                                    <>
+                                        Sign In
+                                        <ArrowRight />
+                                    </>
+                                )}
+                            </PrimaryButton>
+                        </div>
+
+                        <p className="mt-[14px] text-center text-[15px] text-[#adb2bd]">
+                            Don't have an account?{' '}
+                            <Link
+                                href={route(
+                                    'register',
+                                )}
+                                className="font-semibold text-[#3842c9] transition hover:text-[#252fac]"
+                            >
+                                Create one
+                            </Link>
+                        </p>
+                    </form>
                 </div>
 
-                <div className="mt-6">
-                    <PrimaryButton
-                        disabled={processing}
-                    >
-                        {processing ? (
-                            <>
-                                <Spinner />
-                                Signing in...
-                            </>
-                        ) : (
-                            <>
-                                Sign In
-                                <ArrowRight />
-                            </>
-                        )}
-                    </PrimaryButton>
-                </div>
+                <footer className="mt-[38px] flex items-center justify-between border-t border-[#e6e9f1] pb-[47px] pt-[22px]">
+                    <span className="text-[13px] text-[#c2c6cf]">
+                        © 2026 LCMS · Taqat University
+                    </span>
 
-                <p className="mt-3 text-center text-[13px] text-[#adb2bd]">
-                    New student?{' '}
-
-                    <Link
-                        href={route('register')}
-                        className="font-semibold text-[#3842c9]"
-                    >
-                        Register
-                    </Link>
-                </p>
-            </form>
-
-            <footer className="mt-9 border-t border-[#e7eaf1] pt-6 text-[12px] text-[#c2c6cf]">
-                © 2026 LCMS · Taqat University
-            </footer>
+                    <div className="hidden lg:block">
+                        <LanguageToggle variant="light" />
+                    </div>
+                </footer>
+            </div>
         </GuestLayout>
     );
 }
@@ -233,12 +258,14 @@ function ArrowRight() {
     return (
         <svg
             className="ml-2"
-            width="17"
-            height="17"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
         >
             <path d="M5 12h14M14 7l5 5-5 5" />
         </svg>
@@ -254,8 +281,8 @@ function Spinner() {
 function WarningIcon() {
     return (
         <svg
-            width="16"
-            height="16"
+            width="17"
+            height="17"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

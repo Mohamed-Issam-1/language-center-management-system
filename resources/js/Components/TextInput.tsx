@@ -17,7 +17,8 @@ export default forwardRef(function TextInput(
     },
     ref,
 ) {
-    const localRef = useRef<HTMLInputElement>(null);
+    const localRef =
+        useRef<HTMLInputElement>(null);
 
     useImperativeHandle(ref, () => ({
         focus: () => localRef.current?.focus(),
@@ -35,9 +36,9 @@ export default forwardRef(function TextInput(
             type={type}
             ref={localRef}
             className={
-                `h-[50px] w-full rounded-[10px] border border-[#dce0e8] ` +
-                `bg-white px-5 text-[15px] text-[#252832] outline-none ` +
-                `placeholder:text-[#a9adb6] ` +
+                `h-[52px] w-full rounded-[10px] border border-[#dce0e8] ` +
+                `bg-white px-[20px] text-[17px] text-[#252832] outline-none ` +
+                `placeholder:text-[16px] placeholder:text-[#a9adb6] ` +
                 `transition duration-200 ` +
                 `focus:border-[#4a53d4] focus:ring-2 focus:ring-[#4a53d4]/10 ` +
                 `disabled:cursor-not-allowed disabled:bg-[#f3f4f7] ` +

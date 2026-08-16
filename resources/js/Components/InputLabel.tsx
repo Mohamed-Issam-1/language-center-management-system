@@ -12,12 +12,12 @@ export default function InputLabel({
         <label
             {...props}
             className={
-                `mb-2 block text-[11px] font-bold uppercase ` +
-                `tracking-[0.035em] text-[#6c7381] ` +
+                `mb-[9px] block text-[13px] font-bold uppercase ` +
+                `tracking-[0.025em] text-[#6c7381] ` +
                 className
             }
         >
-            {value ? value : children}
+            {value ?? children}
         </label>
     );
 }

@@ -1,51 +1,57 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import LanguageToggle from '@/Components/Auth/LanguageToggle';
 
 export default function AuthBrandPanel() {
     return (
-        <aside className="relative hidden min-h-screen overflow-hidden bg-[#2839ae] text-white lg:flex lg:flex-col">
-            {/* Background decorations */}
-            <div className="absolute -right-[150px] -top-[130px] h-[420px] w-[420px] rounded-full bg-white/[0.07]" />
+        <aside className="relative hidden min-h-screen overflow-hidden bg-[#2d3eb3] text-white lg:flex lg:flex-col">
+            {/* Decorations */}
+            <div className="pointer-events-none absolute -right-[160px] -top-[135px] h-[425px] w-[425px] rounded-full bg-white/[0.075]" />
 
-            <div className="absolute -bottom-[210px] -left-[190px] h-[520px] w-[520px] rounded-full bg-white/[0.11]" />
+            <div className="pointer-events-none absolute -bottom-[220px] -left-[280px] h-[550px] w-[550px] rounded-full bg-white/[0.10]" />
 
-            <div className="absolute left-[110px] top-[195px] h-9 w-9 rounded-full bg-white/[0.09]" />
+            <div className="pointer-events-none absolute left-[110px] top-[285px] h-[205px] w-[205px] rounded-full bg-white/[0.08]" />
 
-            <div className="absolute right-[125px] top-[155px] h-2.5 w-2.5 rounded-full bg-white/30" />
+            <div className="pointer-events-none absolute left-[112px] top-[192px] h-[34px] w-[34px] rounded-full bg-white/[0.08]" />
 
-            <div className="absolute right-[150px] top-[170px] h-1.5 w-1.5 rounded-full bg-white/25" />
+            <div className="pointer-events-none absolute right-[168px] top-[151px] h-[8px] w-[8px] rounded-full bg-white/30" />
 
-            {/* Header */}
-            <div className="relative z-10 flex items-start justify-between px-[58px] pt-[42px]">
-                <ApplicationLogo className="h-auto w-[165px] text-white" />
+            <div className="pointer-events-none absolute right-[146px] top-[170px] h-[5px] w-[5px] rounded-full bg-white/25" />
 
-                <div className="rounded-[8px] bg-white/10 p-1">
-                    <button
-                        type="button"
-                        className="rounded-[6px] bg-white px-3 py-1.5 text-xs font-bold text-[#3544bd]"
-                    >
-                        EN
-                    </button>
-                </div>
+            <div className="pointer-events-none absolute right-[121px] top-[176px] h-[54px] w-[54px] rounded-full border-[9px] border-white/[0.07]">
+                <div className="absolute left-1/2 top-1/2 h-[14px] w-[14px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/25" />
             </div>
 
-            {/* Main branding content */}
-            <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-12 pb-10">
-                <Illustration />
+            {/* Header */}
+            <div className="relative z-20 flex items-center justify-between px-[58px] pt-[42px]">
+                <ApplicationLogo
+                    variant="white"
+                    className="h-auto w-[165px]"
+                />
 
-                <div className="mt-8 text-center">
-                    <h1 className="text-[27px] font-bold leading-[1.3]">
+                <LanguageToggle variant="dark" />
+            </div>
+
+            {/* Main content */}
+            <div className="relative z-10 flex flex-1 flex-col items-center">
+                <div className="mt-[63px]">
+                    <Illustration />
+                </div>
+
+                <div className="mt-[18px] text-center">
+                    <h1 className="text-[29px] font-bold leading-[1.28] tracking-[-0.02em]">
                         Language Center
                         <br />
                         Management System
                     </h1>
 
-                    <p className="mx-auto mt-5 max-w-[330px] text-[14px] leading-6 text-white/65">
+                    <p className="mx-auto mt-[17px] max-w-[360px] text-[16px] leading-[26px] text-white/70">
                         A unified platform for managing academic,
+                        <br />
                         administrative, and financial operations.
                     </p>
                 </div>
 
-                <div className="mt-8 w-full max-w-[365px] space-y-[14px]">
+                <div className="mt-[28px] w-full max-w-[365px] space-y-[13px]">
                     <Feature
                         icon={<BuildingIcon />}
                         text="Multi-branch center management"
@@ -74,12 +80,12 @@ function Feature({
     text: string;
 }) {
     return (
-        <div className="flex items-center gap-3.5">
-            <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-white/[0.14]">
+        <div className="flex items-center gap-[13px]">
+            <div className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[9px] bg-white/[0.14] text-white/85">
                 {icon}
             </div>
 
-            <span className="text-[14px] text-white/85">
+            <span className="text-[16px] text-white/90">
                 {text}
             </span>
         </div>
@@ -88,9 +94,7 @@ function Feature({
 
 function Illustration() {
     return (
-        <div className="relative h-[185px] w-[280px] text-white/20">
-            <div className="absolute left-[28px] top-[60px] h-[125px] w-[125px] rounded-full bg-white/[0.07]" />
-
+        <div className="relative h-[190px] w-[280px] text-white/20">
             <svg
                 viewBox="0 0 280 190"
                 className="relative z-10 h-full w-full"
@@ -184,8 +188,8 @@ function Illustration() {
 function BuildingIcon() {
     return (
         <svg
-            width="16"
-            height="16"
+            width="17"
+            height="17"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -200,8 +204,8 @@ function BuildingIcon() {
 function UserIcon() {
     return (
         <svg
-            width="17"
-            height="17"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -216,8 +220,8 @@ function UserIcon() {
 function DocumentIcon() {
     return (
         <svg
-            width="16"
-            height="16"
+            width="17"
+            height="17"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
