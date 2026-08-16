@@ -42,4 +42,9 @@ class Center extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function branches(): HasMany
+    {
+        return $this->hasMany(Branch::class);
+    }
 }
