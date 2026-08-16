@@ -1,4 +1,9 @@
 import {
+    ArrowRight,
+    TriangleAlert,
+} from 'lucide-react';
+
+import {
     FormEventHandler,
     useState,
 } from 'react';
@@ -75,34 +80,38 @@ export default function Login({
             <div className="flex min-h-full flex-1 flex-col">
                 <div className="pt-[48px]">
                     {/* Desktop logo */}
-                    <div className="mb-[28px] hidden lg:block">
+                    <div className="mb-[30px] hidden lg:block">
                         <ApplicationLogo
                             variant="blue"
-                            className="h-auto w-[215px]"
+                            className="h-auto w-[225px]"
                         />
                     </div>
 
                     {/* Heading */}
                     <div>
-                        <h1 className="text-[34px] font-bold leading-tight tracking-[-0.035em] text-[#22252d]">
+                        <h1 className="text-[38px] font-bold leading-tight tracking-[-0.04em] text-[#22252d]">
                             Sign In
                         </h1>
 
-                        <p className="mt-[9px] text-[16px] leading-[24px] text-[#adb2be]">
+                        <p className="mt-[10px] text-[18px] leading-[27px] text-[#adb2be]">
                             Enter your credentials to access your account.
                         </p>
                     </div>
 
                     {status && (
-                        <div className="mt-6 rounded-[10px] border border-[#a4dfbc] bg-[#f0fbf4] px-4 py-3 text-[14px] text-[#17984c]">
+                        <div className="mt-7 rounded-[10px] border border-[#a4dfbc] bg-[#f0fbf4] px-4 py-3 text-[16px] text-[#17984c]">
                             {status}
                         </div>
                     )}
 
                     {(clientError ||
                         errors.login_identifier) && (
-                        <div className="mt-6 flex min-h-[48px] items-center gap-2.5 rounded-[10px] border border-[#ff9d9d] bg-[#fff0f0] px-4 text-[14px] text-[#ef3434]">
-                            <WarningIcon />
+                        <div className="mt-7 flex min-h-[52px] items-center gap-3 rounded-[10px] border border-[#ff9d9d] bg-[#fff0f0] px-4 text-[16px] text-[#ef3434]">
+                            <TriangleAlert
+                                size={20}
+                                strokeWidth={1.8}
+                                className="shrink-0"
+                            />
 
                             <span>
                                 {clientError ||
@@ -111,11 +120,11 @@ export default function Login({
                         </div>
                     )}
 
-                    {/* No Demo box */}
                     <form
                         onSubmit={submit}
-                        className="mt-[30px]"
+                        className="mt-[34px]"
                     >
+                        {/* Email */}
                         <div>
                             <InputLabel
                                 htmlFor="login_identifier"
@@ -149,7 +158,8 @@ export default function Login({
                             )}
                         </div>
 
-                        <div className="mt-[20px]">
+                        {/* Password */}
+                        <div className="mt-[22px]">
                             <InputLabel
                                 htmlFor="password"
                                 value="Password"
@@ -176,8 +186,9 @@ export default function Login({
                             />
                         </div>
 
-                        <div className="mt-[14px] flex items-center justify-between">
-                            <label className="flex cursor-pointer items-center gap-[9px]">
+                        {/* Remember + forgot */}
+                        <div className="mt-[16px] flex items-center justify-between">
+                            <label className="flex cursor-pointer items-center gap-[10px]">
                                 <Checkbox
                                     name="remember"
                                     checked={
@@ -191,7 +202,7 @@ export default function Login({
                                     }
                                 />
 
-                                <span className="text-[15px] text-[#858b97]">
+                                <span className="text-[17px] text-[#858b97]">
                                     Remember me
                                 </span>
                             </label>
@@ -201,14 +212,15 @@ export default function Login({
                                     href={route(
                                         'password.request',
                                     )}
-                                    className="text-[15px] font-semibold text-[#3842c9] transition hover:text-[#252fac]"
+                                    className="text-[17px] font-semibold text-[#3842c9] transition hover:text-[#252fac]"
                                 >
                                     Forgot password?
                                 </Link>
                             )}
                         </div>
 
-                        <div className="mt-[26px]">
+                        {/* Button */}
+                        <div className="mt-[28px]">
                             <PrimaryButton
                                 disabled={processing}
                             >
@@ -220,18 +232,23 @@ export default function Login({
                                 ) : (
                                     <>
                                         Sign In
-                                        <ArrowRight />
+
+                                        <ArrowRight
+                                            size={20}
+                                            strokeWidth={2}
+                                            className="ml-2"
+                                        />
                                     </>
                                 )}
                             </PrimaryButton>
                         </div>
 
-                        <p className="mt-[14px] text-center text-[15px] text-[#adb2bd]">
+                        {/* Register */}
+                        <p className="mt-[16px] text-center text-[17px] text-[#adb2bd]">
                             Don't have an account?{' '}
+
                             <Link
-                                href={route(
-                                    'register',
-                                )}
+                                href={route('register')}
                                 className="font-semibold text-[#3842c9] transition hover:text-[#252fac]"
                             >
                                 Create one
@@ -240,8 +257,9 @@ export default function Login({
                     </form>
                 </div>
 
-                <footer className="mt-[38px] flex items-center justify-between border-t border-[#e6e9f1] pb-[47px] pt-[22px]">
-                    <span className="text-[13px] text-[#c2c6cf]">
+                {/* Footer */}
+                <footer className="mt-[40px] flex items-center justify-between border-t border-[#e6e9f1] pb-[47px] pt-[24px]">
+                    <span className="text-[15px] text-[#c2c6cf]">
                         © 2026 LCMS · Taqat University
                     </span>
 
@@ -254,48 +272,8 @@ export default function Login({
     );
 }
 
-function ArrowRight() {
-    return (
-        <svg
-            className="ml-2"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M5 12h14M14 7l5 5-5 5" />
-        </svg>
-    );
-}
-
 function Spinner() {
     return (
-        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-    );
-}
-
-function WarningIcon() {
-    return (
-        <svg
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-        >
-            <path d="M12 3 2.7 20h18.6L12 3Z" />
-            <path d="M12 9v4" />
-            <circle
-                cx="12"
-                cy="17"
-                r=".7"
-                fill="currentColor"
-            />
-        </svg>
+        <span className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
     );
 }

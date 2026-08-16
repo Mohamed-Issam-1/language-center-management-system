@@ -1,10 +1,16 @@
+import {
+    Building2,
+    FileText,
+    UserRound,
+} from 'lucide-react';
+
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import LanguageToggle from '@/Components/Auth/LanguageToggle';
 
 export default function AuthBrandPanel() {
     return (
         <aside className="relative hidden min-h-screen overflow-hidden bg-[#2d3eb3] text-white lg:flex lg:flex-col">
-            {/* Decorations */}
+            {/* Background decorations */}
             <div className="pointer-events-none absolute -right-[160px] -top-[135px] h-[425px] w-[425px] rounded-full bg-white/[0.075]" />
 
             <div className="pointer-events-none absolute -bottom-[220px] -left-[280px] h-[550px] w-[550px] rounded-full bg-white/[0.10]" />
@@ -25,7 +31,7 @@ export default function AuthBrandPanel() {
             <div className="relative z-20 flex items-center justify-between px-[58px] pt-[42px]">
                 <ApplicationLogo
                     variant="white"
-                    className="h-auto w-[165px]"
+                    className="h-auto w-[175px]"
                 />
 
                 <LanguageToggle variant="dark" />
@@ -33,37 +39,52 @@ export default function AuthBrandPanel() {
 
             {/* Main content */}
             <div className="relative z-10 flex flex-1 flex-col items-center">
-                <div className="mt-[63px]">
+                <div className="mt-[58px]">
                     <Illustration />
                 </div>
 
-                <div className="mt-[18px] text-center">
-                    <h1 className="text-[29px] font-bold leading-[1.28] tracking-[-0.02em]">
+                <div className="mt-[17px] text-center">
+                    <h1 className="text-[32px] font-bold leading-[1.26] tracking-[-0.025em]">
                         Language Center
                         <br />
                         Management System
                     </h1>
 
-                    <p className="mx-auto mt-[17px] max-w-[360px] text-[16px] leading-[26px] text-white/70">
+                    <p className="mx-auto mt-[19px] max-w-[390px] text-[18px] leading-[29px] text-white/70">
                         A unified platform for managing academic,
                         <br />
                         administrative, and financial operations.
                     </p>
                 </div>
 
-                <div className="mt-[28px] w-full max-w-[365px] space-y-[13px]">
+                <div className="mt-[30px] w-full max-w-[385px] space-y-[15px]">
                     <Feature
-                        icon={<BuildingIcon />}
+                        icon={
+                            <Building2
+                                size={21}
+                                strokeWidth={1.8}
+                            />
+                        }
                         text="Multi-branch center management"
                     />
 
                     <Feature
-                        icon={<UserIcon />}
+                        icon={
+                            <UserRound
+                                size={21}
+                                strokeWidth={1.8}
+                            />
+                        }
                         text="Student & teacher records"
                     />
 
                     <Feature
-                        icon={<DocumentIcon />}
+                        icon={
+                            <FileText
+                                size={21}
+                                strokeWidth={1.8}
+                            />
+                        }
                         text="Fees, installments & payments"
                     />
                 </div>
@@ -80,12 +101,12 @@ function Feature({
     text: string;
 }) {
     return (
-        <div className="flex items-center gap-[13px]">
-            <div className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[9px] bg-white/[0.14] text-white/85">
+        <div className="flex items-center gap-[14px]">
+            <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] bg-white/[0.14] text-white/90">
                 {icon}
             </div>
 
-            <span className="text-[16px] text-white/90">
+            <span className="text-[18px] text-white/90">
                 {text}
             </span>
         </div>
@@ -182,53 +203,5 @@ function Illustration() {
                 />
             </svg>
         </div>
-    );
-}
-
-function BuildingIcon() {
-    return (
-        <svg
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-        >
-            <rect x="5" y="3" width="14" height="18" rx="2" />
-            <path d="M9 7h2M9 11h2M9 15h2M15 7h1M15 11h1M15 15h1" />
-        </svg>
-    );
-}
-
-function UserIcon() {
-    return (
-        <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-        >
-            <circle cx="12" cy="8" r="3" />
-            <path d="M6 20v-2a6 6 0 0 1 12 0v2" />
-        </svg>
-    );
-}
-
-function DocumentIcon() {
-    return (
-        <svg
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-        >
-            <path d="M6 3h8l4 4v14H6V3Z" />
-            <path d="M14 3v5h5M9 12h6M9 16h6" />
-        </svg>
     );
 }
