@@ -6,6 +6,8 @@ enum SystemPermission: string
 {
     case ManageCenters = 'manage_centers';
 
+    case ManageBranches = 'manage_branches';
+
     case ManageCenterOwnerAccounts = 'manage_center_owner_accounts';
 
     case ManageStaffAccounts = 'manage_staff_accounts';
