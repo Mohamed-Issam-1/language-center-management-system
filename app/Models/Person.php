@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasCenterScope;
 use Database\Factories\PersonFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Person extends Model
 {
     /** @use HasFactory<PersonFactory> */
-    use HasFactory;
+    use HasFactory, HasCenterScope;
 
     protected $fillable = [
         'center_id',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Enums\AccountStatus;
+use App\Support\Traits\HasCenterScope;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasCenterScope, Notifiable;
 
     protected $fillable = [
         'name',
