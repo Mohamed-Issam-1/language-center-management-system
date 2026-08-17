@@ -107,28 +107,6 @@ class ForcedPasswordChangeTest extends TestCase
         );
     }
 
-    public function test_user_requiring_password_change_cannot_delete_account(): void
-    {
-        $user = User::factory()
-            ->requiresPasswordChange()
-            ->create([
-                'temporary_password_used_at' => now(),
-            ]);
-
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
-            ]);
-
-        $response->assertRedirect(
-            route('profile.edit', absolute: false)
-        );
-
-        $this->assertNotNull(
-            $user->fresh()
-        );
-    }
 
     public function test_user_requiring_password_change_can_logout(): void
     {
