@@ -8,6 +8,8 @@ use Database\Factories\BranchFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Branch extends Model
 {
@@ -36,6 +38,38 @@ class Branch extends Model
     public function center(): BelongsTo
     {
         return $this->belongsTo(Center::class);
+    }
+
+    public function branchManagerAssignments(): HasMany
+    {
+        return $this->hasMany(
+            BranchManagerAssignment::class
+        );
+    }
+
+    public function activeBranchManagerAssignment(): HasOne
+    {
+        return $this->hasOne(
+            BranchManagerAssignment::class
+        )
+            ->where('active_marker', 1)
+            ->whereNull('ended_at');
+    }
+
+    public function financeEmployeeAssignments(): HasMany
+    {
+        return $this->hasMany(
+            FinanceEmployeeAssignment::class
+        );
+    }
+
+    public function activeFinanceEmployeeAssignments(): HasMany
+    {
+        return $this->hasMany(
+            FinanceEmployeeAssignment::class
+        )
+            ->where('active_marker', 1)
+            ->whereNull('ended_at');
     }
 
     public function isActive(): bool

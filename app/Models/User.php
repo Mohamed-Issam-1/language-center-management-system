@@ -10,6 +10,8 @@ use App\Support\Traits\HasCenterScope;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -97,5 +99,37 @@ class User extends Authenticatable
             $role,
             $permission
         );
+    }
+
+    public function branchManagerAssignments(): HasMany
+    {
+        return $this->hasMany(
+            BranchManagerAssignment::class
+        );
+    }
+
+    public function activeBranchManagerAssignment(): HasOne
+    {
+        return $this->hasOne(
+            BranchManagerAssignment::class
+        )
+            ->where('active_marker', 1)
+            ->whereNull('ended_at');
+    }
+
+    public function financeEmployeeAssignments(): HasMany
+    {
+        return $this->hasMany(
+            FinanceEmployeeAssignment::class
+        );
+    }
+
+    public function activeFinanceEmployeeAssignment(): HasOne
+    {
+        return $this->hasOne(
+            FinanceEmployeeAssignment::class
+        )
+            ->where('active_marker', 1)
+            ->whereNull('ended_at');
     }
 }
