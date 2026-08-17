@@ -8,6 +8,8 @@ enum SystemPermission: string
 
     case ManageBranches = 'manage_branches';
 
+    case ManageClassrooms = 'manage_classrooms';
+
     case ManageCenterOwnerAccounts = 'manage_center_owner_accounts';
 
     case ManageStaffAccounts = 'manage_staff_accounts';

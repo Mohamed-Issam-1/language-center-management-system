@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Models\Branch;
 use App\Models\Center;
+use App\Models\Classroom;
 use App\Models\User;
 use App\Policies\BranchPolicy;
 use App\Policies\CenterPolicy;
+use App\Policies\ClassroomPolicy;
 use App\Support\Enums\SystemPermission;
 use App\Support\Tenancy\BranchContext;
 use App\Support\Tenancy\TenantContext;
@@ -46,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(
             Branch::class,
             BranchPolicy::class
+        );
+        Gate::policy(
+            Classroom::class,
+            ClassroomPolicy::class
         );
 
         /*
