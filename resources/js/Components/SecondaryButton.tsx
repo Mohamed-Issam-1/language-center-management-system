@@ -1,4 +1,7 @@
-import { ButtonHTMLAttributes } from 'react';
+import {
+    ButtonHTMLAttributes,
+    PropsWithChildren,
+} from 'react';
 
 export default function SecondaryButton({
     type = 'button',
@@ -6,17 +9,26 @@ export default function SecondaryButton({
     disabled,
     children,
     ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+}: PropsWithChildren<
+    ButtonHTMLAttributes<HTMLButtonElement>
+>) {
     return (
         <button
             {...props}
             type={type}
-            className={
-                `inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition duration-150 ease-in-out hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 ${
-                    disabled && 'opacity-25'
-                } ` + className
-            }
             disabled={disabled}
+            className={
+                `inline-flex h-[40px] w-full items-center justify-center ` +
+                `rounded-[11px] border border-[#dce0e8] bg-transparent px-5 ` +
+                `text-[12px] font-medium text-[#6f7581] ` +
+                `transition duration-200 ` +
+                `hover:bg-white ` +
+                `focus:outline-none focus:ring-4 focus:ring-[#3f46d3]/10 ` +
+                `active:scale-[0.995] ` +
+                `disabled:cursor-not-allowed disabled:opacity-60 ` +
+                `lg:h-[56px] lg:text-[17px] ` +
+                className
+            }
         >
             {children}
         </button>
