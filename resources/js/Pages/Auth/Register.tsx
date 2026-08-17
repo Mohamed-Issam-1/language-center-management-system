@@ -763,7 +763,7 @@ export default function Register({
             )}
 
             <p className="mt-8 hidden text-[12px] text-[#c3c7cf] lg:block">
-                © 2026 LCMS · Taqat University
+                © 2026 LCMS
             </p>
         </GuestLayout>
     );

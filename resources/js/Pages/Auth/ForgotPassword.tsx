@@ -308,7 +308,7 @@ function Footer() {
   return (
     <footer className="mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
       <span className="text-[10px] text-[#c2c6cf] lg:text-[12px]">
-        © 2026 LCMS · Taqat University
+        © 2026 LCMS
       </span>
     </footer>
   );
