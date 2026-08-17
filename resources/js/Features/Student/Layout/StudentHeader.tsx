@@ -1,6 +1,6 @@
-import Dropdown from '@/Components/Dropdown';
 import ApplicationLogo from '@/Components/ApplicationLogo';
-import { Globe2, ChevronDown } from 'lucide-react';
+import Dropdown from '@/Components/Dropdown';
+import { ChevronDown, Globe2 } from 'lucide-react';
 
 function initials(name: string) {
     return name
@@ -11,19 +11,25 @@ function initials(name: string) {
         .join('');
 }
 
-export default function StudentHeader({ studentName }: { studentName: string }) {
+export default function StudentHeader({
+    studentName,
+    pageTitle,
+}: {
+    studentName: string;
+    pageTitle: string;
+}) {
     return (
         <header className="fixed left-0 right-0 top-0 z-20 h-[60px] border-b border-[#e8ebf2] bg-white lg:left-[240px]">
             <div className="flex h-full items-center justify-between px-5 sm:px-7 lg:px-8">
-                <div className="flex items-center gap-4 lg:hidden">
-                    <ApplicationLogo className="h-9 w-auto" />
-                    <span className="text-[18px] font-extrabold text-[#062f85]">
-                        Dashboard
-                    </span>
+                <div className="flex min-w-0 items-center gap-4 lg:hidden">
+                    <ApplicationLogo className="h-9 w-auto shrink-0" />
+                    <h1 className="truncate text-[18px] font-extrabold text-[#062f85]">
+                        {pageTitle}
+                    </h1>
                 </div>
 
                 <h1 className="hidden text-[22px] font-extrabold text-[#062f85] lg:block">
-                    Dashboard
+                    {pageTitle}
                 </h1>
 
                 <div className="hidden items-center gap-3 sm:flex">
@@ -70,6 +76,10 @@ export default function StudentHeader({ studentName }: { studentName: string }) 
                             </Dropdown.Link>
                         </Dropdown.Content>
                     </Dropdown>
+                </div>
+
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#062f85] text-[10px] font-extrabold text-white sm:hidden">
+                    {initials(studentName)}
                 </div>
             </div>
         </header>

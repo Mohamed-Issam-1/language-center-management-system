@@ -1,4 +1,5 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import { Link, usePage } from '@inertiajs/react';
 import {
     BookOpen,
     CalendarDays,
@@ -9,19 +10,65 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+export type StudentNavKey =
+    | 'dashboard'
+    | 'courses'
+    | 'schedule'
+    | 'attendance'
+    | 'payments'
+    | 'profile';
+
 type SidebarItem = {
+    key: StudentNavKey;
     label: string;
     icon: LucideIcon;
-    active?: boolean;
+    authenticatedHref: string;
+    demoHref: string;
 };
 
 const items: SidebarItem[] = [
-    { label: 'Dashboard', icon: LayoutGrid, active: true },
-    { label: 'My Courses', icon: BookOpen },
-    { label: 'My Schedule', icon: CalendarDays },
-    { label: 'My Attendance', icon: ClipboardList },
-    { label: 'Payments', icon: CreditCard },
-    { label: 'Profile', icon: UserRound },
+    {
+        key: 'dashboard',
+        label: 'Dashboard',
+        icon: LayoutGrid,
+        authenticatedHref: '/dashboard',
+        demoHref: '/demo/dashboard',
+    },
+    {
+        key: 'courses',
+        label: 'My Courses',
+        icon: BookOpen,
+        authenticatedHref: '/my-courses',
+        demoHref: '/demo/courses',
+    },
+    {
+        key: 'schedule',
+        label: 'My Schedule',
+        icon: CalendarDays,
+        authenticatedHref: '#',
+        demoHref: '#',
+    },
+    {
+        key: 'attendance',
+        label: 'My Attendance',
+        icon: ClipboardList,
+        authenticatedHref: '#',
+        demoHref: '#',
+    },
+    {
+        key: 'payments',
+        label: 'Payments',
+        icon: CreditCard,
+        authenticatedHref: '#',
+        demoHref: '#',
+    },
+    {
+        key: 'profile',
+        label: 'Profile',
+        icon: UserRound,
+        authenticatedHref: '/profile',
+        demoHref: '#',
+    },
 ];
 
 function initials(name: string) {
@@ -38,15 +85,20 @@ export default function StudentSidebar({
     studentId,
     centerName,
     branchName,
+    activeNav,
 }: {
     studentName: string;
     studentId: string;
     centerName: string;
     branchName: string;
+    activeNav: StudentNavKey;
 }) {
+    const { url } = usePage();
+    const demoMode = url.startsWith('/demo');
+
     return (
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] flex-col border-r border-[#e8ebf2] bg-white lg:flex">
-            <div className="px-5 pb-4 pt-5">
+            <div className="px-4 pb-4 pt-5">
                 <ApplicationLogo className="h-[50px] w-auto" />
 
                 <div className="mt-3 inline-flex rounded-full bg-[#e9eefb] px-4 py-1 text-[13px] font-bold text-[#062f85]">
@@ -67,28 +119,41 @@ export default function StudentSidebar({
 
             <nav className="flex-1 px-2.5 py-4">
                 <div className="space-y-1.5">
-                    {items.map(({ label, icon: Icon, active }) => (
-                        <button
-                            key={label}
-                            type="button"
-                            className={[
-                                'flex h-[42px] w-full items-center gap-3 rounded-lg px-3 text-left text-[14px] font-medium transition',
-                                active
-                                    ? 'bg-[#e8edf8] font-bold text-[#062f85]'
-                                    : 'text-[#9da9bc] hover:bg-[#f6f8fc] hover:text-[#4f6079]',
-                            ].join(' ')}
-                        >
-                            <Icon
-                                size={17}
-                                strokeWidth={1.8}
-                                className={active ? 'text-[#123e99]' : ''}
-                            />
-                            <span>{label}</span>
-                            {active && (
-                                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0c2f83]" />
-                            )}
-                        </button>
-                    ))}
+                    {items.map((item) => {
+                        const Icon = item.icon;
+                        const active = activeNav === item.key;
+                        const href = demoMode
+                            ? item.demoHref
+                            : item.authenticatedHref;
+
+                        return (
+                            <Link
+                                key={item.key}
+                                href={href}
+                                className={[
+                                    'flex h-[42px] w-full items-center gap-3 rounded-lg px-3 text-[14px] font-medium transition',
+                                    active
+                                        ? 'bg-[#e8edf8] font-bold text-[#062f85]'
+                                        : 'text-[#9da9bc] hover:bg-[#f6f8fc] hover:text-[#4f6079]',
+                                    href === '#'
+                                        ? 'pointer-events-none'
+                                        : '',
+                                ].join(' ')}
+                            >
+                                <Icon
+                                    size={17}
+                                    strokeWidth={1.8}
+                                    className={
+                                        active ? 'text-[#123e99]' : ''
+                                    }
+                                />
+                                <span>{item.label}</span>
+                                {active && (
+                                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0c2f83]" />
+                                )}
+                            </Link>
+                        );
+                    })}
                 </div>
             </nav>
 

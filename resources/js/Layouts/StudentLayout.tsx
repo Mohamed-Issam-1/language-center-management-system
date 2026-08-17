@@ -1,6 +1,7 @@
 import StudentBottomNav from '@/Features/Student/Layout/StudentBottomNav';
 import StudentHeader from '@/Features/Student/Layout/StudentHeader';
 import StudentSidebar from '@/Features/Student/Layout/StudentSidebar';
+import type { StudentNavKey } from '@/Features/Student/Layout/StudentSidebar';
 import type { PropsWithChildren } from 'react';
 
 type StudentLayoutProps = PropsWithChildren<{
@@ -8,6 +9,8 @@ type StudentLayoutProps = PropsWithChildren<{
     studentId: string;
     centerName: string;
     branchName: string;
+    pageTitle: string;
+    activeNav: StudentNavKey;
 }>;
 
 export default function StudentLayout({
@@ -15,6 +18,8 @@ export default function StudentLayout({
     studentId,
     centerName,
     branchName,
+    pageTitle,
+    activeNav,
     children,
 }: StudentLayoutProps) {
     return (
@@ -24,9 +29,13 @@ export default function StudentLayout({
                 studentId={studentId}
                 centerName={centerName}
                 branchName={branchName}
+                activeNav={activeNav}
             />
 
-            <StudentHeader studentName={studentName} />
+            <StudentHeader
+                studentName={studentName}
+                pageTitle={pageTitle}
+            />
 
             <main className="min-h-screen pt-[60px] lg:pl-[240px]">
                 <div className="mx-auto w-full max-w-[1180px] px-4 pb-[86px] pt-4 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7">
@@ -34,7 +43,7 @@ export default function StudentLayout({
                 </div>
             </main>
 
-            <StudentBottomNav />
+            <StudentBottomNav activeNav={activeNav} />
         </div>
     );
 }

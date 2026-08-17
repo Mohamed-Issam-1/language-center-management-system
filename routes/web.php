@@ -21,6 +21,9 @@ Route::get('/dashboard', function () {
 Route::get('/demo/dashboard', function () {
     return Inertia::render('Dashboard');
 })->name('demo.dashboard');
+Route::get('/demo/courses', function () {
+    return Inertia::render('Student/MyCourses');
+})->name('demo.courses');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
