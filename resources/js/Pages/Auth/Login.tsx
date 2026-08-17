@@ -1,19 +1,15 @@
-import { ArrowRight, TriangleAlert } from "lucide-react";
-
 import { FormEventHandler, useState } from "react";
+import { ArrowRight, TriangleAlert } from "lucide-react";
+import { Head, Link, useForm } from "@inertiajs/react";
 
 import Checkbox from "@/Components/Checkbox";
-import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import PasswordInput from "@/Components/Auth/PasswordInput";
 import ApplicationLogo from "@/Components/ApplicationLogo";
-import LanguageToggle from "@/Components/Auth/LanguageToggle";
 
 import GuestLayout from "@/Layouts/GuestLayout";
-
-import { Head, Link, useForm } from "@inertiajs/react";
 
 export default function Login({
   status,
@@ -22,26 +18,42 @@ export default function Login({
   status?: string;
   canResetPassword?: boolean;
 }) {
-  const { data, setData, post, processing, errors, reset } = useForm({
-    login_identifier: "",
-    password: "",
-    remember: false,
-  });
+  const { data, setData, post, processing, errors, reset, clearErrors } =
+    useForm({
+      login_identifier: "",
+      password: "",
+      remember: false,
+    });
 
-  const [clientError, setClientError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const loginHasError =
+    Boolean(errors.login_identifier) ||
+    (submitted && !data.login_identifier.trim());
+
+  const passwordHasError =
+    Boolean(errors.password) || (submitted && !data.password);
+
+  const clientValidationError = submitted
+    ? !data.login_identifier.trim()
+      ? "Please enter your email address."
+      : !data.password
+        ? "Please enter your password."
+        : null
+    : null;
+
+
+  // Server errors take priority over client-side validation.
+
+  const displayedError =
+    errors.login_identifier || errors.password || clientValidationError;
 
   const submit: FormEventHandler = (e) => {
     e.preventDefault();
 
-    setClientError(null);
+    setSubmitted(true);
 
-    if (!data.login_identifier.trim()) {
-      setClientError("Please enter your email address.");
-      return;
-    }
-
-    if (!data.password) {
-      setClientError("Please enter your password.");
+    if (!data.login_identifier.trim() || !data.password) {
       return;
     }
 
@@ -63,26 +75,31 @@ export default function Login({
 
           {/* Heading */}
           <div>
-            <h1 className="text-[32px] lg:text-[42px] m-4 font-bold leading-tight tracking-[-0.04em] text-[#22252d]">
+            <h1 className="text-[32px] font-bold leading-tight tracking-[-0.04em] text-[#22252d] lg:text-[42px]">
               Sign In
             </h1>
 
-            <p className="mt-[10px] text-[13px] lg:text-[20px] leading-[27px] text-[#adb2be]">
+            <p className="mt-[10px] text-[13px] leading-[27px] text-[#adb2be] lg:text-[20px]">
               Enter your credentials to access your account.
             </p>
           </div>
 
+          {/* Success status */}
           {status && (
             <div className="mt-7 rounded-[10px] border border-[#a4dfbc] bg-[#f0fbf4] px-4 py-3 text-[16px] text-[#17984c]">
               {status}
             </div>
           )}
 
-          {(clientError || errors.login_identifier) && (
-            <div className="mt-7 flex min-h-[52px] items-center gap-3 rounded-[10px] border border-[#ff9d9d] bg-[#fff0f0] px-4 text-[16px] text-[#ef3434]">
-              <TriangleAlert size={20} strokeWidth={1.8} className="shrink-0" />
+          {/* Error alert */}
+          {displayedError && (
+            <div
+              role="alert"
+              className="mt-[28px] flex min-h-[46px] items-center gap-[10px] rounded-[10px] border border-[#ff9393] bg-[#fff0f0] px-[14px] text-[13px] text-[#ef3434] lg:mt-[32px] lg:min-h-[54px] lg:px-[16px] lg:text-[16px]"
+            >
+              <TriangleAlert size={19} strokeWidth={1.8} className="shrink-0" />
 
-              <span>{clientError || errors.login_identifier}</span>
+              <span>{displayedError}</span>
             </div>
           )}
 
@@ -99,12 +116,14 @@ export default function Login({
                 placeholder="name@center.com"
                 autoComplete="username"
                 isFocused
-                onChange={(e) => setData("login_identifier", e.target.value)}
-              />
+                hasError={loginHasError}
+                aria-invalid={loginHasError}
+                onChange={(e) => {
+                  setData("login_identifier", e.target.value);
 
-              {data.login_identifier && (
-                <InputError message={errors.login_identifier} />
-              )}
+                  clearErrors("login_identifier");
+                }}
+              />
             </div>
 
             {/* Password */}
@@ -117,14 +136,17 @@ export default function Login({
                 value={data.password}
                 placeholder="Enter your password"
                 autoComplete="current-password"
-                onChange={(e) => setData("password", e.target.value)}
+                hasError={passwordHasError}
+                aria-invalid={passwordHasError}
+                onChange={(e) => {
+                  setData("password", e.target.value);
+                  clearErrors("password", "login_identifier");
+                }}
               />
-
-              <InputError message={errors.password} />
             </div>
 
-            {/* Remember + forgot */}
-            <div className="mt-[10px] lg:mt-[16px] flex items-center justify-between">
+            {/* Remember + forgot password */}
+            <div className="mt-[10px] flex items-center justify-between lg:mt-[16px]">
               <label className="flex cursor-pointer items-center gap-[10px]">
                 <Checkbox
                   name="remember"
@@ -132,7 +154,7 @@ export default function Login({
                   onChange={(e) => setData("remember", e.target.checked)}
                 />
 
-                <span className="text-[12px] lg:text-[18px] text-[#858b97]">
+                <span className="text-[12px] text-[#858b97] lg:text-[18px]">
                   Remember me
                 </span>
               </label>
@@ -140,14 +162,14 @@ export default function Login({
               {canResetPassword && (
                 <Link
                   href={route("password.request")}
-                  className="text-[12px] lg:text-[18px] font-semibold text-[#3842c9] transition hover:text-[#252fac]"
+                  className="text-[12px] font-semibold text-[#3842c9] transition hover:text-[#252fac] lg:text-[18px]"
                 >
                   Forgot password?
                 </Link>
               )}
             </div>
 
-            {/* Button */}
+            {/* Sign in button */}
             <div className="mt-[20px] lg:mt-[28px]">
               <PrimaryButton disabled={processing}>
                 {processing ? (
@@ -165,8 +187,8 @@ export default function Login({
             </div>
 
             {/* Register */}
-            <p className="mt-[11px] lg:mt-[16px] text-center text-[12px] lg:text-[18px] text-[#adb2bd]">
-              Don't have an account?{" "}
+            <p className="mt-[11px] text-center text-[12px] text-[#adb2bd] lg:mt-[16px] lg:text-[18px]">
+              Don&apos;t have an account?{" "}
               <Link
                 href={route("register")}
                 className="font-semibold text-[#3842c9] transition hover:text-[#252fac]"
@@ -178,7 +200,7 @@ export default function Login({
         </div>
 
         {/* Footer */}
-        <footer className="absolute bottom-5 left-0 right-0 flex justify-center lg:static lg:mt-[40px] lg:justify-between lg:border-t lg:border-[#e6e9f1] lg:pt-[24px] lg:pb-[47px]">
+        <footer className="absolute bottom-5 left-0 right-0 flex justify-center lg:static lg:mt-[40px] lg:justify-between lg:border-t lg:border-[#e6e9f1] lg:pb-[47px] lg:pt-[24px]">
           <span className="text-[10px] text-[#c2c6cf] lg:text-[16px]">
             © 2026 LCMS
           </span>

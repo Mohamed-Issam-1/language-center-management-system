@@ -6,44 +6,52 @@ import {
     useRef,
 } from 'react';
 
-export default forwardRef(function TextInput(
-    {
-        type = 'text',
-        className = '',
-        isFocused = false,
-        ...props
-    }: InputHTMLAttributes<HTMLInputElement> & {
-        isFocused?: boolean;
-    },
-    ref,
-) {
-    const localRef =
-        useRef<HTMLInputElement>(null);
+type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
+    isFocused?: boolean;
+    hasError?: boolean;
+};
 
-    useImperativeHandle(ref, () => ({
-        focus: () => localRef.current?.focus(),
-    }));
+export default forwardRef<HTMLInputElement, TextInputProps>(
+    function TextInput(
+        {
+            type = 'text',
+            className = '',
+            isFocused = false,
+            hasError = false,
+            ...props
+        },
+        ref,
+    ) {
+        const localRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        if (isFocused) {
-            localRef.current?.focus();
-        }
-    }, [isFocused]);
+        useImperativeHandle(ref, () => localRef.current as HTMLInputElement);
 
-    return (
-        <input
-            {...props}
-            type={type}
-            ref={localRef}
-            className={
-                `h-[40px] lg:h-[56px] w-full rounded-[11px] border border-[#dce0e8] ` +
-                `bg-white px-[16px] lg:px-[21px] text-[13px] lg:text-[19px] text-[#252832] outline-none ` +
-                `placeholder:text-[13px] lg:placeholder:text-[18px] placeholder:text-[#a9adb6] ` +
-                `transition duration-200 ` +
-                `focus:border-[#4a53d4] focus:ring-2 focus:ring-[#4a53d4]/10 ` +
-                `disabled:cursor-not-allowed disabled:bg-[#f3f4f7] ` +
-                className
+        useEffect(() => {
+            if (isFocused) {
+                localRef.current?.focus();
             }
-        />
-    );
-});
+        }, [isFocused]);
+
+        return (
+            <input
+                {...props}
+                type={type}
+                ref={localRef}
+                className={
+                    `h-[40px] w-full rounded-[11px] border ` +
+                    `px-[16px] text-[13px] text-[#252832] outline-none ` +
+                    `placeholder:text-[13px] placeholder:text-[#a9adb6] ` +
+                    `transition duration-200 ` +
+                    `lg:h-[56px] lg:px-[21px] lg:text-[19px] lg:placeholder:text-[18px] ` +
+                    `disabled:cursor-not-allowed disabled:bg-[#f3f4f7] ` +
+                    (
+                        hasError
+                            ? `border-[#ff5656] bg-[#fffafa] focus:border-[#ff5656] focus:ring-2 focus:ring-[#ff5656]/10 `
+                            : `border-[#dce0e8] bg-white focus:border-[#4a53d4] focus:ring-2 focus:ring-[#4a53d4]/10 `
+                    ) +
+                    className
+                }
+            />
+        );
+    },
+);
