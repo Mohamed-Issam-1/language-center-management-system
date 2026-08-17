@@ -38,19 +38,19 @@ export default function AuthBrandPanel() {
             </div>
 
             {/* Main content */}
-            <div className="relative z-10 flex flex-1 flex-col items-center">
-                <div className="mt-[58px]">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-center pb-[35px]">
+                <div>
                     <Illustration />
                 </div>
 
                 <div className="mt-[17px] text-center">
-                    <h1 className="text-[32px] font-bold leading-[1.26] tracking-[-0.025em]">
+                    <h1 className="text-[32px] lg:text-[35px] font-bold leading-[1.26] tracking-[-0.025em]">
                         Language Center
                         <br />
                         Management System
                     </h1>
 
-                    <p className="mx-auto mt-[19px] max-w-[390px] text-[18px] leading-[29px] text-white/70">
+                    <p className="mx-auto mt-[19px] max-w-[390px] text-[18px] lg:text-[19px] leading-[29px] text-white/70">
                         A unified platform for managing academic,
                         <br />
                         administrative, and financial operations.
@@ -106,7 +106,7 @@ function Feature({
                 {icon}
             </div>
 
-            <span className="text-[18px] text-white/90">
+            <span className="text-[18px] lg:text-[19px] text-white/90">
                 {text}
             </span>
         </div>
