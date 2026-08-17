@@ -1,5 +1,5 @@
 import { FormEventHandler, useState } from "react";
-import { ArrowRight, TriangleAlert } from "lucide-react";
+import { ArrowRight, Check, TriangleAlert } from "lucide-react";
 import { Head, Link, useForm } from "@inertiajs/react";
 
 import Checkbox from "@/Components/Checkbox";
@@ -18,14 +18,26 @@ export default function Login({
   status?: string;
   canResetPassword?: boolean;
 }) {
-  const { data, setData, post, processing, errors, reset, clearErrors } =
-    useForm({
-      login_identifier: "",
-      password: "",
-      remember: false,
-    });
+  const {
+    data,
+    setData,
+    post,
+    processing,
+    errors,
+    reset,
+    clearErrors,
+    setError,
+  } = useForm({
+    login_identifier: "",
+    password: "",
+    remember: false,
+  });
 
   const [submitted, setSubmitted] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  type DemoMode = "real" | "error" | "success";
+
+  const DEMO_MODE = "real" as DemoMode;
 
   const loginHasError =
     Boolean(errors.login_identifier) ||
@@ -42,7 +54,6 @@ export default function Login({
         : null
     : null;
 
-
   // Server errors take priority over client-side validation.
 
   const displayedError =
@@ -57,9 +68,24 @@ export default function Login({
       return;
     }
 
-    post(route("login"), {
-      onFinish: () => reset("password"),
-    });
+    clearErrors();
+
+    if (DEMO_MODE === "error") {
+      setError({
+        login_identifier: "Incorrect email or password.",
+        password: "Incorrect email or password.",
+      });
+      reset("password");
+
+      return;
+    }
+
+    if (DEMO_MODE === "success") {
+      setShowSuccess(true);
+      return;
+    }
+
+    post(route("login"));
   };
 
   return (
@@ -91,112 +117,145 @@ export default function Login({
             </div>
           )}
 
-          {/* Error alert */}
-          {displayedError && (
-            <div
-              role="alert"
-              className="mt-[28px] flex min-h-[46px] items-center gap-[10px] rounded-[10px] border border-[#ff9393] bg-[#fff0f0] px-[14px] text-[13px] text-[#ef3434] lg:mt-[32px] lg:min-h-[54px] lg:px-[16px] lg:text-[16px]"
-            >
-              <TriangleAlert size={19} strokeWidth={1.8} className="shrink-0" />
+          {showSuccess ? (
+            <div className="mt-[58px] flex flex-col items-center text-center lg:mt-[72px]">
+              {/* Success icon */}
+              <div className="flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#dff9e9] lg:h-[68px] lg:w-[68px]">
+                <Check className="text-[#13a457]" size={38} strokeWidth={2.5} />
+              </div>
 
-              <span>{displayedError}</span>
+              {/* Success text */}
+              <h2 className="mt-[18px] text-[20px] font-bold text-[#252832] lg:mt-[22px] lg:text-[26px]">
+                Welcome back!
+              </h2>
+
+              <p className="mt-[8px] text-[13px] text-[#adb2be] lg:text-[18px]">
+                Redirecting to your dashboard...
+              </p>
+
+              {/* Loading circle */}
+              <span className="mt-[22px] h-[34px] w-[34px] animate-spin rounded-full border-2 border-[#dce3ef] border-t-[#bdc8dc]" />
             </div>
-          )}
-
-          <form onSubmit={submit} className="mt-[20px] lg:mt-[34px]">
-            {/* Email */}
-            <div>
-              <InputLabel htmlFor="login_identifier" value="Email Address" />
-
-              <TextInput
-                id="login_identifier"
-                type="text"
-                name="login_identifier"
-                value={data.login_identifier}
-                placeholder="name@center.com"
-                autoComplete="username"
-                isFocused
-                hasError={loginHasError}
-                aria-invalid={loginHasError}
-                onChange={(e) => {
-                  setData("login_identifier", e.target.value);
-
-                  clearErrors("login_identifier");
-                }}
-              />
-            </div>
-
-            {/* Password */}
-            <div className="mt-[14px] lg:mt-[22px]">
-              <InputLabel htmlFor="password" value="Password" />
-
-              <PasswordInput
-                id="password"
-                name="password"
-                value={data.password}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                hasError={passwordHasError}
-                aria-invalid={passwordHasError}
-                onChange={(e) => {
-                  setData("password", e.target.value);
-                  clearErrors("password", "login_identifier");
-                }}
-              />
-            </div>
-
-            {/* Remember + forgot password */}
-            <div className="mt-[10px] flex items-center justify-between lg:mt-[16px]">
-              <label className="flex cursor-pointer items-center gap-[10px]">
-                <Checkbox
-                  name="remember"
-                  checked={data.remember}
-                  onChange={(e) => setData("remember", e.target.checked)}
-                />
-
-                <span className="text-[12px] text-[#858b97] lg:text-[18px]">
-                  Remember me
-                </span>
-              </label>
-
-              {canResetPassword && (
-                <Link
-                  href={route("password.request")}
-                  className="text-[12px] font-semibold text-[#3842c9] transition hover:text-[#252fac] lg:text-[18px]"
+          ) : (
+            <>
+              {/* Error alert */}
+              {displayedError && (
+                <div
+                  role="alert"
+                  className="mt-[28px] flex min-h-[46px] items-center gap-[10px] rounded-[10px] border border-[#ff9393] bg-[#fff0f0] px-[14px] text-[13px] text-[#ef3434] lg:mt-[32px] lg:min-h-[54px] lg:px-[16px] lg:text-[16px]"
                 >
-                  Forgot password?
-                </Link>
+                  <TriangleAlert
+                    size={19}
+                    strokeWidth={1.8}
+                    className="shrink-0"
+                  />
+
+                  <span>{displayedError}</span>
+                </div>
               )}
-            </div>
 
-            {/* Sign in button */}
-            <div className="mt-[20px] lg:mt-[28px]">
-              <PrimaryButton disabled={processing}>
-                {processing ? (
-                  <>
-                    <Spinner />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    Sign In
-                    <ArrowRight size={20} strokeWidth={2} className="ml-2" />
-                  </>
-                )}
-              </PrimaryButton>
-            </div>
+              <form onSubmit={submit} className="mt-[20px] lg:mt-[34px]">
+                {/* Email */}
+                <div>
+                  <InputLabel
+                    htmlFor="login_identifier"
+                    value="Email Address"
+                  />
 
-            {/* Register */}
-            <p className="mt-[11px] text-center text-[12px] text-[#adb2bd] lg:mt-[16px] lg:text-[18px]">
-              Don&apos;t have an account?{" "}
-              <Link
-                href={route("register")}
-                className="font-semibold text-[#3842c9] transition hover:text-[#252fac]"
-              >
-                Create one
-              </Link>
-            </p>
-          </form>
+                  <TextInput
+                    id="login_identifier"
+                    type="text"
+                    name="login_identifier"
+                    value={data.login_identifier}
+                    placeholder="name@center.com"
+                    autoComplete="username"
+                    isFocused
+                    hasError={loginHasError}
+                    aria-invalid={loginHasError}
+                    onChange={(e) => {
+                      setData("login_identifier", e.target.value);
+                      clearErrors("login_identifier");
+                    }}
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="mt-[14px] lg:mt-[22px]">
+                  <InputLabel htmlFor="password" value="Password" />
+
+                  <PasswordInput
+                    id="password"
+                    name="password"
+                    value={data.password}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    hasError={passwordHasError}
+                    aria-invalid={passwordHasError}
+                    onChange={(e) => {
+                      setData("password", e.target.value);
+                      clearErrors("password", "login_identifier");
+                    }}
+                  />
+                </div>
+
+                {/* Remember + forgot password */}
+                <div className="mt-[10px] flex items-center justify-between lg:mt-[16px]">
+                  <label className="flex cursor-pointer items-center gap-[10px]">
+                    <Checkbox
+                      name="remember"
+                      checked={data.remember}
+                      onChange={(e) => setData("remember", e.target.checked)}
+                    />
+
+                    <span className="text-[12px] text-[#858b97] lg:text-[18px]">
+                      Remember me
+                    </span>
+                  </label>
+
+                  {canResetPassword && (
+                    <Link
+                      href={route("password.request")}
+                      className="text-[12px] font-semibold text-[#3842c9] transition hover:text-[#252fac] lg:text-[18px]"
+                    >
+                      Forgot password?
+                    </Link>
+                  )}
+                </div>
+
+                {/* Sign in button */}
+                <div className="mt-[20px] lg:mt-[28px]">
+                  <PrimaryButton disabled={processing}>
+                    {processing ? (
+                      <>
+                        <Spinner />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        Sign In
+                        <ArrowRight
+                          size={20}
+                          strokeWidth={2}
+                          className="ml-2"
+                        />
+                      </>
+                    )}
+                  </PrimaryButton>
+                </div>
+
+                {/* Register */}
+                <p className="mt-[11px] text-center text-[12px] text-[#adb2bd] lg:mt-[16px] lg:text-[18px]">
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    href={route("register")}
+                    className="font-semibold text-[#3842c9] transition hover:text-[#252fac]"
+                  >
+                    Create one
+                  </Link>
+                </p>
+              </form>
+            </>
+          )}
         </div>
 
         {/* Footer */}
