@@ -72,6 +72,13 @@ class Branch extends Model
             ->whereNull('ended_at');
     }
 
+    public function classrooms(): HasMany
+    {
+        return $this->hasMany(
+            Classroom::class
+        );
+    }
+
     public function isActive(): bool
     {
         return $this->status === BranchStatus::Active;
