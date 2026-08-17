@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Support\Traits\HasCenterScope;
+use App\Support\Traits\HasBranchScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BranchManagerAssignment extends Model
 {
-    use HasCenterScope;
+    use HasCenterScope, HasBranchScope;
 
     protected $fillable = [
         'center_id',
