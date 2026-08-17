@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'password.change.completed' => \App\Http\Middleware\EnsurePasswordChangeCompleted::class,
             'tenant.context' => \App\Http\Middleware\EstablishTenantContext::class,
+            'branch.context' => \App\Http\Middleware\EstablishBranchContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

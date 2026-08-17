@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Policies\BranchPolicy;
 use App\Policies\CenterPolicy;
 use App\Support\Enums\SystemPermission;
+use App\Support\Tenancy\BranchContext;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
@@ -18,15 +19,21 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         /*
-         * Tenant context belongs to the current request lifecycle.
-         *
-         * It must not be a global singleton because a long-lived
-         * worker must never carry one center's context into another
-         * request.
-         */
+        * Tenant and operational contexts belong to the
+        * current request lifecycle.
+        *
+        * They must remain request-scoped so a long-lived
+        * worker cannot leak tenant or operational state
+        * between requests.
+        */
         $this->app->scoped(
             TenantContext::class,
             fn(): TenantContext => new TenantContext()
+        );
+
+        $this->app->scoped(
+            BranchContext::class,
+            fn(): BranchContext => new BranchContext()
         );
     }
 
