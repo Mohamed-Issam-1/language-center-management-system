@@ -101,7 +101,7 @@ export default function Login({
 
           {/* Heading */}
           <div>
-            <h1 className="text-[32px] font-bold leading-tight tracking-[-0.04em] text-[#22252d] lg:text-[42px]">
+            <h1 className="text-[32px] mt-4 font-bold leading-tight tracking-[-0.04em] text-[#22252d] lg:text-[42px]">
               Sign In
             </h1>
 

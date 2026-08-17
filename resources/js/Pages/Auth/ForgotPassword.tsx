@@ -102,7 +102,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
         {/* Heading */}
         <div>
-          <h1 className="text-[28px] m-4 font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[36px]">
+          <h1 className="text-[28px] mt-4 font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[36px]">
             Password Recovery
           </h1>
 
