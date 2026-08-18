@@ -24,6 +24,13 @@ Route::get('/demo/dashboard', function () {
 Route::get('/demo/courses', function () {
     return Inertia::render('Student/MyCourses');
 })->name('demo.courses');
+Route::get('/my-courses/{course}', function () {
+    return Inertia::render('Student/CourseDetails');
+})->middleware(['auth', 'verified'])->name('student.courses.show');
+
+Route::get('/demo/courses/{course}', function () {
+    return Inertia::render('Student/CourseDetails');
+})->name('demo.courses.show');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

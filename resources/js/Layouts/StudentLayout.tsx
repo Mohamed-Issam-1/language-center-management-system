@@ -11,6 +11,7 @@ type StudentLayoutProps = PropsWithChildren<{
     branchName: string;
     pageTitle: string;
     activeNav: StudentNavKey;
+    mobileBackHref?: string;
 }>;
 
 export default function StudentLayout({
@@ -20,6 +21,7 @@ export default function StudentLayout({
     branchName,
     pageTitle,
     activeNav,
+    mobileBackHref,
     children,
 }: StudentLayoutProps) {
     return (
@@ -35,6 +37,7 @@ export default function StudentLayout({
             <StudentHeader
                 studentName={studentName}
                 pageTitle={pageTitle}
+                mobileBackHref={mobileBackHref}
             />
 
             <main className="min-h-screen pt-[60px] lg:pl-[240px]">

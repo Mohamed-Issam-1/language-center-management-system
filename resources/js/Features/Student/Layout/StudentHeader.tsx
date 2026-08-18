@@ -1,6 +1,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
-import { ChevronDown, Globe2 } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { ArrowLeft, ChevronDown, Globe2 } from 'lucide-react';
 
 function initials(name: string) {
     return name
@@ -14,15 +15,28 @@ function initials(name: string) {
 export default function StudentHeader({
     studentName,
     pageTitle,
+    mobileBackHref,
 }: {
     studentName: string;
     pageTitle: string;
+    mobileBackHref?: string;
 }) {
     return (
         <header className="fixed left-0 right-0 top-0 z-20 h-[60px] border-b border-[#e8ebf2] bg-white lg:left-[240px]">
-            <div className="flex h-full items-center justify-between px-5 sm:px-7 lg:px-8">
-                <div className="flex min-w-0 items-center gap-4 lg:hidden">
-                    <ApplicationLogo className="h-9 w-auto shrink-0" />
+            <div className="flex h-full items-center justify-between px-4 sm:px-7 lg:px-8">
+                <div className="flex min-w-0 items-center gap-3 lg:hidden">
+                    {mobileBackHref ? (
+                        <Link
+                            href={mobileBackHref}
+                            aria-label="Back"
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[#e8edf8] text-[#123a8e]"
+                        >
+                            <ArrowLeft size={17} strokeWidth={2} />
+                        </Link>
+                    ) : (
+                        <ApplicationLogo className="h-9 w-auto shrink-0" />
+                    )}
+
                     <h1 className="truncate text-[18px] font-extrabold text-[#062f85]">
                         {pageTitle}
                     </h1>

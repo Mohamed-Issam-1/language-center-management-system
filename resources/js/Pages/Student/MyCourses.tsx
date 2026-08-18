@@ -21,6 +21,7 @@ const demoCourses: StudentCourse[] = [
         attendance: 88,
         status: 'Active',
         accent: 'indigo',
+        detailsHref: '/demo/courses/2',
     },
     {
         id: 2,
@@ -35,6 +36,7 @@ const demoCourses: StudentCourse[] = [
         attendance: 95,
         status: 'Active',
         accent: 'violet',
+        detailsHref: '/demo/courses/2',
     },
 ];
 
