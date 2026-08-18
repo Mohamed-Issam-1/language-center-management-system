@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\BranchManagerAssignment;
 use App\Models\FinanceEmployeeAssignment;
 use App\Models\User;
+use App\Services\Audit\AuditRecorder;
 use App\Support\Enums\AccountStatus;
 use App\Support\Enums\BranchStatus;
 use App\Support\Enums\SystemPermission;
@@ -19,7 +20,8 @@ use Illuminate\Support\Facades\Gate;
 class StaffBranchAssignmentService
 {
     public function __construct(
-        private readonly TenantContext $tenant
+        private readonly TenantContext $tenant,
+        private readonly AuditRecorder $audit
     ) {}
 
     public function assignBranchManager(
@@ -33,6 +35,7 @@ class StaffBranchAssignmentService
 
         return DB::transaction(
             function () use (
+                $actor,
                 $manager,
                 $branch,
                 $centerId
@@ -69,10 +72,8 @@ class StaffBranchAssignmentService
                     ->first();
 
                 /*
-                 * The requested manager is already assigned
-                 * to this Branch.
-                 *
-                 * Treat the request as idempotent.
+                 * Idempotent request. No business state changed,
+                 * therefore no new Audit Record is produced.
                  */
                 if (
                     $currentBranchAssignment !== null
@@ -93,19 +94,20 @@ class StaffBranchAssignmentService
                 }
 
                 /*
-                * Assignment is not an implicit reassignment operation.
-                *
-                * A Branch Manager that already has an active Branch
-                * assignment must be explicitly ended before the account
-                * can be assigned to another Branch.
-                */
+                 * Assignment is not an implicit reassignment operation.
+                 *
+                 * A Branch Manager that already has an active Branch
+                 * assignment must be explicitly ended before the account
+                 * can be assigned to another Branch.
+                 */
                 if ($currentUserAssignment !== null) {
                     throw new DomainException(
                         'The Branch Manager is already assigned to another branch.'
                     );
                 }
 
-                return BranchManagerAssignment::query()
+                $assignment =
+                    BranchManagerAssignment::query()
                     ->create([
                         'center_id' => $centerId,
                         'user_id' => $manager->id,
@@ -114,6 +116,17 @@ class StaffBranchAssignmentService
                         'ended_at' => null,
                         'active_marker' => 1,
                     ]);
+
+                $this->audit->record(
+                    actor: $actor,
+                    actionType: 'branch_manager.assigned',
+                    subject: $assignment,
+                    afterValues: $this->assignmentAuditValues(
+                        $assignment
+                    )
+                );
+
+                return $assignment;
             },
             3
         );
@@ -130,6 +143,7 @@ class StaffBranchAssignmentService
 
         return DB::transaction(
             function () use (
+                $actor,
                 $branch,
                 $newManager,
                 $centerId
@@ -164,6 +178,10 @@ class StaffBranchAssignmentService
                     ->lockForUpdate()
                     ->first();
 
+                /*
+                 * Already the current Manager.
+                 * This is idempotent and produces no Audit Record.
+                 */
                 if (
                     $currentBranchAssignment !== null
                     && $currentBranchAssignment->user_id
@@ -183,18 +201,30 @@ class StaffBranchAssignmentService
                     ->first();
 
                 /*
-                * Replacement must not silently take a Manager
-                * away from another Branch.
-                *
-                * The Manager's current assignment must be
-                * explicitly ended before the account can be
-                * assigned as the replacement for this Branch.
-                */
+                 * Replacement must not silently take a Manager
+                 * away from another Branch.
+                 *
+                 * The Manager's current assignment must be
+                 * explicitly ended before the account can be
+                 * assigned as the replacement for this Branch.
+                 */
                 if ($newManagerAssignment !== null) {
                     throw new DomainException(
                         'The new Branch Manager is already assigned to another branch.'
                     );
                 }
+
+                /*
+                 * Capture the previous active assignment before
+                 * changing it so the Audit Record represents the
+                 * actual before state.
+                 */
+                $beforeValues =
+                    $currentBranchAssignment !== null
+                    ? $this->assignmentAuditValues(
+                        $currentBranchAssignment
+                    )
+                    : null;
 
                 if ($currentBranchAssignment !== null) {
                     $this->endManagerAssignment(
@@ -202,7 +232,8 @@ class StaffBranchAssignmentService
                     );
                 }
 
-                return BranchManagerAssignment::query()
+                $newAssignment =
+                    BranchManagerAssignment::query()
                     ->create([
                         'center_id' => $centerId,
                         'user_id' => $newManager->id,
@@ -211,6 +242,27 @@ class StaffBranchAssignmentService
                         'ended_at' => null,
                         'active_marker' => 1,
                     ]);
+
+                /*
+                 * If no previous assignment existed, this is
+                 * effectively an assignment rather than a replacement.
+                 */
+                $actionType =
+                    $beforeValues === null
+                    ? 'branch_manager.assigned'
+                    : 'branch_manager.replaced';
+
+                $this->audit->record(
+                    actor: $actor,
+                    actionType: $actionType,
+                    subject: $newAssignment,
+                    beforeValues: $beforeValues,
+                    afterValues: $this->assignmentAuditValues(
+                        $newAssignment
+                    )
+                );
+
+                return $newAssignment;
             },
             3
         );
@@ -226,6 +278,7 @@ class StaffBranchAssignmentService
 
         return DB::transaction(
             function () use (
+                $actor,
                 $manager,
                 $centerId
             ): ?BranchManagerAssignment {
@@ -246,15 +299,36 @@ class StaffBranchAssignmentService
                     ->lockForUpdate()
                     ->first();
 
+                /*
+                 * Nothing active to end. This is idempotent and
+                 * therefore does not produce an Audit Record.
+                 */
                 if ($assignment === null) {
                     return null;
                 }
+
+                $beforeValues =
+                    $this->assignmentAuditValues(
+                        $assignment
+                    );
 
                 $this->endManagerAssignment(
                     $assignment
                 );
 
-                return $assignment->refresh();
+                $assignment->refresh();
+
+                $this->audit->record(
+                    actor: $actor,
+                    actionType: 'branch_manager.assignment_ended',
+                    subject: $assignment,
+                    beforeValues: $beforeValues,
+                    afterValues: $this->assignmentAuditValues(
+                        $assignment
+                    )
+                );
+
+                return $assignment;
             },
             3
         );
@@ -271,6 +345,7 @@ class StaffBranchAssignmentService
 
         return DB::transaction(
             function () use (
+                $actor,
                 $financeEmployee,
                 $branch,
                 $centerId
@@ -299,6 +374,9 @@ class StaffBranchAssignmentService
 
                 /*
                  * Already assigned to this Branch.
+                 *
+                 * Treat the request as idempotent and do not
+                 * create duplicate Audit history.
                  */
                 if (
                     $currentAssignment !== null
@@ -309,19 +387,20 @@ class StaffBranchAssignmentService
                 }
 
                 /*
-                * Assignment is not an implicit reassignment operation.
-                *
-                * A Finance Employee with an active Branch assignment
-                * must have that assignment explicitly ended before a
-                * different Branch can be assigned.
-                */
+                 * Assignment is not an implicit reassignment operation.
+                 *
+                 * A Finance Employee with an active Branch assignment
+                 * must have that assignment explicitly ended before a
+                 * different Branch can be assigned.
+                 */
                 if ($currentAssignment !== null) {
                     throw new DomainException(
                         'The Finance Employee is already assigned to another branch.'
                     );
                 }
 
-                return FinanceEmployeeAssignment::query()
+                $assignment =
+                    FinanceEmployeeAssignment::query()
                     ->create([
                         'center_id' => $centerId,
                         'user_id' => $financeEmployee->id,
@@ -330,6 +409,17 @@ class StaffBranchAssignmentService
                         'ended_at' => null,
                         'active_marker' => 1,
                     ]);
+
+                $this->audit->record(
+                    actor: $actor,
+                    actionType: 'finance_employee.assigned',
+                    subject: $assignment,
+                    afterValues: $this->assignmentAuditValues(
+                        $assignment
+                    )
+                );
+
+                return $assignment;
             },
             3
         );
@@ -345,6 +435,7 @@ class StaffBranchAssignmentService
 
         return DB::transaction(
             function () use (
+                $actor,
                 $financeEmployee,
                 $centerId
             ): ?FinanceEmployeeAssignment {
@@ -366,15 +457,36 @@ class StaffBranchAssignmentService
                     ->lockForUpdate()
                     ->first();
 
+                /*
+                 * Nothing active to end. This is idempotent and
+                 * therefore does not produce an Audit Record.
+                 */
                 if ($assignment === null) {
                     return null;
                 }
+
+                $beforeValues =
+                    $this->assignmentAuditValues(
+                        $assignment
+                    );
 
                 $this->endFinanceAssignment(
                     $assignment
                 );
 
-                return $assignment->refresh();
+                $assignment->refresh();
+
+                $this->audit->record(
+                    actor: $actor,
+                    actionType: 'finance_employee.assignment_ended',
+                    subject: $assignment,
+                    beforeValues: $beforeValues,
+                    afterValues: $this->assignmentAuditValues(
+                        $assignment
+                    )
+                );
+
+                return $assignment;
             },
             3
         );
@@ -507,5 +619,22 @@ class StaffBranchAssignmentService
             'ended_at' => now(),
             'active_marker' => null,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function assignmentAuditValues(
+        BranchManagerAssignment|FinanceEmployeeAssignment $assignment
+    ): array {
+        return [
+            'assignment_id' => $assignment->id,
+            'center_id' => $assignment->center_id,
+            'user_id' => $assignment->user_id,
+            'branch_id' => $assignment->branch_id,
+            'started_at' => $assignment->started_at,
+            'ended_at' => $assignment->ended_at,
+            'active_marker' => $assignment->active_marker,
+        ];
     }
 }

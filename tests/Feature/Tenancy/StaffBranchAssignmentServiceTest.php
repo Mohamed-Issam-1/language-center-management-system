@@ -18,6 +18,9 @@ use DomainException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\Models\AuditRecord;
+use App\Services\Audit\AuditRecorder;
+use LogicException;
 
 class StaffBranchAssignmentServiceTest extends TestCase
 {
@@ -860,6 +863,420 @@ class StaffBranchAssignmentServiceTest extends TestCase
             BranchManagerAssignment::query()
                 ->active()
                 ->count()
+        );
+    }
+
+    public function test_assigning_branch_manager_creates_audit_record(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $actor = $this->createRoleAccount(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $manager = $this->createRoleAccount(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $assignment = $this->service()
+            ->assignBranchManager(
+                $actor,
+                $manager,
+                $branch
+            );
+
+        $record = AuditRecord::query()
+            ->where(
+                'action_type',
+                'branch_manager.assigned'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $actor->id,
+            $record->actor_user_id
+        );
+
+        $this->assertSame(
+            'branch_manager_assignments',
+            $record->subject_type
+        );
+
+        $this->assertSame(
+            $assignment->id,
+            $record->subject_id
+        );
+
+        $this->assertSame(
+            $manager->id,
+            $record->after_values['user_id']
+        );
+
+        $this->assertSame(
+            $branch->id,
+            $record->after_values['branch_id']
+        );
+
+        $this->assertSame(
+            1,
+            $record->after_values['active_marker']
+        );
+    }
+
+    public function test_replacing_branch_manager_creates_single_replacement_audit_record(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $actor = $this->createRoleAccount(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $oldManager = $this->createRoleAccount(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $newManager = $this->createRoleAccount(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $oldAssignment = $this->service()
+            ->assignBranchManager(
+                $actor,
+                $oldManager,
+                $branch
+            );
+
+        $newAssignment = $this->service()
+            ->replaceBranchManager(
+                $actor,
+                $branch,
+                $newManager
+            );
+
+        $record = AuditRecord::query()
+            ->where(
+                'action_type',
+                'branch_manager.replaced'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $newAssignment->id,
+            $record->subject_id
+        );
+
+        $this->assertSame(
+            $oldAssignment->id,
+            $record->before_values['assignment_id']
+        );
+
+        $this->assertSame(
+            $oldManager->id,
+            $record->before_values['user_id']
+        );
+
+        $this->assertSame(
+            $newManager->id,
+            $record->after_values['user_id']
+        );
+
+        $this->assertSame(
+            1,
+            AuditRecord::query()
+                ->where(
+                    'action_type',
+                    'branch_manager.replaced'
+                )
+                ->count()
+        );
+    }
+
+    public function test_ending_branch_manager_assignment_creates_audit_record(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $actor = $this->createRoleAccount(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $manager = $this->createRoleAccount(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $assignment = $this->service()
+            ->assignBranchManager(
+                $actor,
+                $manager,
+                $branch
+            );
+
+        $this->service()
+            ->endBranchManagerAssignment(
+                $actor,
+                $manager
+            );
+
+        $record = AuditRecord::query()
+            ->where(
+                'action_type',
+                'branch_manager.assignment_ended'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $assignment->id,
+            $record->subject_id
+        );
+
+        $this->assertSame(
+            1,
+            $record->before_values['active_marker']
+        );
+
+        $this->assertNull(
+            $record->after_values['active_marker']
+        );
+
+        $this->assertNotNull(
+            $record->after_values['ended_at']
+        );
+    }
+
+    public function test_finance_employee_assignment_and_end_are_audited(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $actor = $this->createRoleAccount(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $finance = $this->createRoleAccount(
+            SystemRole::FinanceEmployee,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $assignment = $this->service()
+            ->assignFinanceEmployee(
+                $actor,
+                $finance,
+                $branch
+            );
+
+        $this->service()
+            ->endFinanceEmployeeAssignment(
+                $actor,
+                $finance
+            );
+
+        $assigned = AuditRecord::query()
+            ->where(
+                'action_type',
+                'finance_employee.assigned'
+            )
+            ->firstOrFail();
+
+        $ended = AuditRecord::query()
+            ->where(
+                'action_type',
+                'finance_employee.assignment_ended'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $assignment->id,
+            $assigned->subject_id
+        );
+
+        $this->assertSame(
+            $assignment->id,
+            $ended->subject_id
+        );
+
+        $this->assertSame(
+            $finance->id,
+            $assigned->after_values['user_id']
+        );
+
+        $this->assertNull(
+            $ended->after_values['active_marker']
+        );
+    }
+
+    public function test_idempotent_branch_manager_assignment_does_not_duplicate_audit_history(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $actor = $this->createRoleAccount(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $manager = $this->createRoleAccount(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $this->service()
+            ->assignBranchManager(
+                $actor,
+                $manager,
+                $branch
+            );
+
+        $this->service()
+            ->assignBranchManager(
+                $actor,
+                $manager,
+                $branch
+            );
+
+        $this->assertSame(
+            1,
+            AuditRecord::query()
+                ->where(
+                    'action_type',
+                    'branch_manager.assigned'
+                )
+                ->count()
+        );
+    }
+
+    public function test_assignment_rolls_back_when_audit_recording_fails(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $actor = $this->createRoleAccount(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $manager = $this->createRoleAccount(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $failingAudit =
+            \Mockery::mock(
+                AuditRecorder::class
+            );
+
+        $failingAudit
+            ->shouldReceive('record')
+            ->once()
+            ->andThrow(
+                new LogicException(
+                    'Simulated audit failure.'
+                )
+            );
+
+        $this->app->instance(
+            AuditRecorder::class,
+            $failingAudit
+        );
+
+        try {
+            $this->service()
+                ->assignBranchManager(
+                    $actor,
+                    $manager,
+                    $branch
+                );
+
+            $this->fail(
+                'Expected audit failure to abort the assignment transaction.'
+            );
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Simulated audit failure.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertDatabaseMissing(
+            'branch_manager_assignments',
+            [
+                'user_id' => $manager->id,
+                'branch_id' => $branch->id,
+            ]
+        );
+
+        $this->assertDatabaseCount(
+            'audit_records',
+            0
         );
     }
 
