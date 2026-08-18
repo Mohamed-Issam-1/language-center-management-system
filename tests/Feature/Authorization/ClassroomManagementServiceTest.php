@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Authorization;
 
+use App\Models\AuditRecord;
 use App\Models\Branch;
 use App\Models\BranchManagerAssignment;
 use App\Models\Center;
@@ -9,6 +10,7 @@ use App\Models\Classroom;
 use App\Models\Person;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\Audit\AuditRecorder;
 use App\Services\Classrooms\ClassroomManagementService;
 use App\Support\Enums\AccountStatus;
 use App\Support\Enums\BranchStatus;
@@ -21,6 +23,7 @@ use Database\Seeders\RoleSeeder;
 use DomainException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use LogicException;
 use Tests\TestCase;
 
 class ClassroomManagementServiceTest extends TestCase
@@ -674,6 +677,829 @@ class ClassroomManagementServiceTest extends TestCase
         $this->assertSame(
             ClassroomStatus::Deactivated,
             $updated->status
+        );
+    }
+
+    public function test_classroom_creation_creates_audit_record(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $classroom = $this->service()
+            ->create(
+                $owner,
+                $branch,
+                [
+                    'name' => 'Audit Classroom',
+                    'code' => 'AUD-101',
+                    'capacity' => 35,
+                    'location' => 'Second Floor',
+                    'availability_status' =>
+                    ClassroomAvailabilityStatus::Available,
+                    'status' =>
+                    ClassroomStatus::Active,
+                ]
+            );
+
+        $record = AuditRecord::query()
+            ->where(
+                'action_type',
+                'classroom.created'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $owner->id,
+            $record->actor_user_id
+        );
+
+        $this->assertSame(
+            $center->id,
+            $record->center_id
+        );
+
+        $this->assertSame(
+            $branch->id,
+            $record->branch_id
+        );
+
+        $this->assertSame(
+            'classrooms',
+            $record->subject_type
+        );
+
+        $this->assertSame(
+            $classroom->id,
+            $record->subject_id
+        );
+
+        $this->assertNull(
+            $record->before_values
+        );
+
+        $this->assertSame(
+            'Audit Classroom',
+            $record->after_values['name']
+        );
+
+        $this->assertSame(
+            35,
+            $record->after_values['capacity']
+        );
+
+        $this->assertSame(
+            ClassroomAvailabilityStatus::Available->value,
+            $record->after_values['availability_status']
+        );
+
+        $this->assertSame(
+            ClassroomStatus::Active->value,
+            $record->after_values['status']
+        );
+    }
+
+    public function test_classroom_update_records_before_and_after_values(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->active()
+            ->available()
+            ->create([
+                'name' => 'Old Classroom',
+                'capacity' => 20,
+                'location' => 'Old Location',
+            ]);
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $updated = $this->service()
+            ->update(
+                $owner,
+                $classroom,
+                [
+                    'name' => 'Updated Classroom',
+                    'capacity' => 45,
+                    'location' => 'New Location',
+                ]
+            );
+
+        $record = AuditRecord::query()
+            ->where(
+                'action_type',
+                'classroom.updated'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $updated->id,
+            $record->subject_id
+        );
+
+        $this->assertSame(
+            'Old Classroom',
+            $record->before_values['name']
+        );
+
+        $this->assertSame(
+            20,
+            $record->before_values['capacity']
+        );
+
+        $this->assertSame(
+            'Updated Classroom',
+            $record->after_values['name']
+        );
+
+        $this->assertSame(
+            45,
+            $record->after_values['capacity']
+        );
+
+        $this->assertSame(
+            $branch->id,
+            $record->after_values['branch_id']
+        );
+
+        $this->assertSame(
+            ClassroomStatus::Active->value,
+            $record->after_values['status']
+        );
+    }
+
+    public function test_classroom_availability_change_is_audited(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->available()
+            ->create();
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $this->service()
+            ->setAvailability(
+                $owner,
+                $classroom,
+                ClassroomAvailabilityStatus::Unavailable
+            );
+
+        $record = AuditRecord::query()
+            ->where(
+                'action_type',
+                'classroom.availability_changed'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $classroom->id,
+            $record->subject_id
+        );
+
+        $this->assertSame(
+            ClassroomAvailabilityStatus::Available->value,
+            $record->before_values['availability_status']
+        );
+
+        $this->assertSame(
+            ClassroomAvailabilityStatus::Unavailable->value,
+            $record->after_values['availability_status']
+        );
+    }
+
+    public function test_classroom_lifecycle_changes_are_audited(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->deactivated()
+            ->create();
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $service = $this->service();
+
+        $classroom = $service->activate(
+            $owner,
+            $classroom
+        );
+
+        $classroom = $service->deactivate(
+            $owner,
+            $classroom
+        );
+
+        $activated = AuditRecord::query()
+            ->where(
+                'action_type',
+                'classroom.activated'
+            )
+            ->firstOrFail();
+
+        $deactivated = AuditRecord::query()
+            ->where(
+                'action_type',
+                'classroom.deactivated'
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            ClassroomStatus::Deactivated->value,
+            $activated->before_values['status']
+        );
+
+        $this->assertSame(
+            ClassroomStatus::Active->value,
+            $activated->after_values['status']
+        );
+
+        $this->assertSame(
+            ClassroomStatus::Active->value,
+            $deactivated->before_values['status']
+        );
+
+        $this->assertSame(
+            ClassroomStatus::Deactivated->value,
+            $deactivated->after_values['status']
+        );
+    }
+
+    public function test_no_op_classroom_update_does_not_create_audit_record(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->create([
+                'name' => 'Unchanged Classroom',
+                'capacity' => 25,
+            ]);
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $this->service()
+            ->update(
+                $owner,
+                $classroom,
+                [
+                    'name' => 'Unchanged Classroom',
+                    'capacity' => 25,
+                ]
+            );
+
+        $this->assertSame(
+            0,
+            AuditRecord::query()
+                ->where(
+                    'action_type',
+                    'classroom.updated'
+                )
+                ->count()
+        );
+    }
+
+    public function test_repeated_classroom_state_requests_do_not_duplicate_audit_history(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->active()
+            ->available()
+            ->create();
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $service = $this->service();
+
+        /*
+     * Already available: no event.
+     */
+        $classroom = $service->setAvailability(
+            $owner,
+            $classroom,
+            ClassroomAvailabilityStatus::Available
+        );
+
+        $this->assertSame(
+            0,
+            AuditRecord::query()
+                ->where(
+                    'action_type',
+                    'classroom.availability_changed'
+                )
+                ->count()
+        );
+
+        $classroom = $service->setAvailability(
+            $owner,
+            $classroom,
+            ClassroomAvailabilityStatus::Unavailable
+        );
+
+        $classroom = $service->setAvailability(
+            $owner,
+            $classroom,
+            ClassroomAvailabilityStatus::Unavailable
+        );
+
+        $this->assertSame(
+            1,
+            AuditRecord::query()
+                ->where(
+                    'action_type',
+                    'classroom.availability_changed'
+                )
+                ->count()
+        );
+
+        /*
+     * Already active: no event.
+     */
+        $classroom = $service->activate(
+            $owner,
+            $classroom
+        );
+
+        $this->assertSame(
+            0,
+            AuditRecord::query()
+                ->where(
+                    'action_type',
+                    'classroom.activated'
+                )
+                ->count()
+        );
+
+        $classroom = $service->deactivate(
+            $owner,
+            $classroom
+        );
+
+        $classroom = $service->deactivate(
+            $owner,
+            $classroom
+        );
+
+        $this->assertSame(
+            1,
+            AuditRecord::query()
+                ->where(
+                    'action_type',
+                    'classroom.deactivated'
+                )
+                ->count()
+        );
+    }
+
+    public function test_classroom_management_uses_persisted_scope_instead_of_tampered_in_memory_scope(): void
+    {
+        $centerA = Center::factory()
+            ->active()
+            ->create();
+
+        $centerB = Center::factory()
+            ->active()
+            ->create();
+
+        $ownerA = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $centerA
+        );
+
+        $branchA = Branch::factory()
+            ->for($centerA)
+            ->active()
+            ->create();
+
+        $branchB = Branch::factory()
+            ->for($centerB)
+            ->active()
+            ->create();
+
+        $classroomB = Classroom::factory()
+            ->forBranch($branchB)
+            ->create([
+                'name' => 'Foreign Classroom',
+            ]);
+
+        /*
+     * Modify only the in-memory Model.
+     * The persisted row still belongs to Center B / Branch B.
+     */
+        $classroomB->center_id = $centerA->id;
+        $classroomB->branch_id = $branchA->id;
+
+        $this->establishCenterOwnerContext(
+            $centerA
+        );
+
+        $this->expectException(
+            AuthorizationException::class
+        );
+
+        $this->service()
+            ->update(
+                $ownerA,
+                $classroomB,
+                [
+                    'name' => 'Should Be Rejected',
+                ]
+            );
+    }
+
+    public function test_classroom_creation_rolls_back_when_audit_recording_fails(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $failingAudit = \Mockery::mock(
+            AuditRecorder::class
+        );
+
+        $failingAudit
+            ->shouldReceive('record')
+            ->once()
+            ->andThrow(
+                new LogicException(
+                    'Simulated audit failure.'
+                )
+            );
+
+        $this->app->instance(
+            AuditRecorder::class,
+            $failingAudit
+        );
+
+        try {
+            $this->service()
+                ->create(
+                    $owner,
+                    $branch,
+                    [
+                        'name' => 'Rollback Classroom',
+                        'code' => 'ROLLBACK-CR',
+                        'capacity' => 20,
+                        'location' => 'Test Location',
+                        'availability_status' =>
+                        ClassroomAvailabilityStatus::Available,
+                        'status' =>
+                        ClassroomStatus::Active,
+                    ]
+                );
+
+            $this->fail(
+                'Expected audit failure to abort classroom creation.'
+            );
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Simulated audit failure.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertDatabaseMissing(
+            'classrooms',
+            [
+                'code' => 'ROLLBACK-CR',
+            ]
+        );
+
+        $this->assertDatabaseCount(
+            'audit_records',
+            0
+        );
+    }
+
+    public function test_classroom_update_rolls_back_when_audit_recording_fails(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->create([
+                'name' => 'Original Classroom',
+            ]);
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $failingAudit = \Mockery::mock(
+            AuditRecorder::class
+        );
+
+        $failingAudit
+            ->shouldReceive('record')
+            ->once()
+            ->andThrow(
+                new LogicException(
+                    'Simulated audit failure.'
+                )
+            );
+
+        $this->app->instance(
+            AuditRecorder::class,
+            $failingAudit
+        );
+
+        try {
+            $this->service()
+                ->update(
+                    $owner,
+                    $classroom,
+                    [
+                        'name' => 'Should Roll Back',
+                    ]
+                );
+
+            $this->fail(
+                'Expected audit failure to abort classroom update.'
+            );
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Simulated audit failure.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertDatabaseHas(
+            'classrooms',
+            [
+                'id' => $classroom->id,
+                'name' => 'Original Classroom',
+            ]
+        );
+
+        $this->assertDatabaseCount(
+            'audit_records',
+            0
+        );
+    }
+
+    public function test_classroom_availability_change_rolls_back_when_audit_recording_fails(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->available()
+            ->create();
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $failingAudit = \Mockery::mock(
+            AuditRecorder::class
+        );
+
+        $failingAudit
+            ->shouldReceive('record')
+            ->once()
+            ->andThrow(
+                new LogicException(
+                    'Simulated audit failure.'
+                )
+            );
+
+        $this->app->instance(
+            AuditRecorder::class,
+            $failingAudit
+        );
+
+        try {
+            $this->service()
+                ->setAvailability(
+                    $owner,
+                    $classroom,
+                    ClassroomAvailabilityStatus::Unavailable
+                );
+
+            $this->fail(
+                'Expected audit failure to abort availability change.'
+            );
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Simulated audit failure.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertDatabaseHas(
+            'classrooms',
+            [
+                'id' => $classroom->id,
+                'availability_status' =>
+                ClassroomAvailabilityStatus::Available->value,
+            ]
+        );
+
+        $this->assertDatabaseCount(
+            'audit_records',
+            0
+        );
+    }
+
+    public function test_classroom_lifecycle_change_rolls_back_when_audit_recording_fails(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $owner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $classroom = Classroom::factory()
+            ->forBranch($branch)
+            ->active()
+            ->create();
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $failingAudit = \Mockery::mock(
+            AuditRecorder::class
+        );
+
+        $failingAudit
+            ->shouldReceive('record')
+            ->once()
+            ->andThrow(
+                new LogicException(
+                    'Simulated audit failure.'
+                )
+            );
+
+        $this->app->instance(
+            AuditRecorder::class,
+            $failingAudit
+        );
+
+        try {
+            $this->service()
+                ->deactivate(
+                    $owner,
+                    $classroom
+                );
+
+            $this->fail(
+                'Expected audit failure to abort classroom lifecycle change.'
+            );
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Simulated audit failure.',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertDatabaseHas(
+            'classrooms',
+            [
+                'id' => $classroom->id,
+                'status' =>
+                ClassroomStatus::Active->value,
+            ]
+        );
+
+        $this->assertDatabaseCount(
+            'audit_records',
+            0
         );
     }
 

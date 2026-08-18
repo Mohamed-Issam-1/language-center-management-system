@@ -5,6 +5,7 @@ namespace App\Services\Classrooms;
 use App\Models\Branch;
 use App\Models\Classroom;
 use App\Models\User;
+use App\Services\Audit\AuditRecorder;
 use App\Support\Enums\BranchStatus;
 use App\Support\Enums\ClassroomAvailabilityStatus;
 use App\Support\Enums\ClassroomStatus;
@@ -21,7 +22,8 @@ class ClassroomManagementService
 {
     public function __construct(
         private readonly TenantContext $tenant,
-        private readonly BranchContext $branchContext
+        private readonly BranchContext $branchContext,
+        private readonly AuditRecorder $audit
     ) {}
 
     public function create(
@@ -29,55 +31,41 @@ class ClassroomManagementService
         Branch $branch,
         array $attributes
     ): Classroom {
-        Gate::forUser($user)
-            ->authorize(
-                'create',
-                [
-                    Classroom::class,
-                    $branch,
-                ]
-            );
-
         $centerId = $this->authorizedCenterId(
             $user
         );
 
-        $this->ensureBranchIsInCurrentTenant(
-            $branch,
-            $centerId
-        );
-
-        $this->ensureOperationalBranchScope(
-            $user,
-            $centerId,
-            $branch->id
-        );
-
         return DB::transaction(
             function () use (
+                $user,
                 $branch,
                 $centerId,
                 $attributes
             ): Classroom {
                 /*
-                 * Re-read and lock the Branch so creation cannot rely
-                 * on stale in-memory status and cannot race with Branch
-                 * deactivation.
+                 * Re-read and lock the persisted Branch so creation
+                 * cannot depend on stale or locally modified model
+                 * state and cannot race with Branch deactivation.
                  */
-                $lockedBranch = Branch::query()
-                    ->whereKey($branch->id)
-                    ->where(
-                        'center_id',
-                        $centerId
-                    )
-                    ->lockForUpdate()
-                    ->first();
+                $lockedBranch = $this->lockBranchInCurrentTenant(
+                    $branch,
+                    $centerId
+                );
 
-                if ($lockedBranch === null) {
-                    throw new AuthorizationException(
-                        'The branch is outside the authorized center scope.'
+                Gate::forUser($user)
+                    ->authorize(
+                        'create',
+                        [
+                            Classroom::class,
+                            $lockedBranch,
+                        ]
                     );
-                }
+
+                $this->ensureOperationalBranchScope(
+                    $user,
+                    $centerId,
+                    $lockedBranch->id
+                );
 
                 /*
                  * A deactivated Branch must not receive new
@@ -106,13 +94,27 @@ class ClassroomManagementService
 
                 /*
                  * Tenant and Branch ownership are derived from the
-                 * authorized target Branch and never trusted from input.
+                 * authorized persisted Branch and never trusted
+                 * from request input.
                  */
                 $data['center_id'] = $centerId;
                 $data['branch_id'] = $lockedBranch->id;
 
-                return Classroom::query()
-                    ->create($data);
+                $classroom = Classroom::query()
+                    ->create(
+                        $data
+                    );
+
+                $this->audit->record(
+                    actor: $user,
+                    actionType: 'classroom.created',
+                    subject: $classroom,
+                    afterValues: $this->classroomAuditValues(
+                        $classroom
+                    )
+                );
+
+                return $classroom->refresh();
             },
             3
         );
@@ -123,37 +125,76 @@ class ClassroomManagementService
         Classroom $classroom,
         array $attributes
     ): Classroom {
-        Gate::forUser($user)
-            ->authorize(
-                'update',
-                $classroom
-            );
-
-        $this->ensureClassroomIsInCurrentScope(
-            $user,
-            $classroom
+        $centerId = $this->authorizedCenterId(
+            $user
         );
 
-        /*
-         * General information updates cannot move the Classroom
-         * to another Center or Branch and cannot bypass the
-         * explicit lifecycle/availability operations.
-         */
-        $classroom->fill(
-            Arr::only(
+        return DB::transaction(
+            function () use (
+                $user,
+                $classroom,
                 $attributes,
-                [
-                    'name',
-                    'code',
-                    'capacity',
-                    'location',
-                ]
-            )
+                $centerId
+            ): Classroom {
+                $classroom = $this->lockClassroomInCurrentScope(
+                    $user,
+                    $classroom,
+                    $centerId
+                );
+
+                Gate::forUser($user)
+                    ->authorize(
+                        'update',
+                        $classroom
+                    );
+
+                $beforeValues =
+                    $this->classroomAuditValues(
+                        $classroom
+                    );
+
+                /*
+                 * General information updates cannot move the Classroom
+                 * to another Center or Branch and cannot bypass the
+                 * explicit lifecycle/availability operations.
+                 */
+                $classroom->fill(
+                    Arr::only(
+                        $attributes,
+                        [
+                            'name',
+                            'code',
+                            'capacity',
+                            'location',
+                        ]
+                    )
+                );
+
+                /*
+                 * No business state changed, therefore there is
+                 * no new event to add to Audit history.
+                 */
+                if (! $classroom->isDirty()) {
+                    return $classroom;
+                }
+
+                $classroom->save();
+                $classroom->refresh();
+
+                $this->audit->record(
+                    actor: $user,
+                    actionType: 'classroom.updated',
+                    subject: $classroom,
+                    beforeValues: $beforeValues,
+                    afterValues: $this->classroomAuditValues(
+                        $classroom
+                    )
+                );
+
+                return $classroom;
+            },
+            3
         );
-
-        $classroom->save();
-
-        return $classroom->refresh();
     }
 
     public function setAvailability(
@@ -161,66 +202,199 @@ class ClassroomManagementService
         Classroom $classroom,
         ClassroomAvailabilityStatus $availability
     ): Classroom {
-        Gate::forUser($user)
-            ->authorize(
-                'update',
-                $classroom
-            );
-
-        $this->ensureClassroomIsInCurrentScope(
-            $user,
-            $classroom
+        $centerId = $this->authorizedCenterId(
+            $user
         );
 
-        $classroom->update([
-            'availability_status' => $availability,
-        ]);
+        return DB::transaction(
+            function () use (
+                $user,
+                $classroom,
+                $availability,
+                $centerId
+            ): Classroom {
+                $classroom = $this->lockClassroomInCurrentScope(
+                    $user,
+                    $classroom,
+                    $centerId
+                );
 
-        return $classroom->refresh();
+                Gate::forUser($user)
+                    ->authorize(
+                        'update',
+                        $classroom
+                    );
+
+                /*
+                 * Repeating the same availability state is
+                 * idempotent and produces no duplicate Audit Record.
+                 */
+                if (
+                    $classroom->availability_status
+                    === $availability
+                ) {
+                    return $classroom;
+                }
+
+                $beforeAvailability =
+                    $classroom->availability_status;
+
+                $classroom->update([
+                    'availability_status' =>
+                    $availability,
+                ]);
+
+                $classroom->refresh();
+
+                $this->audit->record(
+                    actor: $user,
+                    actionType: 'classroom.availability_changed',
+                    subject: $classroom,
+                    beforeValues: [
+                        'availability_status' =>
+                        $beforeAvailability,
+                    ],
+                    afterValues: [
+                        'availability_status' =>
+                        $classroom
+                            ->availability_status,
+                    ]
+                );
+
+                return $classroom;
+            },
+            3
+        );
     }
 
     public function activate(
         User $user,
         Classroom $classroom
     ): Classroom {
-        Gate::forUser($user)
-            ->authorize(
-                'activate',
-                $classroom
-            );
-
-        $this->ensureClassroomIsInCurrentScope(
-            $user,
-            $classroom
+        $centerId = $this->authorizedCenterId(
+            $user
         );
 
-        $classroom->update([
-            'status' => ClassroomStatus::Active,
-        ]);
+        return DB::transaction(
+            function () use (
+                $user,
+                $classroom,
+                $centerId
+            ): Classroom {
+                $classroom = $this->lockClassroomInCurrentScope(
+                    $user,
+                    $classroom,
+                    $centerId
+                );
 
-        return $classroom->refresh();
+                Gate::forUser($user)
+                    ->authorize(
+                        'activate',
+                        $classroom
+                    );
+
+                /*
+                 * Lifecycle requests are idempotent.
+                 */
+                if (
+                    $classroom->status
+                    === ClassroomStatus::Active
+                ) {
+                    return $classroom;
+                }
+
+                $beforeStatus =
+                    $classroom->status;
+
+                $classroom->update([
+                    'status' =>
+                    ClassroomStatus::Active,
+                ]);
+
+                $classroom->refresh();
+
+                $this->audit->record(
+                    actor: $user,
+                    actionType: 'classroom.activated',
+                    subject: $classroom,
+                    beforeValues: [
+                        'status' => $beforeStatus,
+                    ],
+                    afterValues: [
+                        'status' =>
+                        $classroom->status,
+                    ]
+                );
+
+                return $classroom;
+            },
+            3
+        );
     }
 
     public function deactivate(
         User $user,
         Classroom $classroom
     ): Classroom {
-        Gate::forUser($user)
-            ->authorize(
-                'deactivate',
-                $classroom
-            );
-
-        $this->ensureClassroomIsInCurrentScope(
-            $user,
-            $classroom
+        $centerId = $this->authorizedCenterId(
+            $user
         );
 
-        $classroom->update([
-            'status' => ClassroomStatus::Deactivated,
-        ]);
+        return DB::transaction(
+            function () use (
+                $user,
+                $classroom,
+                $centerId
+            ): Classroom {
+                $classroom = $this->lockClassroomInCurrentScope(
+                    $user,
+                    $classroom,
+                    $centerId
+                );
 
-        return $classroom->refresh();
+                Gate::forUser($user)
+                    ->authorize(
+                        'deactivate',
+                        $classroom
+                    );
+
+                /*
+                 * Lifecycle requests are idempotent.
+                 */
+                if (
+                    $classroom->status
+                    === ClassroomStatus::Deactivated
+                ) {
+                    return $classroom;
+                }
+
+                $beforeStatus =
+                    $classroom->status;
+
+                $classroom->update([
+                    'status' =>
+                    ClassroomStatus::Deactivated,
+                ]);
+
+                $classroom->refresh();
+
+                $this->audit->record(
+                    actor: $user,
+                    actionType: 'classroom.deactivated',
+                    subject: $classroom,
+                    beforeValues: [
+                        'status' => $beforeStatus,
+                    ],
+                    afterValues: [
+                        'status' =>
+                        $classroom->status,
+                    ]
+                );
+
+                return $classroom;
+            },
+            3
+        );
     }
 
     private function authorizedCenterId(
@@ -238,36 +412,79 @@ class ClassroomManagementService
         return $center->id;
     }
 
-    private function ensureBranchIsInCurrentTenant(
+    private function lockBranchInCurrentTenant(
         Branch $branch,
         int $centerId
-    ): void {
-        if ($branch->center_id !== $centerId) {
+    ): Branch {
+        /*
+         * Bypass operational global scopes only for the explicit
+         * persisted-row lookup. Tenant ownership is checked
+         * immediately after the row is locked.
+         */
+        $persistedBranch = Branch::query()
+            ->withoutGlobalScopes()
+            ->whereKey(
+                $branch->getKey()
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        if (
+            $persistedBranch->center_id
+            !== $centerId
+        ) {
             throw new AuthorizationException(
                 'The branch is outside the authorized center scope.'
             );
         }
+
+        return $persistedBranch;
     }
 
-    private function ensureClassroomIsInCurrentScope(
+    private function lockClassroomInCurrentScope(
         User $user,
-        Classroom $classroom
-    ): void {
-        $centerId = $this->authorizedCenterId(
-            $user
-        );
+        Classroom $classroom,
+        int $centerId
+    ): Classroom {
+        /*
+         * Re-read the actual persisted Classroom before
+         * authorization and mutation.
+         *
+         * This prevents stale or locally modified Eloquent state
+         * from controlling Center or Branch authorization.
+         */
+        $persistedClassroom =
+            Classroom::query()
+            ->withoutGlobalScopes()
+            ->whereKey(
+                $classroom->getKey()
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
 
-        if ($classroom->center_id !== $centerId) {
+        if (
+            $persistedClassroom->center_id
+            !== $centerId
+        ) {
             throw new AuthorizationException(
                 'The classroom is outside the authorized center scope.'
             );
         }
 
+        /*
+         * Existing Classrooms remain maintainable when their
+         * parent Branch is later deactivated.
+         *
+         * Therefore only operational Branch scope is checked here;
+         * active Branch status is intentionally not required.
+         */
         $this->ensureOperationalBranchScope(
             $user,
             $centerId,
-            $classroom->branch_id
+            $persistedClassroom->branch_id
         );
+
+        return $persistedClassroom;
     }
 
     private function ensureOperationalBranchScope(
@@ -321,5 +538,38 @@ class ClassroomManagementService
                 'The classroom operation is outside the assigned Branch scope.'
             );
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function classroomAuditValues(
+        Classroom $classroom
+    ): array {
+        return [
+            'center_id' =>
+            $classroom->center_id,
+
+            'branch_id' =>
+            $classroom->branch_id,
+
+            'name' =>
+            $classroom->name,
+
+            'code' =>
+            $classroom->code,
+
+            'capacity' =>
+            $classroom->capacity,
+
+            'location' =>
+            $classroom->location,
+
+            'availability_status' =>
+            $classroom->availability_status,
+
+            'status' =>
+            $classroom->status,
+        ];
     }
 }
