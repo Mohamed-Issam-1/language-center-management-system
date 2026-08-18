@@ -37,8 +37,8 @@ const items: BottomItem[] = [
         key: 'schedule',
         label: 'My',
         icon: CalendarDays,
-        authenticatedHref: '#',
-        demoHref: '#',
+        authenticatedHref: '/my-schedule',
+        demoHref: '/demo/schedule',
     },
     {
         key: 'attendance',

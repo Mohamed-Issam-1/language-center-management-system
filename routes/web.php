@@ -32,6 +32,16 @@ Route::get('/demo/courses/{course}', function () {
     return Inertia::render('Student/CourseDetails');
 })->name('demo.courses.show');
 
+
+Route::get('/my-schedule', function () {
+    return Inertia::render('Student/MySchedule');
+})->middleware(['auth', 'verified'])->name('student.schedule');
+
+
+Route::get('/demo/schedule', function () {
+    return Inertia::render('Student/MySchedule');
+})->name('demo.schedule');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

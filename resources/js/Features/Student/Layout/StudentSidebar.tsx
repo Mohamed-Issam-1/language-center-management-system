@@ -45,8 +45,8 @@ const items: SidebarItem[] = [
         key: 'schedule',
         label: 'My Schedule',
         icon: CalendarDays,
-        authenticatedHref: '#',
-        demoHref: '#',
+        authenticatedHref: '/my-schedule',
+        demoHref: '/demo/schedule',
     },
     {
         key: 'attendance',

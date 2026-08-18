@@ -2,7 +2,7 @@ import StudentBottomNav from '@/Features/Student/Layout/StudentBottomNav';
 import StudentHeader from '@/Features/Student/Layout/StudentHeader';
 import StudentSidebar from '@/Features/Student/Layout/StudentSidebar';
 import type { StudentNavKey } from '@/Features/Student/Layout/StudentSidebar';
-import type { PropsWithChildren } from 'react';
+import type { CSSProperties, PropsWithChildren } from 'react';
 
 type StudentLayoutProps = PropsWithChildren<{
     studentName: string;
@@ -12,6 +12,7 @@ type StudentLayoutProps = PropsWithChildren<{
     pageTitle: string;
     activeNav: StudentNavKey;
     mobileBackHref?: string;
+    fluid?: boolean;
 }>;
 
 export default function StudentLayout({
@@ -22,8 +23,20 @@ export default function StudentLayout({
     pageTitle,
     activeNav,
     mobileBackHref,
+    fluid = false,
     children,
 }: StudentLayoutProps) {
+    const contentStyle: CSSProperties = fluid
+        ? {
+              width: '100%',
+          }
+        : {
+              width: '100%',
+              maxWidth: '1180px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+          };
+
     return (
         <div className="min-h-screen bg-[#f6f8fc] text-[#202631]">
             <StudentSidebar
@@ -41,7 +54,10 @@ export default function StudentLayout({
             />
 
             <main className="min-h-screen pt-[60px] lg:pl-[240px]">
-                <div className="mx-auto w-full max-w-[1180px] px-4 pb-[86px] pt-4 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7">
+                <div
+                    className="px-4 pb-[86px] pt-4 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7"
+                    style={contentStyle}
+                >
                     {children}
                 </div>
             </main>
