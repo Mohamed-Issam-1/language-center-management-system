@@ -59,6 +59,23 @@ Route::get('/demo/payments', function () {
     return Inertia::render('Student/Payments');
 })->name('demo.payments');
 
+
+Route::get('/student/profile', function () {
+    return Inertia::render('Student/Profile');
+})->middleware(['auth', 'verified'])->name('student.profile');
+
+Route::get('/student/profile/edit', function () {
+    return Inertia::render('Student/EditProfile');
+})->middleware(['auth', 'verified'])->name('student.profile.edit');
+
+Route::get('/demo/profile', function () {
+    return Inertia::render('Student/Profile');
+})->name('demo.profile');
+
+Route::get('/demo/profile/edit', function () {
+    return Inertia::render('Student/EditProfile');
+})->name('demo.profile.edit');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
