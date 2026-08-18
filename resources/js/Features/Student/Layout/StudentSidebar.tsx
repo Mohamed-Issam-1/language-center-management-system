@@ -52,22 +52,22 @@ const items: SidebarItem[] = [
         key: 'attendance',
         label: 'My Attendance',
         icon: ClipboardList,
-        authenticatedHref: '#',
-        demoHref: '#',
+        authenticatedHref: '/my-attendance',
+        demoHref: '/demo/attendance',
     },
     {
         key: 'payments',
         label: 'Payments',
         icon: CreditCard,
-        authenticatedHref: '#',
-        demoHref: '#',
+        authenticatedHref: '/payments',
+        demoHref: '/demo/payments',
     },
     {
         key: 'profile',
         label: 'Profile',
         icon: UserRound,
-        authenticatedHref: '/profile',
-        demoHref: '#',
+        authenticatedHref: '/student/profile',
+        demoHref: '/demo/profile',
     },
 ];
 

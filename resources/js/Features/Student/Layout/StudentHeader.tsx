@@ -1,6 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, ChevronDown, Globe2 } from 'lucide-react';
 
 function initials(name: string) {
@@ -21,6 +21,12 @@ export default function StudentHeader({
     pageTitle: string;
     mobileBackHref?: string;
 }) {
+    const { url } = usePage();
+    const demoMode = url.startsWith('/demo');
+    const profileHref = demoMode
+        ? '/demo/profile'
+        : '/student/profile';
+
     return (
         <header className="fixed left-0 right-0 top-0 z-20 h-[60px] border-b border-[#e8ebf2] bg-white lg:left-[240px]">
             <div className="flex h-full items-center justify-between px-4 sm:px-7 lg:px-8">
@@ -78,16 +84,18 @@ export default function StudentHeader({
                         </Dropdown.Trigger>
 
                         <Dropdown.Content>
-                            <Dropdown.Link href={route('profile.edit')}>
+                            <Dropdown.Link href={profileHref}>
                                 Profile
                             </Dropdown.Link>
-                            <Dropdown.Link
-                                href={route('logout')}
-                                method="post"
-                                as="button"
-                            >
-                                Log Out
-                            </Dropdown.Link>
+                            {!demoMode && (
+                                <Dropdown.Link
+                                    href={route('logout')}
+                                    method="post"
+                                    as="button"
+                                >
+                                    Log Out
+                                </Dropdown.Link>
+                            )}
                         </Dropdown.Content>
                     </Dropdown>
                 </div>

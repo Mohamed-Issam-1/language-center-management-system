@@ -42,6 +42,23 @@ Route::get('/demo/schedule', function () {
     return Inertia::render('Student/MySchedule');
 })->name('demo.schedule');
 
+
+Route::get('/my-attendance', function () {
+    return Inertia::render('Student/MyAttendance');
+})->middleware(['auth', 'verified'])->name('student.attendance');
+
+Route::get('/demo/attendance', function () {
+    return Inertia::render('Student/MyAttendance');
+})->name('demo.attendance');
+
+Route::get('/payments', function () {
+    return Inertia::render('Student/Payments');
+})->middleware(['auth', 'verified'])->name('student.payments');
+
+Route::get('/demo/payments', function () {
+    return Inertia::render('Student/Payments');
+})->name('demo.payments');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
