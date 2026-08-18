@@ -22,7 +22,7 @@ class AuditRecordFactory extends Factory
             'center_id' => Center::factory(),
             'branch_id' => null,
             'actor_user_id' => User::factory(),
-            'actor_role' => SystemRole::CenterOwner->value,
+            'actor_role' => SystemRole::PlatformOwner->value,
             'action_type' => 'record.updated',
             'subject_type' => 'record',
             'subject_id' => fake()
