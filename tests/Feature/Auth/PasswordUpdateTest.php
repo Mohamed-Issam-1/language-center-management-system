@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Support\Enums\AccountStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -159,4 +160,76 @@ class PasswordUpdateTest extends TestCase
             )
         );
     }
+
+    public function test_deactivated_account_cannot_update_password_using_existing_session(): void
+{
+    $user = User::factory()
+        ->deactivated()
+        ->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->from('/profile')
+        ->put('/password', [
+            'current_password' => 'password',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+    $response->assertForbidden();
+
+    $user->refresh();
+
+    $this->assertTrue(
+        Hash::check(
+            'password',
+            $user->password
+        )
+    );
+
+    $this->assertNull(
+        $user->password_changed_at
+    );
+
+    $this->assertSame(
+        AccountStatus::Deactivated,
+        $user->status
+    );
+}
+
+public function test_pending_account_cannot_update_password_using_authenticated_session(): void
+{
+    $user = User::factory()
+        ->pending()
+        ->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->from('/profile')
+        ->put('/password', [
+            'current_password' => 'password',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+    $response->assertForbidden();
+
+    $user->refresh();
+
+    $this->assertTrue(
+        Hash::check(
+            'password',
+            $user->password
+        )
+    );
+
+    $this->assertNull(
+        $user->password_changed_at
+    );
+
+    $this->assertSame(
+        AccountStatus::Pending,
+        $user->status
+    );
+}
 }

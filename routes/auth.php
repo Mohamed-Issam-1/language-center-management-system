@@ -26,10 +26,12 @@ Route::middleware('auth')->group(function () {
      * These two operations must remain available while a user is
      * completing a forced password change.
      */
-    Route::put(
-        'password',
-        [PasswordController::class, 'update']
-    )->name('password.update');
+Route::put(
+    'password',
+    [PasswordController::class, 'update']
+)
+    ->middleware('tenant.context')
+    ->name('password.update');
 
     Route::post(
         'logout',
