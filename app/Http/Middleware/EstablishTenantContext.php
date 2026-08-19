@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Support\Enums\AccountStatus;
 use App\Support\Enums\CenterStatus;
 use App\Support\Enums\SystemRole;
 use App\Support\Tenancy\TenantContext;
@@ -31,6 +32,21 @@ class EstablishTenantContext
         abort_unless(
             $user instanceof User,
             401
+        );
+
+        /*
+        * Authentication state alone is not sufficient authorization.
+        *
+        * An account may have been deactivated or otherwise made
+        * non-active after its current session was created.
+        *
+        * Every protected request must therefore revalidate the
+        * persisted account lifecycle state.
+        */
+        abort_unless(
+            $user->status === AccountStatus::Active,
+            403,
+            'The authenticated account is not active.'
         );
 
         $user->loadMissing([

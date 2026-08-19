@@ -277,6 +277,64 @@ class TenantContextTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_deactivated_center_account_cannot_continue_existing_authenticated_session(): void
+    {
+        $user = $this->createCenterScopedUser(
+            SystemRole::Teacher
+        );
+
+        /*
+     * Simulate an account that authenticated while Active and
+     * was deactivated afterwards while its session still exists.
+     */
+        $user->update([
+            'status' => AccountStatus::Deactivated,
+            'deactivated_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->getJson('/_test/tenant-context');
+
+        $response->assertForbidden();
+    }
+
+    public function test_deactivated_platform_owner_cannot_continue_existing_authenticated_session(): void
+    {
+        $user = User::factory()->create([
+            'role_id' => $this->role(
+                SystemRole::PlatformOwner
+            )->id,
+            'center_id' => null,
+            'person_id' => null,
+            'status' => AccountStatus::Deactivated,
+            'deactivated_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->getJson('/_test/tenant-context');
+
+        $response->assertForbidden();
+    }
+
+    public function test_pending_account_cannot_continue_authenticated_protected_request(): void
+    {
+        $user = $this->createCenterScopedUser(
+            SystemRole::Student
+        );
+
+        $user->update([
+            'status' => AccountStatus::Pending,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->getJson('/_test/tenant-context');
+
+        $response->assertForbidden();
+    }
+
     private function createCenterScopedUser(
         SystemRole $role,
         CenterStatus $centerStatus = CenterStatus::Active
