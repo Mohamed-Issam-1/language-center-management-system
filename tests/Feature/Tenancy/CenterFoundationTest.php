@@ -16,6 +16,7 @@ class CenterFoundationTest extends TestCase
     {
         $center = Center::query()->create([
             'code' => 'GZA-001',
+            'identifier_code' => '01',
             'name' => 'Gaza Language Center',
             'email' => 'contact@gaza-center.test',
             'phone' => '+970000000000',
@@ -25,6 +26,7 @@ class CenterFoundationTest extends TestCase
 
         $this->assertDatabaseHas('centers', [
             'id' => $center->id,
+            'identifier_code' => '01',
             'code' => 'GZA-001',
             'name' => 'Gaza Language Center',
             'status' => CenterStatus::Suspended->value,
@@ -97,5 +99,32 @@ class CenterFoundationTest extends TestCase
             'id' => $center->id,
             'operating_currency_code' => 'ILS',
         ]);
+    }
+
+    public function test_center_identifier_code_must_be_unique_when_present(): void
+    {
+        Center::factory()->create([
+            'identifier_code' => '01',
+        ]);
+
+        $this->expectException(
+            QueryException::class
+        );
+
+        Center::factory()->create([
+            'identifier_code' => '01',
+        ]);
+    }
+
+    public function test_existing_center_records_may_temporarily_have_no_identifier_code(): void
+    {
+        $center = Center::factory()
+            ->create([
+                'identifier_code' => null,
+            ]);
+
+        $this->assertNull(
+            $center->identifier_code
+        );
     }
 }

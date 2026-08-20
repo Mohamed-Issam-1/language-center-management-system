@@ -120,4 +120,92 @@ class PersonFoundationTest extends TestCase
 
         $center->delete();
     }
+
+    public function test_person_can_store_shared_registration_identity_information(): void
+    {
+        $center = Center::factory()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create([
+                'national_id_number' =>
+                '111222333',
+
+                'full_name' =>
+                'Ahmad Mohammed',
+
+                'date_of_birth' =>
+                '2001-05-15',
+
+                'city_of_residence' =>
+                'Gaza',
+
+                'email' =>
+                'ahmad@example.test',
+
+                'phone_number' =>
+                '+970599123456',
+
+                'personal_picture_path' =>
+                'people/photos/example.jpg',
+            ]);
+
+        $this->assertDatabaseHas(
+            'people',
+            [
+                'id' => $person->id,
+
+                'full_name' =>
+                'Ahmad Mohammed',
+
+                'city_of_residence' =>
+                'Gaza',
+
+                'email' =>
+                'ahmad@example.test',
+
+                'phone_number' =>
+                '+970599123456',
+
+                'personal_picture_path' =>
+                'people/photos/example.jpg',
+            ]
+        );
+
+        $this->assertSame(
+            '2001-05-15',
+            $person
+                ->date_of_birth
+                ->format('Y-m-d')
+        );
+    }
+
+    public function test_legacy_person_creation_can_temporarily_omit_registration_identity_fields(): void
+    {
+        $center = Center::factory()
+            ->create();
+
+        $person = Person::query()
+            ->create([
+                'center_id' =>
+                $center->id,
+
+                'national_id_number' =>
+                '444555666',
+            ]);
+
+        $this->assertDatabaseHas(
+            'people',
+            [
+                'id' => $person->id,
+
+                'national_id_number' =>
+                '444555666',
+
+                'full_name' =>
+                null,
+            ]
+        );
+    }
 }

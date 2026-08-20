@@ -18,6 +18,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use LogicException;
 use Tests\TestCase;
+use DomainException;
 
 class CenterManagementServiceTest extends TestCase
 {
@@ -43,6 +44,7 @@ class CenterManagementServiceTest extends TestCase
                 $platformOwner,
                 [
                     'code' => 'GZA-100',
+                    'identifier_code' => '01',
                     'name' => 'Gaza Language Center',
                     'email' => 'center@example.test',
                     'phone' => '0599000000',
@@ -61,6 +63,11 @@ class CenterManagementServiceTest extends TestCase
         $this->assertSame(
             'GZA-100',
             $center->code
+        );
+
+        $this->assertSame(
+            '01',
+            $center->identifier_code
         );
 
         $this->assertSame(
@@ -274,6 +281,7 @@ class CenterManagementServiceTest extends TestCase
                 $platformOwner,
                 [
                     'code' => 'AUD-CTR-1',
+                    'identifier_code' => '02',
                     'name' => 'Audit Center',
                     'email' => 'audit@example.test',
                     'phone' => '123456',
@@ -293,6 +301,12 @@ class CenterManagementServiceTest extends TestCase
         $this->assertSame(
             $platformOwner->id,
             $record->actor_user_id
+        );
+
+        $this->assertSame(
+            '02',
+            $record
+                ->after_values['identifier_code']
         );
 
         $this->assertSame(
@@ -674,6 +688,7 @@ class CenterManagementServiceTest extends TestCase
                     $platformOwner,
                     [
                         'code' => 'ROLLBACK-CTR',
+                        'identifier_code' => '03',
                         'name' => 'Rollback Center',
                         'timezone' => 'Asia/Gaza',
                     ]
@@ -827,6 +842,112 @@ class CenterManagementServiceTest extends TestCase
         $this->assertDatabaseCount(
             'audit_records',
             0
+        );
+    }
+
+    public function test_center_creation_requires_identifier_code(): void
+    {
+        $platformOwner =
+            $this->createUserForRole(
+                SystemRole::PlatformOwner
+            );
+
+        $this->establishPlatformContext();
+
+        $this->expectException(
+            DomainException::class
+        );
+
+        $this->service()->create(
+            $platformOwner,
+            [
+                'code' => 'NO-ID-CODE',
+                'name' =>
+                'Missing Identifier Center',
+
+                'timezone' =>
+                'Asia/Gaza',
+            ]
+        );
+    }
+
+    public function test_center_creation_rejects_invalid_identifier_code(): void
+    {
+        $platformOwner =
+            $this->createUserForRole(
+                SystemRole::PlatformOwner
+            );
+
+        $this->establishPlatformContext();
+
+        $this->expectException(
+            DomainException::class
+        );
+
+        $this->service()->create(
+            $platformOwner,
+            [
+                'code' => 'BAD-ID-CODE',
+
+                'identifier_code' =>
+                '00',
+
+                'name' =>
+                'Invalid Identifier Center',
+
+                'timezone' =>
+                'Asia/Gaza',
+            ]
+        );
+    }
+
+    public function test_center_identifier_code_cannot_be_changed_by_general_update(): void
+    {
+        $platformOwner =
+            $this->createUserForRole(
+                SystemRole::PlatformOwner
+            );
+
+        $center = Center::factory()
+            ->active()
+            ->create([
+                'identifier_code' =>
+                '04',
+            ]);
+
+        $this->establishPlatformContext();
+
+        $updated =
+            $this->service()->update(
+                $platformOwner,
+                $center,
+                [
+                    'identifier_code' =>
+                    '05',
+
+                    'name' =>
+                    'Updated Center Name',
+                ]
+            );
+
+        $this->assertSame(
+            '04',
+            $updated->identifier_code
+        );
+
+        $this->assertSame(
+            'Updated Center Name',
+            $updated->name
+        );
+
+        $this->assertDatabaseHas(
+            'centers',
+            [
+                'id' => $center->id,
+
+                'identifier_code' =>
+                '04',
+            ]
         );
     }
 

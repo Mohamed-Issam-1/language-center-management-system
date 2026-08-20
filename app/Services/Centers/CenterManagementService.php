@@ -12,6 +12,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use DomainException;
 
 class CenterManagementService
 {
@@ -46,6 +47,11 @@ class CenterManagementService
                  * A new Center begins Suspended according to the
                  * database default and must be activated explicitly.
                  */
+                $identifierCode =
+                    $this->normalizeIdentifierCode(
+                        $attributes['identifier_code'] ?? null
+                    );
+
                 $data = Arr::only(
                     $attributes,
                     [
@@ -58,6 +64,9 @@ class CenterManagementService
                         'operating_currency_code',
                     ]
                 );
+
+                $data['identifier_code'] =
+                    $identifierCode;
 
                 $center = Center::query()
                     ->create(
@@ -329,6 +338,33 @@ class CenterManagementService
             ->firstOrFail();
     }
 
+    private function normalizeIdentifierCode(
+        mixed $value
+    ): string {
+        if (! is_string($value)) {
+            throw new DomainException(
+                'A Center identifier code is required.'
+            );
+        }
+
+        $identifierCode = trim(
+            $value
+        );
+
+        if (
+            ! preg_match(
+                '/^(0[1-9]|[1-9][0-9])$/',
+                $identifierCode
+            )
+        ) {
+            throw new DomainException(
+                'The Center identifier code must be a two-digit value from 01 through 99.'
+            );
+        }
+
+        return $identifierCode;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -338,6 +374,9 @@ class CenterManagementService
         return [
             'code' =>
             $center->code,
+
+            'identifier_code' =>
+            $center->identifier_code,
 
             'name' =>
             $center->name,

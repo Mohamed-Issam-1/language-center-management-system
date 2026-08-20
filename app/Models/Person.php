@@ -18,7 +18,20 @@ class Person extends Model
     protected $fillable = [
         'center_id',
         'national_id_number',
+        'full_name',
+        'date_of_birth',
+        'city_of_residence',
+        'email',
+        'phone_number',
+        'personal_picture_path',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'date_of_birth' => 'date',
+        ];
+    }
 
     public function center(): BelongsTo
     {
