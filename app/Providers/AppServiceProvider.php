@@ -6,9 +6,11 @@ use App\Models\Branch;
 use App\Models\Center;
 use App\Models\Classroom;
 use App\Models\User;
+use App\Models\Student;
 use App\Policies\BranchPolicy;
 use App\Policies\CenterPolicy;
 use App\Policies\ClassroomPolicy;
+use App\Policies\StudentPolicy;
 use App\Support\Enums\SystemPermission;
 use App\Support\Tenancy\BranchContext;
 use App\Support\Tenancy\TenantContext;
@@ -45,13 +47,20 @@ class AppServiceProvider extends ServiceProvider
             Center::class,
             CenterPolicy::class
         );
+
         Gate::policy(
             Branch::class,
             BranchPolicy::class
         );
+
         Gate::policy(
             Classroom::class,
             ClassroomPolicy::class
+        );
+
+        Gate::policy(
+            Student::class,
+            StudentPolicy::class
         );
 
         /*
