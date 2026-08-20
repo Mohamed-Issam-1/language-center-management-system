@@ -37,12 +37,12 @@ class StudentPolicy
              * Branches cannot appear.
              */
             SystemRole::BranchManager =>
-                $user->activeBranchManagerAssignment()
-                    ->where(
-                        'center_id',
-                        $user->center_id
-                    )
-                    ->exists(),
+            $user->activeBranchManagerAssignment()
+                ->where(
+                    'center_id',
+                    $user->center_id
+                )
+                ->exists(),
 
             /*
              * Teacher Student-record access is class-scoped.
@@ -79,11 +79,11 @@ class StudentPolicy
             SystemRole::CenterOwner => true,
 
             SystemRole::BranchManager =>
-                $this->hasActiveBranchAccess(
-                    $user,
-                    $student->center_id,
-                    $student->branch_id
-                ),
+            $this->hasActiveBranchAccess(
+                $user,
+                $student->center_id,
+                $student->branch_id
+            ),
 
             /*
              * A Student account may view only the Student record
@@ -93,7 +93,7 @@ class StudentPolicy
              * been completed because Person is the shared identity.
              */
             SystemRole::Student =>
-                $user->person_id !== null
+            $user->person_id !== null
                 && $user->person_id === $student->person_id,
 
             /*
@@ -151,6 +151,25 @@ class StudentPolicy
         );
     }
 
+    public function linkAccount(
+        User $user,
+        Student $student
+    ): bool {
+        if (
+            ! $user->hasPermission(
+                SystemPermission::ManageStudentAccounts
+            )
+        ) {
+            return false;
+        }
+
+        return $this->canManageBranch(
+            $user,
+            $student->center_id,
+            $student->branch_id
+        );
+    }
+
     private function canManageBranch(
         User $user,
         int $centerId,
@@ -175,11 +194,11 @@ class StudentPolicy
             SystemRole::CenterOwner => true,
 
             SystemRole::BranchManager =>
-                $this->hasActiveBranchAccess(
-                    $user,
-                    $centerId,
-                    $branchId
-                ),
+            $this->hasActiveBranchAccess(
+                $user,
+                $centerId,
+                $branchId
+            ),
 
             default => false,
         };
