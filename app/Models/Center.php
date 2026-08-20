@@ -54,4 +54,11 @@ class Center extends Model
             Classroom::class
         );
     }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(
+            Student::class
+        );
+    }
 }

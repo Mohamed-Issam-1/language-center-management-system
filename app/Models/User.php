@@ -124,6 +124,13 @@ class User extends Authenticatable
         );
     }
 
+    public function student(): HasOne
+    {
+        return $this->hasOne(
+            Student::class
+        );
+    }
+
     public function activeFinanceEmployeeAssignment(): HasOne
     {
         return $this->hasOne(

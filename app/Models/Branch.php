@@ -79,6 +79,13 @@ class Branch extends Model
         );
     }
 
+    public function students(): HasMany
+    {
+        return $this->hasMany(
+            Student::class
+        );
+    }
+
     public function isActive(): bool
     {
         return $this->status === BranchStatus::Active;
