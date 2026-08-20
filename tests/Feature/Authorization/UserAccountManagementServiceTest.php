@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Authorization;
 
+use App\Models\Branch;
+use App\Models\BranchManagerAssignment;
+use App\Models\Student;
 use App\Models\AuditRecord;
 use App\Models\Center;
 use App\Models\Person;
@@ -12,6 +15,7 @@ use App\Services\Audit\AuditRecorder;
 use App\Support\Enums\AccountStatus;
 use App\Support\Enums\SystemRole;
 use App\Support\Tenancy\TenantContext;
+use App\Support\Tenancy\BranchContext;
 use Database\Seeders\RoleSeeder;
 use DomainException;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -508,7 +512,7 @@ class UserAccountManagementServiceTest extends TestCase
             );
     }
 
-    public function test_branch_manager_student_account_management_fails_closed_until_student_branch_scope_exists(): void
+    public function test_branch_manager_cannot_bypass_student_scope_through_generic_account_creation(): void
     {
         $center = Center::factory()
             ->active()
@@ -539,6 +543,1123 @@ class UserAccountManagementServiceTest extends TestCase
             );
     }
 
+    public function test_center_owner_can_create_student_account_for_active_student(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $student = Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->active()
+            ->create();
+
+        $centerOwner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $account = $this->service()
+            ->createStudentAccountForStudent(
+                actor: $centerOwner,
+                student: $student,
+                accountLoginIdentifier: 'student.account.one',
+                recoveryEmail: 'STUDENT@EXAMPLE.TEST',
+                temporaryPassword: 'Temporary!123'
+            );
+
+        $student->refresh();
+
+        $this->assertSame(
+            $center->id,
+            $account->center_id
+        );
+
+        $this->assertSame(
+            $person->id,
+            $account->person_id
+        );
+
+        $this->assertSame(
+            SystemRole::Student,
+            $account->systemRole()
+        );
+
+        $this->assertSame(
+            AccountStatus::Active,
+            $account->status
+        );
+
+        $this->assertSame(
+            'student.account.one',
+            $account->account_login_identifier
+        );
+
+        $this->assertSame(
+            'student@example.test',
+            $account->recovery_email
+        );
+
+        $this->assertTrue(
+            $account->must_change_password
+        );
+
+        $this->assertNull(
+            $account->temporary_password_used_at
+        );
+
+        $this->assertTrue(
+            Hash::check(
+                'Temporary!123',
+                $account->password
+            )
+        );
+
+        $this->assertSame(
+            $account->id,
+            $student->user_id
+        );
+
+        $accountAudit =
+            AuditRecord::withoutGlobalScopes()
+            ->where(
+                'action_type',
+                'user_account.created'
+            )
+            ->where(
+                'subject_id',
+                $account->id
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $centerOwner->id,
+            $accountAudit->actor_user_id
+        );
+
+        $linkAudit =
+            AuditRecord::withoutGlobalScopes()
+            ->where(
+                'action_type',
+                'student.account_linked'
+            )
+            ->where(
+                'subject_id',
+                $student->id
+            )
+            ->firstOrFail();
+
+        $this->assertNull(
+            $linkAudit->before_values['user_id']
+        );
+
+        $this->assertSame(
+            $account->id,
+            $linkAudit->after_values['user_id']
+        );
+    }
+
+    public function test_archived_student_cannot_receive_new_student_account(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $student = Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->archived()
+            ->create();
+
+        $centerOwner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $userCount =
+            User::withoutGlobalScopes()
+            ->count();
+
+        try {
+            $this->service()
+                ->createStudentAccountForStudent(
+                    actor: $centerOwner,
+                    student: $student,
+                    accountLoginIdentifier: 'archived.student',
+                    recoveryEmail: 'archived@example.test',
+                    temporaryPassword: 'Temporary!123'
+                );
+
+            $this->fail(
+                'Expected Archived Student account creation to be rejected.'
+            );
+        } catch (DomainException $exception) {
+            $this->assertSame(
+                'An Archived Student must be restored before creating a User Account.',
+                $exception->getMessage()
+            );
+        }
+
+        $student->refresh();
+
+        $this->assertNull(
+            $student->user_id
+        );
+
+        $this->assertSame(
+            $userCount,
+            User::withoutGlobalScopes()
+                ->count()
+        );
+    }
+
+    public function test_new_student_account_is_rejected_when_person_already_has_student_role_account(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $student = Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->active()
+            ->create();
+
+        $existingAccount =
+            $this->createCenterAccount(
+                SystemRole::Student,
+                $center,
+                $person
+            );
+
+        $centerOwner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $userCount =
+            User::withoutGlobalScopes()
+            ->count();
+
+        try {
+            $this->service()
+                ->createStudentAccountForStudent(
+                    actor: $centerOwner,
+                    student: $student,
+                    accountLoginIdentifier: 'duplicate.student',
+                    recoveryEmail: 'duplicate@example.test',
+                    temporaryPassword: 'Temporary!123'
+                );
+
+            $this->fail(
+                'Expected duplicate Student-role account creation to be rejected.'
+            );
+        } catch (DomainException $exception) {
+            $this->assertSame(
+                'This Person already has a Student account in the language center.',
+                $exception->getMessage()
+            );
+        }
+
+        $student->refresh();
+
+        $this->assertNull(
+            $student->user_id
+        );
+
+        $this->assertDatabaseHas(
+            'users',
+            [
+                'id' =>
+                $existingAccount->id,
+            ]
+        );
+
+        $this->assertSame(
+            $userCount,
+            User::withoutGlobalScopes()
+                ->count()
+        );
+    }
+
+    public function test_branch_manager_can_create_student_account_in_assigned_branch(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $student = Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->active()
+            ->create();
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $branch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $branch
+        );
+
+        $account = $this->service()
+            ->createStudentAccountForStudent(
+                actor: $manager,
+                student: $student,
+                accountLoginIdentifier: 'branch.student.one',
+                recoveryEmail: 'branch.student@example.test',
+                temporaryPassword: 'Temporary!123'
+            );
+
+        $student->refresh();
+
+        $this->assertSame(
+            SystemRole::Student,
+            $account->systemRole()
+        );
+
+        $this->assertSame(
+            $person->id,
+            $account->person_id
+        );
+
+        $this->assertSame(
+            $account->id,
+            $student->user_id
+        );
+
+        $this->assertDatabaseHas(
+            'students',
+            [
+                'id' => $student->id,
+                'branch_id' => $branch->id,
+                'user_id' => $account->id,
+            ]
+        );
+    }
+
+    public function test_branch_manager_cannot_create_student_account_outside_assigned_branch(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $assignedBranch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $otherBranch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $student = Student::factory()
+            ->forBranch($otherBranch)
+            ->forPerson($person)
+            ->active()
+            ->create();
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $assignedBranch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $assignedBranch
+        );
+
+        $userCount =
+            User::withoutGlobalScopes()
+            ->count();
+
+        try {
+            $this->service()
+                ->createStudentAccountForStudent(
+                    actor: $manager,
+                    student: $student,
+                    accountLoginIdentifier: 'outside.branch.student',
+                    recoveryEmail: 'outside@example.test',
+                    temporaryPassword: 'Temporary!123'
+                );
+
+            $this->fail(
+                'Expected cross-branch Student account creation to be rejected.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $student->refresh();
+
+        $this->assertNull(
+            $student->user_id
+        );
+
+        $this->assertSame(
+            $userCount,
+            User::withoutGlobalScopes()
+                ->count()
+        );
+    }
+
+    public function test_branch_manager_can_manage_linked_student_account_in_assigned_branch(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $account = $this->createCenterAccount(
+            SystemRole::Student,
+            $center,
+            $person
+        );
+
+        $student = Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->active()
+            ->create([
+                'user_id' => $account->id,
+            ]);
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $branch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $branch
+        );
+
+        $updated = $this->service()
+            ->update(
+                $manager,
+                $account,
+                [
+                    'account_login_identifier' =>
+                    'managed.student',
+                    'recovery_email' =>
+                    'MANAGED@EXAMPLE.TEST',
+                ]
+            );
+
+        $this->assertSame(
+            'managed.student',
+            $updated->account_login_identifier
+        );
+
+        $this->assertSame(
+            'managed@example.test',
+            $updated->recovery_email
+        );
+
+        $this->assertSame(
+            $account->id,
+            $student->user_id
+        );
+    }
+
+    public function test_branch_manager_cannot_manage_linked_student_account_outside_assigned_branch(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $assignedBranch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $otherBranch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $account = $this->createCenterAccount(
+            SystemRole::Student,
+            $center,
+            $person
+        );
+
+        Student::factory()
+            ->forBranch($otherBranch)
+            ->forPerson($person)
+            ->active()
+            ->create([
+                'user_id' => $account->id,
+            ]);
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $assignedBranch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $assignedBranch
+        );
+
+        $this->expectException(
+            AuthorizationException::class
+        );
+
+        $this->service()
+            ->update(
+                $manager,
+                $account,
+                [
+                    'recovery_email' =>
+                    'should.not.change@example.test',
+                ]
+            );
+    }
+
+    public function test_branch_manager_cannot_manage_unlinked_student_role_account(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $account = $this->createCenterAccount(
+            SystemRole::Student,
+            $center,
+            $person
+        );
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $branch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $branch
+        );
+
+        $this->expectException(
+            AuthorizationException::class
+        );
+
+        $this->service()
+            ->update(
+                $manager,
+                $account,
+                [
+                    'recovery_email' =>
+                    'should.not.change@example.test',
+                ]
+            );
+    }
+
+    public function test_branch_manager_cannot_bypass_scope_by_tampering_with_student_branch_in_memory(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $assignedBranch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $otherBranch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $student = Student::factory()
+            ->forBranch($otherBranch)
+            ->forPerson($person)
+            ->active()
+            ->create();
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $assignedBranch
+        );
+
+        /*
+     * Tamper only with the local Eloquent instance.
+     *
+     * Persisted Student still belongs to $otherBranch.
+     */
+        $student->branch_id =
+            $assignedBranch->id;
+
+        $this->establishBranchContext(
+            $center,
+            $assignedBranch
+        );
+
+        try {
+            $this->service()
+                ->createStudentAccountForStudent(
+                    actor: $manager,
+                    student: $student,
+                    accountLoginIdentifier: 'tampered.branch.student',
+                    recoveryEmail: 'tampered@example.test',
+                    temporaryPassword: 'Temporary!123'
+                );
+
+            $this->fail(
+                'Expected persisted Student Branch scope to reject the tampered Student instance.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $persistedStudent =
+            Student::withoutGlobalScopes()
+            ->findOrFail(
+                $student->id
+            );
+
+        $this->assertSame(
+            $otherBranch->id,
+            $persistedStudent->branch_id
+        );
+
+        $this->assertNull(
+            $persistedStudent->user_id
+        );
+
+        $this->assertDatabaseMissing(
+            'users',
+            [
+                'account_login_identifier' =>
+                'tampered.branch.student',
+            ]
+        );
+    }
+
+    public function test_student_account_creation_and_link_roll_back_when_second_audit_fails(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $student = Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->active()
+            ->create();
+
+        $centerOwner = $this->createUserForRole(
+            SystemRole::CenterOwner,
+            $center
+        );
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        /*
+        * First Audit call represents user_account.created
+        * and succeeds.
+        *
+        * Second Audit call represents student.account_linked
+        * and fails.
+        */
+        $realAudit = app(
+            AuditRecorder::class
+        );
+
+        $failingAudit = \Mockery::mock(
+            AuditRecorder::class
+        );
+
+        /*
+        * Let the first Audit call execute normally.
+        *
+        * Because it runs inside the same database transaction,
+        * its persisted AuditRecord must also be rolled back
+        * when the second Audit call fails.
+        */
+        $failingAudit
+            ->shouldReceive('record')
+            ->once()
+            ->ordered()
+            ->andReturnUsing(
+                function (...$arguments) use (
+                    $realAudit
+                ): AuditRecord {
+                    return $realAudit->record(
+                        ...$arguments
+                    );
+                }
+            );
+
+        /*
+        * Fail the second Audit call after the User Account
+        * has been created and Student.user_id has been linked.
+        */
+        $failingAudit
+            ->shouldReceive('record')
+            ->once()
+            ->ordered()
+            ->andThrow(
+                new LogicException(
+                    'Simulated second audit failure.'
+                )
+            );
+
+        $this->app->instance(
+            AuditRecorder::class,
+            $failingAudit
+        );
+
+        try {
+            $this->service()
+                ->createStudentAccountForStudent(
+                    actor: $centerOwner,
+                    student: $student,
+                    accountLoginIdentifier: 'rollback.student.account',
+                    recoveryEmail: 'rollback.student@example.test',
+                    temporaryPassword: 'Temporary!123'
+                );
+
+            $this->fail(
+                'Expected second audit failure to abort Student account creation and linking.'
+            );
+        } catch (LogicException $exception) {
+            $this->assertSame(
+                'Simulated second audit failure.',
+                $exception->getMessage()
+            );
+        }
+
+        $student->refresh();
+
+        $this->assertNull(
+            $student->user_id
+        );
+
+        $this->assertDatabaseMissing(
+            'users',
+            [
+                'account_login_identifier' =>
+                'rollback.student.account',
+            ]
+        );
+
+        $this->assertDatabaseHas(
+            'students',
+            [
+                'id' => $student->id,
+                'person_id' => $person->id,
+                'branch_id' => $branch->id,
+                'user_id' => null,
+            ]
+        );
+
+        $this->assertDatabaseCount(
+            'audit_records',
+            0
+        );
+    }
+
+    public function test_branch_manager_can_deactivate_and_reactivate_linked_student_account_in_assigned_branch(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $account = $this->createCenterAccount(
+            SystemRole::Student,
+            $center,
+            $person
+        );
+
+        $student = Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->active()
+            ->create([
+                'user_id' => $account->id,
+            ]);
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $branch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $branch
+        );
+
+        $deactivated = $this->service()
+            ->deactivate(
+                $manager,
+                $account
+            );
+
+        $this->assertSame(
+            AccountStatus::Deactivated,
+            $deactivated->status
+        );
+
+        $this->assertNotNull(
+            $deactivated->deactivated_at
+        );
+
+        $student->refresh();
+
+        $this->assertSame(
+            $account->id,
+            $student->user_id
+        );
+
+        $activated = $this->service()
+            ->activate(
+                $manager,
+                $deactivated
+            );
+
+        $this->assertSame(
+            AccountStatus::Active,
+            $activated->status
+        );
+
+        $this->assertNull(
+            $activated->deactivated_at
+        );
+
+        $this->assertDatabaseHas(
+            'students',
+            [
+                'id' => $student->id,
+                'user_id' => $account->id,
+            ]
+        );
+
+        $this->assertSame(
+            1,
+            AuditRecord::withoutGlobalScopes()
+                ->where(
+                    'action_type',
+                    'user_account.deactivated'
+                )
+                ->where(
+                    'subject_id',
+                    $account->id
+                )
+                ->count()
+        );
+
+        $this->assertSame(
+            1,
+            AuditRecord::withoutGlobalScopes()
+                ->where(
+                    'action_type',
+                    'user_account.activated'
+                )
+                ->where(
+                    'subject_id',
+                    $account->id
+                )
+                ->count()
+        );
+    }
+
+    public function test_branch_manager_can_issue_temporary_password_for_linked_student_account_in_assigned_branch(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $person = Person::factory()
+            ->for($center)
+            ->create();
+
+        $account = $this->createCenterAccount(
+            SystemRole::Student,
+            $center,
+            $person
+        );
+
+        Student::factory()
+            ->forBranch($branch)
+            ->forPerson($person)
+            ->active()
+            ->create([
+                'user_id' => $account->id,
+            ]);
+
+        $account->forceFill([
+            'failed_login_attempts' => 4,
+            'locked_until' => now()
+                ->addMinutes(10),
+            'must_change_password' => false,
+        ])->save();
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $branch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $branch
+        );
+
+        $updated = $this->service()
+            ->issueTemporaryPassword(
+                $manager,
+                $account,
+                'BranchReset!123'
+            );
+
+        $this->assertTrue(
+            Hash::check(
+                'BranchReset!123',
+                $updated->password
+            )
+        );
+
+        $this->assertTrue(
+            $updated->must_change_password
+        );
+
+        $this->assertNull(
+            $updated->temporary_password_used_at
+        );
+
+        $this->assertSame(
+            0,
+            $updated->failed_login_attempts
+        );
+
+        $this->assertNull(
+            $updated->locked_until
+        );
+
+        $this->assertSame(
+            1,
+            AuditRecord::withoutGlobalScopes()
+                ->where(
+                    'action_type',
+                    'user_account.temporary_password_issued'
+                )
+                ->where(
+                    'subject_id',
+                    $account->id
+                )
+                ->count()
+        );
+    }
+
+    public function test_branch_manager_cannot_manage_non_student_account_even_inside_same_center(): void
+    {
+        $center = Center::factory()
+            ->active()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->active()
+            ->create();
+
+        $teacher = $this->createCenterAccount(
+            SystemRole::Teacher,
+            $center
+        );
+
+        $manager = $this->createUserForRole(
+            SystemRole::BranchManager,
+            $center
+        );
+
+        $this->assignManager(
+            $manager,
+            $branch
+        );
+
+        $this->establishBranchContext(
+            $center,
+            $branch
+        );
+
+        $originalRecoveryEmail =
+            $teacher->recovery_email;
+
+        try {
+            $this->service()
+                ->update(
+                    $manager,
+                    $teacher,
+                    [
+                        'recovery_email' =>
+                        'unauthorized@example.test',
+                    ]
+                );
+
+            $this->fail(
+                'Expected Branch Manager management of non-Student account to be rejected.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $teacher->refresh();
+
+        $this->assertSame(
+            $originalRecoveryEmail,
+            $teacher->recovery_email
+        );
+
+        $this->assertDatabaseCount(
+            'audit_records',
+            0
+        );
+    }
     public function test_general_account_update_changes_only_allowed_identity_fields(): void
     {
         $center = Center::factory()
@@ -1421,6 +2542,42 @@ class UserAccountManagementServiceTest extends TestCase
             ->establishCenterScope(
                 $center
             );
+    }
+
+    private function establishBranchContext(
+        Center $center,
+        Branch $branch
+    ): void {
+        app(TenantContext::class)
+            ->establishCenterScope(
+                $center
+            );
+
+        app(BranchContext::class)
+            ->establishBranchScope(
+                $branch
+            );
+    }
+
+    private function assignManager(
+        User $manager,
+        Branch $branch
+    ): BranchManagerAssignment {
+        return BranchManagerAssignment::query()
+            ->create([
+                'center_id' =>
+                $branch->center_id,
+
+                'user_id' =>
+                $manager->id,
+
+                'branch_id' =>
+                $branch->id,
+
+                'started_at' => now(),
+                'ended_at' => null,
+                'active_marker' => 1,
+            ]);
     }
 
     private function createUserForRole(
