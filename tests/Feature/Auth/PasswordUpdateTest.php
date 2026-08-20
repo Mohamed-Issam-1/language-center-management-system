@@ -74,27 +74,38 @@ class PasswordUpdateTest extends TestCase
         );
     }
 
-    public function test_forced_password_change_clears_temporary_password_state(): void
+    public function test_forced_password_change_clears_temporary_password_state_and_logs_user_out(): void
     {
         $user = User::factory()
             ->requiresPasswordChange()
             ->create([
-                'temporary_password_used_at' => now(),
+                'temporary_password_used_at' =>
+                now(),
             ]);
 
         $response = $this
             ->actingAs($user)
             ->put('/password', [
-                'current_password' => 'password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
+                'current_password' =>
+                'password',
+
+                'password' =>
+                'new-password',
+
+                'password_confirmation' =>
+                'new-password',
             ]);
 
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect(
-                route('dashboard', absolute: false)
+                route(
+                    'login',
+                    absolute: false
+                )
             );
+
+        $this->assertGuest();
 
         $user->refresh();
 
@@ -117,6 +128,7 @@ class PasswordUpdateTest extends TestCase
             )
         );
     }
+
 
     public function test_forced_password_change_requires_a_different_password(): void
     {
@@ -162,74 +174,74 @@ class PasswordUpdateTest extends TestCase
     }
 
     public function test_deactivated_account_cannot_update_password_using_existing_session(): void
-{
-    $user = User::factory()
-        ->deactivated()
-        ->create();
+    {
+        $user = User::factory()
+            ->deactivated()
+            ->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->put('/password', [
-            'current_password' => 'password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ]);
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ]);
 
-    $response->assertForbidden();
+        $response->assertForbidden();
 
-    $user->refresh();
+        $user->refresh();
 
-    $this->assertTrue(
-        Hash::check(
-            'password',
-            $user->password
-        )
-    );
+        $this->assertTrue(
+            Hash::check(
+                'password',
+                $user->password
+            )
+        );
 
-    $this->assertNull(
-        $user->password_changed_at
-    );
+        $this->assertNull(
+            $user->password_changed_at
+        );
 
-    $this->assertSame(
-        AccountStatus::Deactivated,
-        $user->status
-    );
-}
+        $this->assertSame(
+            AccountStatus::Deactivated,
+            $user->status
+        );
+    }
 
-public function test_pending_account_cannot_update_password_using_authenticated_session(): void
-{
-    $user = User::factory()
-        ->pending()
-        ->create();
+    public function test_pending_account_cannot_update_password_using_authenticated_session(): void
+    {
+        $user = User::factory()
+            ->pending()
+            ->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->from('/profile')
-        ->put('/password', [
-            'current_password' => 'password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ]);
+        $response = $this
+            ->actingAs($user)
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ]);
 
-    $response->assertForbidden();
+        $response->assertForbidden();
 
-    $user->refresh();
+        $user->refresh();
 
-    $this->assertTrue(
-        Hash::check(
-            'password',
-            $user->password
-        )
-    );
+        $this->assertTrue(
+            Hash::check(
+                'password',
+                $user->password
+            )
+        );
 
-    $this->assertNull(
-        $user->password_changed_at
-    );
+        $this->assertNull(
+            $user->password_changed_at
+        );
 
-    $this->assertSame(
-        AccountStatus::Pending,
-        $user->status
-    );
-}
+        $this->assertSame(
+            AccountStatus::Pending,
+            $user->status
+        );
+    }
 }

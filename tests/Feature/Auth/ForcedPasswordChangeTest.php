@@ -166,28 +166,69 @@ class ForcedPasswordChangeTest extends TestCase
         );
     }
 
-    public function test_forced_password_change_restores_normal_access(): void
+    public function test_forced_password_change_requires_reauthentication_with_new_password(): void
     {
         $user = User::factory()
             ->requiresPasswordChange()
             ->create([
-                'account_login_identifier' => 'change.required',
+                'account_login_identifier' =>
+                'change.required',
             ]);
 
-        $this->post('/login', [
-            'account_login_identifier' => 'change.required',
-            'password' => 'password',
-        ]);
+        /*
+     * First login uses the temporary credential.
+     */
+        $loginResponse = $this->post(
+            '/login',
+            [
+                'account_login_identifier' =>
+                'change.required',
 
-        $response = $this->put('/password', [
-            'current_password' => 'password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ]);
-
-        $response->assertRedirect(
-            route('dashboard', absolute: false)
+                'password' =>
+                'password',
+            ]
         );
+
+        $this->assertAuthenticatedAs(
+            $user
+        );
+
+        $loginResponse->assertRedirect(
+            route(
+                'profile.edit',
+                absolute: false
+            )
+        );
+
+        /*
+     * Establish a permanent password.
+     */
+        $passwordResponse = $this->put(
+            '/password',
+            [
+                'current_password' =>
+                'password',
+
+                'password' =>
+                'new-password',
+
+                'password_confirmation' =>
+                'new-password',
+            ]
+        );
+
+        $passwordResponse->assertRedirect(
+            route(
+                'login',
+                absolute: false
+            )
+        );
+
+        /*
+     * The session authenticated using the temporary
+     * credential must be terminated.
+     */
+        $this->assertGuest();
 
         $user->refresh();
 
@@ -210,7 +251,55 @@ class ForcedPasswordChangeTest extends TestCase
             )
         );
 
-        $dashboardResponse = $this->get('/dashboard');
+        /*
+     * The old temporary password no longer works.
+     */
+        $oldPasswordResponse = $this->post(
+            '/login',
+            [
+                'account_login_identifier' =>
+                'change.required',
+
+                'password' =>
+                'password',
+            ]
+        );
+
+        $oldPasswordResponse
+            ->assertSessionHasErrors(
+                'account_login_identifier'
+            );
+
+        $this->assertGuest();
+
+        /*
+     * The new permanent password starts a fresh
+     * authenticated session.
+     */
+        $newPasswordResponse = $this->post(
+            '/login',
+            [
+                'account_login_identifier' =>
+                'change.required',
+
+                'password' =>
+                'new-password',
+            ]
+        );
+
+        $this->assertAuthenticatedAs(
+            $user
+        );
+
+        $newPasswordResponse->assertRedirect(
+            route(
+                'dashboard',
+                absolute: false
+            )
+        );
+
+        $dashboardResponse =
+            $this->get('/dashboard');
 
         $dashboardResponse->assertOk();
     }
