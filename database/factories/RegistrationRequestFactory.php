@@ -59,6 +59,9 @@ class RegistrationRequestFactory extends Factory
             'selected_role_id' =>
             null,
 
+            'selected_branch_id' =>
+            null,
+
             'reviewed_by_user_id' =>
             null,
 

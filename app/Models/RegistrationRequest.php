@@ -25,6 +25,7 @@ class RegistrationRequest extends Model
         'personal_picture_path',
         'status',
         'selected_role_id',
+        'selected_branch_id',
         'reviewed_by_user_id',
         'reviewed_at',
         'rejection_reason',
@@ -37,7 +38,7 @@ class RegistrationRequest extends Model
             'date_of_birth' => 'date',
 
             'status' =>
-                RegistrationRequestStatus::class,
+            RegistrationRequestStatus::class,
 
             'reviewed_at' => 'datetime',
 
@@ -57,6 +58,14 @@ class RegistrationRequest extends Model
         return $this->belongsTo(
             Role::class,
             'selected_role_id'
+        );
+    }
+
+    public function selectedBranch(): BelongsTo
+    {
+        return $this->belongsTo(
+            Branch::class,
+            'selected_branch_id'
         );
     }
 

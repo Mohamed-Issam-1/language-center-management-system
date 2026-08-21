@@ -4,6 +4,7 @@ namespace Tests\Feature\Tenancy;
 
 use App\Models\Center;
 use App\Models\RegistrationRequest;
+use App\Models\Branch;
 use App\Support\Enums\RegistrationRequestStatus;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -147,6 +148,117 @@ class RegistrationRequestFoundationTest extends TestCase
                 'national_id_number' =>
                 '111222333',
             ]);
+    }
+
+    public function test_registration_request_can_select_branch_from_same_center(): void
+    {
+        $center = Center::factory()
+            ->create();
+
+        $branch = Branch::factory()
+            ->for($center)
+            ->create();
+
+        $request = RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_branch_id' =>
+                $branch->id,
+            ]);
+
+        $this->assertTrue(
+            $request
+                ->selectedBranch
+                ->is($branch)
+        );
+
+        $this->assertSame(
+            $center->id,
+            $request
+                ->selectedBranch
+                ->center_id
+        );
+    }
+
+    public function test_registration_request_cannot_select_branch_from_another_center(): void
+    {
+        $centerA = Center::factory()
+            ->create();
+
+        $centerB = Center::factory()
+            ->create();
+
+        $branchB = Branch::factory()
+            ->for($centerB)
+            ->create();
+
+        $this->expectException(
+            QueryException::class
+        );
+
+        RegistrationRequest::factory()
+            ->for($centerA)
+            ->create([
+                'selected_branch_id' =>
+                $branchB->id,
+            ]);
+    }
+
+    public function test_registration_request_may_have_no_selected_branch_while_pending_review(): void
+    {
+        $request =
+            RegistrationRequest::factory()
+            ->create();
+
+        $this->assertNull(
+            $request->selected_branch_id
+        );
+
+        $this->assertNull(
+            $request->selectedBranch
+        );
+    }
+
+    public function test_branch_exposes_registration_requests_that_selected_it(): void
+    {
+        $center = Center::factory()
+            ->create();
+
+        $branchA = Branch::factory()
+            ->for($center)
+            ->create();
+
+        $branchB = Branch::factory()
+            ->for($center)
+            ->create();
+
+        $request =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_branch_id' =>
+                $branchA->id,
+            ]);
+
+        RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_branch_id' =>
+                $branchB->id,
+            ]);
+
+        $this->assertCount(
+            1,
+            $branchA
+                ->selectedRegistrationRequests
+        );
+
+        $this->assertTrue(
+            $branchA
+                ->selectedRegistrationRequests
+                ->first()
+                ->is($request)
+        );
     }
 
     public function test_completed_request_history_does_not_block_a_new_pending_request(): void

@@ -40,6 +40,14 @@ class Branch extends Model
         return $this->belongsTo(Center::class);
     }
 
+    public function selectedRegistrationRequests(): HasMany
+    {
+        return $this->hasMany(
+            RegistrationRequest::class,
+            'selected_branch_id'
+        );
+    }
+
     public function branchManagerAssignments(): HasMany
     {
         return $this->hasMany(
