@@ -16,4 +16,12 @@ class Role extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function selectedRegistrationRequests(): HasMany
+    {
+        return $this->hasMany(
+            RegistrationRequest::class,
+            'selected_role_id'
+        );
+    }
 }

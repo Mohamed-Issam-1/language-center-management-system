@@ -62,4 +62,11 @@ class Center extends Model
             Student::class
         );
     }
+
+    public function registrationRequests(): HasMany
+    {
+        return $this->hasMany(
+            RegistrationRequest::class
+        );
+    }
 }

@@ -101,6 +101,14 @@ class User extends Authenticatable
         );
     }
 
+    public function reviewedRegistrationRequests(): HasMany
+    {
+        return $this->hasMany(
+            RegistrationRequest::class,
+            'reviewed_by_user_id'
+        );
+    }
+
     public function branchManagerAssignments(): HasMany
     {
         return $this->hasMany(
