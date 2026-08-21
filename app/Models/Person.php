@@ -49,4 +49,25 @@ class Person extends Model
             Student::class
         );
     }
+
+    public function teacher(): HasOne
+    {
+        return $this->hasOne(
+            Teacher::class
+        );
+    }
+
+    public function branchManager(): HasOne
+    {
+        return $this->hasOne(
+            BranchManager::class
+        );
+    }
+
+    public function financeEmployee(): HasOne
+    {
+        return $this->hasOne(
+            FinanceEmployee::class
+        );
+    }
 }
