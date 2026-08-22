@@ -8,6 +8,8 @@ use App\Support\Enums\SystemPermission;
 use App\Support\Enums\SystemRole;
 use App\Support\Traits\HasCenterScope;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasCenterScope, Notifiable;
@@ -98,6 +100,49 @@ class User extends Authenticatable
         return RolePermissionRegistry::allows(
             $role,
             $permission
+        );
+    }
+
+    public function canAccessPanel(
+        Panel $panel
+    ): bool {
+        /*
+         * LCMS currently exposes one internal Filament panel.
+         *
+         * Panel access is deliberately narrower than application
+         * authentication: Teacher and Student use the custom
+         * application UI rather than the internal administration
+         * panel.
+         */
+        if ($panel->getId() !== 'admin') {
+            return false;
+        }
+
+        /*
+         * An existing authenticated session must not preserve
+         * Filament access after the account has been deactivated
+         * or moved to another non-active lifecycle state.
+         */
+        if ($this->status !== AccountStatus::Active) {
+            return false;
+        }
+
+        /*
+         * must_change_password is intentionally not checked here.
+         *
+         * The shared forced-password middleware redirects such an
+         * account to the existing password-change workflow instead
+         * of turning that lifecycle requirement into a 403 response.
+         */
+        return in_array(
+            $this->systemRole(),
+            [
+                SystemRole::PlatformOwner,
+                SystemRole::CenterOwner,
+                SystemRole::BranchManager,
+                SystemRole::FinanceEmployee,
+            ],
+            true
         );
     }
 
