@@ -34,13 +34,14 @@ class RegistrationReviewServiceTest extends TestCase
         );
     }
 
-    public function test_platform_owner_can_select_center_owner_role(): void
+    public function test_platform_owner_cannot_classify_public_registration_as_center_owner(): void
     {
         $center =
             \App\Models\Center::factory()
             ->create();
 
-        $actor = $this->platformOwner();
+        $actor =
+            $this->platformOwner();
 
         $request =
             RegistrationRequest::factory()
@@ -50,18 +51,24 @@ class RegistrationReviewServiceTest extends TestCase
         app(TenantContext::class)
             ->establishPlatformScope();
 
-        $request =
+        try {
             $this->service()
-            ->selectRole(
-                $actor,
-                $request,
-                SystemRole::CenterOwner
-            );
+                ->selectRole(
+                    $actor,
+                    $request,
+                    SystemRole::CenterOwner
+                );
 
-        $this->assertSame(
-            $this->role(
-                SystemRole::CenterOwner
-            )->id,
+            $this->fail(
+                'Expected Platform Owner public registration review to be rejected.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $request->refresh();
+
+        $this->assertNull(
             $request->selected_role_id
         );
 
@@ -69,14 +76,11 @@ class RegistrationReviewServiceTest extends TestCase
             $request->selected_branch_id
         );
 
-        $this->assertDatabaseHas(
+        $this->assertDatabaseMissing(
             'audit_records',
             [
                 'action_type' =>
                 'registration_request.role_selected',
-
-                'subject_type' =>
-                'registration_requests',
 
                 'subject_id' =>
                 $request->id,

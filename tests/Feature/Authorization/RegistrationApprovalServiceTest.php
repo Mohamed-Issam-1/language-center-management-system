@@ -40,11 +40,12 @@ class RegistrationApprovalServiceTest extends TestCase
         );
     }
 
-    public function test_platform_owner_can_approve_center_owner_registration(): void
+    public function test_platform_owner_cannot_approve_center_owner_through_public_registration_workflow(): void
     {
-        $center = $this->center(
-            '01'
-        );
+        $center =
+            $this->center(
+                '01'
+            );
 
         $actor =
             $this->platformOwner();
@@ -58,91 +59,81 @@ class RegistrationApprovalServiceTest extends TestCase
                     '900000001',
 
                     'full_name' =>
-                    'New Center Owner',
+                    'Public Center Owner Attempt',
 
                     'email' =>
-                    'OWNER@EXAMPLE.TEST',
+                    'owner@example.test',
                 ]
             );
 
         $this->establishPlatformContext();
 
-        $result = $this->service()
-            ->approve(
-                $actor,
-                $request
-            );
-
-        $this->assertSame(
-            SystemRole::CenterOwner,
-            $result->role
-        );
-
-        $this->assertSame(
-            '01100001',
-            $result->account
-                ->account_login_identifier
-        );
-
-        $this->assertSame(
-            'owner@example.test',
-            $result->recipientEmail
-        );
-
-        $this->assertSame(
-            $result->person->id,
-            $result->account->person_id
-        );
-
-        $this->assertSame(
-            $center->id,
-            $result->account->center_id
-        );
-
-        $this->assertSame(
-            SystemRole::CenterOwner,
-            $result->account->systemRole()
-        );
-
-        $this->assertTrue(
-            $result->account
-                ->must_change_password
-        );
-
-        $this->assertTrue(
-            Hash::check(
-                $result->temporaryPassword,
-                $result->account->password
+        $beforeUserCount =
+            User::withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $center->id
             )
-        );
+            ->count();
 
-        $this->assertNotSame(
-            $result->temporaryPassword,
-            $result->account->password
-        );
+        $beforePersonCount =
+            Person::withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $center->id
+            )
+            ->count();
+
+        try {
+            $this->service()
+                ->approve(
+                    $actor,
+                    $request
+                );
+
+            $this->fail(
+                'Expected Platform Owner public Registration Request approval to be rejected.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $request->refresh();
 
         $this->assertSame(
-            RegistrationRequestStatus::Approved,
-            $result->registrationRequest->status
-        );
-
-        $this->assertSame(
-            $actor->id,
-            $result->registrationRequest
-                ->reviewed_by_user_id
-        );
-
-        $this->assertNotNull(
-            $result->registrationRequest
-                ->reviewed_at
+            RegistrationRequestStatus::Pending,
+            $request->status
         );
 
         $this->assertNull(
-            $result->registrationRequest
-                ->pending_marker
+            $request->reviewed_by_user_id
         );
 
-        $this->assertDatabaseHas(
+        $this->assertNull(
+            $request->reviewed_at
+        );
+
+        $this->assertSame(
+            $beforeUserCount,
+            User::withoutGlobalScopes()
+                ->where(
+                    'center_id',
+                    $center->id
+                )
+                ->count()
+        );
+
+        $this->assertSame(
+            $beforePersonCount,
+            Person::withoutGlobalScopes()
+                ->where(
+                    'center_id',
+                    $center->id
+                )
+                ->count()
+        );
+
+        $this->assertDatabaseMissing(
             'audit_records',
             [
                 'action_type' =>

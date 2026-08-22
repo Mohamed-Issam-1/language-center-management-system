@@ -387,7 +387,6 @@ class RegistrationReviewService
                 'Platform Owner is not a valid target for a Center Registration Request.'
             );
         }
-
         if (
             $actorRole
             === SystemRole::PlatformOwner
@@ -396,22 +395,18 @@ class RegistrationReviewService
                 $actor
             );
 
-            Gate::forUser($actor)
-                ->authorize(
-                    SystemPermission::ManageCenterOwnerAccounts
-                        ->value
-                );
-
-            if (
-                $targetRole
-                !== SystemRole::CenterOwner
-            ) {
-                throw new AuthorizationException(
-                    'Platform Owner may review only Center Owner registration requests.'
-                );
-            }
-
-            return;
+            /*
+            * Public Center Registration Requests are reviewed only
+            * inside the Center operational workflow.
+            *
+            * Center Owner accounts are privileged platform-managed
+            * accounts and must be created through the dedicated
+            * Platform Owner account-management workflow instead of
+            * being promoted from a public Registration Request.
+            */
+            throw new AuthorizationException(
+                'Platform Owner does not review public Center Registration Requests. Center Owner accounts are managed through the platform account workflow.'
+            );
         }
 
         $this->ensureCenterScope(
