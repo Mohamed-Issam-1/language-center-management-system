@@ -480,9 +480,31 @@ class RegistrationReviewService
                 );
             }
 
+            /*
+            * Classification and initial Branch routing belong to
+            * the Center Owner.
+            *
+            * A Branch Manager may participate only after the
+            * Registration Request has already been classified as
+            * Student and explicitly assigned to a Branch.
+            *
+            * This prevents a Branch Manager from claiming an
+            * unclassified request by selecting Student and then
+            * assigning the Manager's own Branch.
+            */
+            if (
+                $request->selected_role_id === null
+                || $request->selected_branch_id === null
+            ) {
+                throw new AuthorizationException(
+                    'Branch Manager may review only Student registration requests already assigned to the Manager\'s active Branch.'
+                );
+            }
+
             $this->ensureBranchManagerOwnsBranch(
                 $actor,
-                $request
+                $request,
+                $request->selected_branch_id
             );
 
             return;

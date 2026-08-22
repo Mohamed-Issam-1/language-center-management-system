@@ -192,7 +192,7 @@ class RegistrationReviewServiceTest extends TestCase
             );
     }
 
-    public function test_branch_manager_can_select_only_student_role(): void
+    public function test_branch_manager_cannot_classify_unclassified_request_as_student(): void
     {
         $center =
             \App\Models\Center::factory()
@@ -214,35 +214,15 @@ class RegistrationReviewServiceTest extends TestCase
             $branch
         );
 
+        $request =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create();
+
         app(TenantContext::class)
             ->establishCenterScope(
                 $center
             );
-
-        $studentRequest =
-            RegistrationRequest::factory()
-            ->for($center)
-            ->create();
-
-        $reviewed =
-            $this->service()
-            ->selectRole(
-                $actor,
-                $studentRequest,
-                SystemRole::Student
-            );
-
-        $this->assertSame(
-            $this->role(
-                SystemRole::Student
-            )->id,
-            $reviewed->selected_role_id
-        );
-
-        $teacherRequest =
-            RegistrationRequest::factory()
-            ->for($center)
-            ->create();
 
         $this->expectException(
             AuthorizationException::class
@@ -251,7 +231,59 @@ class RegistrationReviewServiceTest extends TestCase
         $this->service()
             ->selectRole(
                 $actor,
-                $teacherRequest,
+                $request,
+                SystemRole::Student
+            );
+    }
+
+    public function test_branch_manager_cannot_select_non_student_role(): void
+    {
+        $center =
+            \App\Models\Center::factory()
+            ->create();
+
+        $branch =
+            Branch::factory()
+            ->for($center)
+            ->create();
+
+        $actor =
+            $this->centerActor(
+                $center,
+                SystemRole::BranchManager
+            );
+
+        $this->assignBranchManager(
+            $actor,
+            $branch
+        );
+
+        $request =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_role_id' =>
+                $this->role(
+                    SystemRole::Student
+                )->id,
+
+                'selected_branch_id' =>
+                $branch->id,
+            ]);
+
+        app(TenantContext::class)
+            ->establishCenterScope(
+                $center
+            );
+
+        $this->expectException(
+            AuthorizationException::class
+        );
+
+        $this->service()
+            ->selectRole(
+                $actor,
+                $request,
                 SystemRole::Teacher
             );
     }
@@ -415,18 +447,13 @@ class RegistrationReviewServiceTest extends TestCase
             );
     }
 
-    public function test_branch_manager_can_select_only_own_assigned_branch(): void
+    public function test_branch_manager_cannot_select_initial_branch_for_student_request(): void
     {
         $center =
             \App\Models\Center::factory()
             ->create();
 
         $ownBranch =
-            Branch::factory()
-            ->for($center)
-            ->create();
-
-        $otherBranch =
             Branch::factory()
             ->for($center)
             ->create();
@@ -450,6 +477,9 @@ class RegistrationReviewServiceTest extends TestCase
                 $this->role(
                     SystemRole::Student
                 )->id,
+
+                'selected_branch_id' =>
+                null,
             ]);
 
         app(TenantContext::class)
@@ -465,7 +495,259 @@ class RegistrationReviewServiceTest extends TestCase
             ->selectBranch(
                 $actor,
                 $request,
-                $otherBranch
+                $ownBranch
+            );
+    }
+
+    public function test_branch_manager_can_reconfirm_student_role_already_assigned_to_own_branch(): void
+    {
+        $center =
+            \App\Models\Center::factory()
+            ->create();
+
+        $branch =
+            Branch::factory()
+            ->for($center)
+            ->create();
+
+        $actor =
+            $this->centerActor(
+                $center,
+                SystemRole::BranchManager
+            );
+
+        $this->assignBranchManager(
+            $actor,
+            $branch
+        );
+
+        $request =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_role_id' =>
+                $this->role(
+                    SystemRole::Student
+                )->id,
+
+                'selected_branch_id' =>
+                $branch->id,
+            ]);
+
+        app(TenantContext::class)
+            ->establishCenterScope(
+                $center
+            );
+
+        $reviewed =
+            $this->service()
+            ->selectRole(
+                $actor,
+                $request,
+                SystemRole::Student
+            );
+
+        $this->assertSame(
+            $this->role(
+                SystemRole::Student
+            )->id,
+            $reviewed->selected_role_id
+        );
+
+        $this->assertSame(
+            $branch->id,
+            $reviewed->selected_branch_id
+        );
+
+        /*
+     * Idempotent authorization must not generate a false
+     * role-change Audit record.
+     */
+        $this->assertDatabaseMissing(
+            'audit_records',
+            [
+                'action_type' =>
+                'registration_request.role_selected',
+
+                'subject_id' =>
+                $request->id,
+            ]
+        );
+    }
+
+    public function test_branch_manager_can_reconfirm_existing_own_branch_selection(): void
+    {
+        $center =
+            \App\Models\Center::factory()
+            ->create();
+
+        $branch =
+            Branch::factory()
+            ->for($center)
+            ->create();
+
+        $actor =
+            $this->centerActor(
+                $center,
+                SystemRole::BranchManager
+            );
+
+        $this->assignBranchManager(
+            $actor,
+            $branch
+        );
+
+        $request =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_role_id' =>
+                $this->role(
+                    SystemRole::Student
+                )->id,
+
+                'selected_branch_id' =>
+                $branch->id,
+            ]);
+
+        app(TenantContext::class)
+            ->establishCenterScope(
+                $center
+            );
+
+        $reviewed =
+            $this->service()
+            ->selectBranch(
+                $actor,
+                $request,
+                $branch
+            );
+
+        $this->assertSame(
+            $branch->id,
+            $reviewed->selected_branch_id
+        );
+
+        $this->assertDatabaseMissing(
+            'audit_records',
+            [
+                'action_type' =>
+                'registration_request.branch_selected',
+
+                'subject_id' =>
+                $request->id,
+            ]
+        );
+    }
+
+    public function test_branch_manager_can_reject_student_assigned_to_own_branch(): void
+    {
+        $center =
+            \App\Models\Center::factory()
+            ->create();
+
+        $branch =
+            Branch::factory()
+            ->for($center)
+            ->create();
+
+        $actor =
+            $this->centerActor(
+                $center,
+                SystemRole::BranchManager
+            );
+
+        $this->assignBranchManager(
+            $actor,
+            $branch
+        );
+
+        $request =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_role_id' =>
+                $this->role(
+                    SystemRole::Student
+                )->id,
+
+                'selected_branch_id' =>
+                $branch->id,
+            ]);
+
+        app(TenantContext::class)
+            ->establishCenterScope(
+                $center
+            );
+
+        $rejected =
+            $this->service()
+            ->reject(
+                $actor,
+                $request,
+                'Student information could not be verified.'
+            );
+
+        $this->assertSame(
+            RegistrationRequestStatus::Rejected,
+            $rejected->status
+        );
+
+        $this->assertSame(
+            $actor->id,
+            $rejected->reviewed_by_user_id
+        );
+    }
+
+    public function test_branch_manager_cannot_reject_student_without_center_owner_branch_assignment(): void
+    {
+        $center =
+            \App\Models\Center::factory()
+            ->create();
+
+        $branch =
+            Branch::factory()
+            ->for($center)
+            ->create();
+
+        $actor =
+            $this->centerActor(
+                $center,
+                SystemRole::BranchManager
+            );
+
+        $this->assignBranchManager(
+            $actor,
+            $branch
+        );
+
+        $request =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'selected_role_id' =>
+                $this->role(
+                    SystemRole::Student
+                )->id,
+
+                'selected_branch_id' =>
+                null,
+            ]);
+
+        app(TenantContext::class)
+            ->establishCenterScope(
+                $center
+            );
+
+        $this->expectException(
+            AuthorizationException::class
+        );
+
+        $this->service()
+            ->reject(
+                $actor,
+                $request,
+                'Should not be allowed.'
             );
     }
 
