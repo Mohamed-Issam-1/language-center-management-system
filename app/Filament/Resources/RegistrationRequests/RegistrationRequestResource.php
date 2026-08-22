@@ -29,6 +29,14 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Illuminate\Auth\Access\AuthorizationException;
+use App\Models\Person;
+use App\Services\Registration\RegistrationApprovalService;
+use App\Services\Registration\RegistrationCredentialsDeliveryService;
+use App\Services\Registration\RegistrationCredentialsReissueService;
+use App\Support\Enums\AccountStatus;
+use InvalidArgumentException;
+use LogicException;
+use Throwable;
 
 class RegistrationRequestResource extends Resource
 {
@@ -484,6 +492,108 @@ class RegistrationRequestResource extends Resource
                         }
                     ),
 
+                Action::make('approve')
+                    ->label('Approve')
+                    ->color('success')
+                    ->visible(
+                        fn(
+                            RegistrationRequest $record
+                        ): bool =>
+                        static::canApproveAction(
+                            $record
+                        )
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading(
+                        'Approve Registration Request'
+                    )
+                    ->modalDescription(
+                        'Confirm that you reviewed the applicant identity, selected role, and Branch when required. Approval will create the User Account and operational records.'
+                    )
+                    ->modalSubmitActionLabel(
+                        'Approve Registration'
+                    )
+                    ->action(
+                        function (
+                            RegistrationRequest $record
+                        ): void {
+                            $actor =
+                                auth()->user();
+
+                            if (! $actor instanceof User) {
+                                static::reviewFailure(
+                                    'The authenticated User Account could not be resolved.'
+                                );
+
+                                return;
+                            }
+
+                            try {
+                                /*
+                 * Approval commits all LCMS database state first.
+                 *
+                 * Email delivery deliberately happens only after
+                 * approve() has returned successfully.
+                 */
+                                $result =
+                                    app(
+                                        RegistrationApprovalService::class
+                                    )->approve(
+                                        $actor,
+                                        $record
+                                    );
+                            } catch (
+                                AuthorizationException
+                                | DomainException
+                                | InvalidArgumentException
+                                | LogicException $exception
+                            ) {
+                                static::reviewFailure(
+                                    $exception->getMessage()
+                                );
+
+                                return;
+                            }
+
+                            try {
+                                app(
+                                    RegistrationCredentialsDeliveryService::class
+                                )->deliver(
+                                    $result
+                                );
+                            } catch (Throwable) {
+                                /*
+                 * Approval has already committed.
+                 *
+                 * Never report this as an Approval failure and
+                 * never attempt to roll back the created account.
+                 */
+                                Notification::make()
+                                    ->title(
+                                        'Registration approved'
+                                    )
+                                    ->body(
+                                        'The account was created successfully, but the credentials email could not be delivered. Use Reissue Credentials to generate and send a new temporary password.'
+                                    )
+                                    ->warning()
+                                    ->persistent()
+                                    ->send();
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title(
+                                    'Registration approved'
+                                )
+                                ->body(
+                                    'The User Account was created and the sign-in credentials were sent successfully.'
+                                )
+                                ->success()
+                                ->send();
+                        }
+                    ),
+
                 Action::make('reject')
                     ->label('Reject')
                     ->color('danger')
@@ -552,6 +662,121 @@ class RegistrationRequestResource extends Resource
                             Notification::make()
                                 ->title(
                                     'Registration request rejected'
+                                )
+                                ->success()
+                                ->send();
+                        }
+                    ),
+                Action::make('reissueCredentials')
+                    ->label('Reissue Credentials')
+                    ->color('warning')
+                    ->visible(
+                        fn(
+                            RegistrationRequest $record
+                        ): bool =>
+                        static::canReissueCredentialsAction(
+                            $record
+                        )
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading(
+                        'Reissue Sign-in Credentials'
+                    )
+                    ->modalDescription(
+                        'A new temporary password will be generated. Any previous temporary password will immediately become invalid.'
+                    )
+                    ->modalSubmitActionLabel(
+                        'Reissue Credentials'
+                    )
+                    ->action(
+                        function (
+                            RegistrationRequest $record
+                        ): void {
+                            $actor =
+                                auth()->user();
+
+                            if (! $actor instanceof User) {
+                                static::reviewFailure(
+                                    'The authenticated User Account could not be resolved.'
+                                );
+
+                                return;
+                            }
+
+                            $account =
+                                static::approvedAccountForRequest(
+                                    $record
+                                );
+
+                            if ($account === null) {
+                                static::reviewFailure(
+                                    'The approved User Account could not be resolved.'
+                                );
+
+                                return;
+                            }
+
+                            /*
+             * This allows us to distinguish:
+             *
+             * 1. failure before password issuance, from
+             * 2. email failure after password issuance committed.
+             */
+                            $previousPasswordHash =
+                                (string) $account->password;
+
+                            try {
+                                app(
+                                    RegistrationCredentialsReissueService::class
+                                )->reissue(
+                                    $actor,
+                                    $account
+                                );
+                            } catch (Throwable $exception) {
+                                $account->refresh();
+
+                                $passwordWasReissued =
+                                    ! hash_equals(
+                                        $previousPasswordHash,
+                                        (string) $account->password
+                                    );
+
+                                if ($passwordWasReissued) {
+                                    Notification::make()
+                                        ->title(
+                                            'New credentials issued'
+                                        )
+                                        ->body(
+                                            'A new temporary password was generated successfully, but its email could not be delivered. The previous temporary password is no longer valid. You may retry Reissue Credentials.'
+                                        )
+                                        ->warning()
+                                        ->persistent()
+                                        ->send();
+
+                                    return;
+                                }
+
+                                $message =
+                                    $exception instanceof AuthorizationException
+                                    || $exception instanceof DomainException
+                                    || $exception instanceof InvalidArgumentException
+                                    || $exception instanceof LogicException
+                                    ? $exception->getMessage()
+                                    : 'The credentials could not be reissued.';
+
+                                static::reviewFailure(
+                                    $message
+                                );
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title(
+                                    'Credentials reissued'
+                                )
+                                ->body(
+                                    'A new temporary password was generated and sent successfully.'
                                 )
                                 ->success()
                                 ->send();
@@ -1022,6 +1247,242 @@ class RegistrationRequestResource extends Resource
             )
             ->danger()
             ->send();
+    }
+
+    private static function canApproveAction(
+        RegistrationRequest $record
+    ): bool {
+        if (
+            $record->status
+            !== RegistrationRequestStatus::Pending
+        ) {
+            return false;
+        }
+
+        $selectedRole =
+            static::selectedSystemRole(
+                $record
+            );
+
+        if (
+            $selectedRole === null
+            || ! array_key_exists(
+                $selectedRole->value,
+                static::reviewableRoleOptions()
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            static::roleRequiresBranch(
+                $selectedRole
+            )
+        ) {
+            if (
+                $record->selected_branch_id
+                === null
+                || ! static::selectedBranchIsActive(
+                    $record
+                )
+            ) {
+                return false;
+            }
+        } elseif (
+            $record->selected_branch_id
+            !== null
+        ) {
+            return false;
+        }
+
+        $actorRole =
+            static::authenticatedSystemRole();
+
+        if (
+            $actorRole
+            === SystemRole::CenterOwner
+        ) {
+            return true;
+        }
+
+        if (
+            $actorRole
+            !== SystemRole::BranchManager
+            || $selectedRole
+            !== SystemRole::Student
+        ) {
+            return false;
+        }
+
+        $branchId =
+            app(BranchContext::class)
+            ->branchId();
+
+        return $branchId !== null
+            && $record->selected_branch_id
+            === $branchId;
+    }
+
+    private static function canReissueCredentialsAction(
+        RegistrationRequest $record
+    ): bool {
+        if (
+            $record->status
+            !== RegistrationRequestStatus::Approved
+        ) {
+            return false;
+        }
+
+        $actorRole =
+            static::authenticatedSystemRole();
+
+        if (
+            $actorRole
+            !== SystemRole::CenterOwner
+            && $actorRole
+            !== SystemRole::BranchManager
+        ) {
+            return false;
+        }
+
+        if (
+            $actorRole
+            === SystemRole::BranchManager
+        ) {
+            if (
+                static::selectedSystemRole(
+                    $record
+                )
+                !== SystemRole::Student
+            ) {
+                return false;
+            }
+
+            $branchId =
+                app(BranchContext::class)
+                ->branchId();
+
+            if (
+                $branchId === null
+                || $record->selected_branch_id
+                !== $branchId
+            ) {
+                return false;
+            }
+        }
+
+        $account =
+            static::approvedAccountForRequest(
+                $record
+            );
+
+        if ($account === null) {
+            return false;
+        }
+
+        /*
+     * This action belongs to the Registration workflow,
+     * not the general administrative password-reset workflow.
+     *
+     * Once the user has completed the forced first-login
+     * password change, credential management belongs elsewhere.
+     */
+        return $account->status
+            === AccountStatus::Active
+            && $account->must_change_password;
+    }
+
+    private static function roleRequiresBranch(
+        SystemRole $role
+    ): bool {
+        return in_array(
+            $role,
+            [
+                SystemRole::Student,
+                SystemRole::FinanceEmployee,
+                SystemRole::BranchManager,
+            ],
+            true
+        );
+    }
+
+    private static function selectedBranchIsActive(
+        RegistrationRequest $record
+    ): bool {
+        if (
+            $record->selected_branch_id
+            === null
+        ) {
+            return false;
+        }
+
+        return Branch::withoutGlobalScopes()
+            ->whereKey(
+                $record->selected_branch_id
+            )
+            ->where(
+                'center_id',
+                $record->center_id
+            )
+            ->where(
+                'status',
+                BranchStatus::Active
+            )
+            ->exists();
+    }
+
+    private static function approvedAccountForRequest(
+        RegistrationRequest $record
+    ): ?User {
+        if (
+            $record->status
+            !== RegistrationRequestStatus::Approved
+            || $record->selected_role_id
+            === null
+        ) {
+            return null;
+        }
+
+        $nationalIdNumber =
+            trim(
+                (string)
+                $record->national_id_number
+            );
+
+        if ($nationalIdNumber === '') {
+            return null;
+        }
+
+        $person =
+            Person::withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $record->center_id
+            )
+            ->where(
+                'national_id_number',
+                $nationalIdNumber
+            )
+            ->first();
+
+        if ($person === null) {
+            return null;
+        }
+
+        return User::withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $record->center_id
+            )
+            ->where(
+                'person_id',
+                $person->id
+            )
+            ->where(
+                'role_id',
+                $record->selected_role_id
+            )
+            ->first();
     }
 
     private static function statusLabel(
