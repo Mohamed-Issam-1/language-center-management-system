@@ -16,15 +16,25 @@ class RegistrationCredentialsDeliveryService
     public function deliver(
         RegistrationApprovalResult $result
     ): void {
+        $this->deliverAccountCredentials(
+            $result->account,
+            $result->temporaryPassword
+        );
+    }
+
+    public function deliverAccountCredentials(
+        User $account,
+        string $temporaryPassword
+    ): void {
         /*
-         * Re-read the approved account from persisted state.
+         * Re-read the account from persisted state.
          *
          * Credential delivery must never trust mutable
          * in-memory account attributes.
          */
         $account =
             $this->persistedAccount(
-                $result->account
+                $account
             );
 
         if (
@@ -32,7 +42,7 @@ class RegistrationCredentialsDeliveryService
             !== AccountStatus::Active
         ) {
             throw new DomainException(
-                'Registration credentials may be delivered only for an active User Account.'
+                'Credentials may be delivered only for an active User Account.'
             );
         }
 
@@ -40,27 +50,26 @@ class RegistrationCredentialsDeliveryService
             ! $account->must_change_password
         ) {
             throw new DomainException(
-                'Registration credentials may be delivered only while a temporary password change is required.'
+                'Credentials may be delivered only while a temporary password change is required.'
             );
         }
 
         $temporaryPassword =
             trim(
-                $result->temporaryPassword
+                $temporaryPassword
             );
 
         if ($temporaryPassword === '') {
             throw new DomainException(
-                'Registration credentials require a temporary password.'
+                'Credential delivery requires a temporary password.'
             );
         }
 
         /*
-         * Prevent delivery of stale plaintext credentials.
+         * Never send stale plaintext credentials.
          *
-         * For example, if an administrator has already issued
-         * a newer temporary password, an older ApprovalResult
-         * must not be able to send the obsolete password.
+         * If a newer temporary password has already been
+         * issued, an older value must no longer be delivered.
          */
         if (
             ! Hash::check(
@@ -69,7 +78,7 @@ class RegistrationCredentialsDeliveryService
             )
         ) {
             throw new DomainException(
-                'The temporary password no longer matches the approved User Account.'
+                'The temporary password no longer matches the User Account.'
             );
         }
 
@@ -89,7 +98,7 @@ class RegistrationCredentialsDeliveryService
             ) === false
         ) {
             throw new DomainException(
-                'The approved User Account does not have a valid credential-delivery email address.'
+                'The User Account does not have a valid credential-delivery email address.'
             );
         }
 
@@ -104,16 +113,15 @@ class RegistrationCredentialsDeliveryService
             $accountLoginIdentifier === ''
         ) {
             throw new DomainException(
-                'The approved User Account does not have a login identifier.'
+                'The User Account does not have a login identifier.'
             );
         }
 
         /*
-         * Send synchronously.
+         * Credentials are intentionally sent synchronously.
          *
-         * Do not queue this message because the plaintext
-         * temporary password must not be serialized into a
-         * persistent queue payload.
+         * The plaintext temporary password must not be
+         * serialized into a persistent queue payload.
          */
         Mail::to(
             $recipientEmail
@@ -140,7 +148,7 @@ class RegistrationCredentialsDeliveryService
             || $account->getKey() === null
         ) {
             throw new InvalidArgumentException(
-                'Registration credentials require a persisted User Account.'
+                'Credential delivery requires a persisted User Account.'
             );
         }
 
@@ -157,7 +165,7 @@ class RegistrationCredentialsDeliveryService
             )
         ) {
             throw new InvalidArgumentException(
-                'The approved User Account must use a numeric identifier.'
+                'The User Account must use a numeric identifier.'
             );
         }
 
@@ -171,7 +179,7 @@ class RegistrationCredentialsDeliveryService
 
         if ($persisted === null) {
             throw new InvalidArgumentException(
-                'The approved User Account no longer exists.'
+                'The User Account no longer exists.'
             );
         }
 
