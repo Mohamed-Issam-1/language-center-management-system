@@ -20,6 +20,15 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Branch;
+use App\Services\Registration\RegistrationReviewService;
+use App\Support\Enums\BranchStatus;
+use DomainException;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class RegistrationRequestResource extends Resource
 {
@@ -268,6 +277,286 @@ class RegistrationRequestResource extends Resource
             ])
             ->recordActions([
                 ViewAction::make(),
+
+                Action::make('selectRole')
+                    ->label('Select Role')
+                    ->color('gray')
+                    ->visible(
+                        fn(
+                            RegistrationRequest $record
+                        ): bool =>
+                        static::canSelectRoleAction(
+                            $record
+                        )
+                    )
+                    ->schema([
+                        Select::make('role')
+                            ->label('System Role')
+                            ->options(
+                                static::reviewableRoleOptions()
+                            )
+                            ->selectablePlaceholder(false)
+                            ->native(false)
+                            ->required(),
+                    ])
+                    ->modalHeading(
+                        'Select Registration Role'
+                    )
+                    ->modalDescription(
+                        'Changing the role clears any previously selected Branch and requires the Branch to be selected again when applicable.'
+                    )
+                    ->modalSubmitActionLabel(
+                        'Save Role'
+                    )
+                    ->action(
+                        function (
+                            array $data,
+                            RegistrationRequest $record
+                        ): void {
+                            $actor =
+                                auth()->user();
+
+                            if (! $actor instanceof User) {
+                                static::reviewFailure(
+                                    'The authenticated User Account could not be resolved.'
+                                );
+
+                                return;
+                            }
+
+                            $targetRole =
+                                SystemRole::tryFrom(
+                                    (string) (
+                                        $data['role']
+                                        ?? ''
+                                    )
+                                );
+
+                            if (
+                                $targetRole === null
+                                || ! array_key_exists(
+                                    $targetRole->value,
+                                    static::reviewableRoleOptions()
+                                )
+                            ) {
+                                static::reviewFailure(
+                                    'The selected System Role is invalid.'
+                                );
+
+                                return;
+                            }
+
+                            try {
+                                app(
+                                    RegistrationReviewService::class
+                                )->selectRole(
+                                    $actor,
+                                    $record,
+                                    $targetRole
+                                );
+                            } catch (
+                                AuthorizationException
+                                | DomainException $exception
+                            ) {
+                                static::reviewFailure(
+                                    $exception->getMessage()
+                                );
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title(
+                                    'Registration role updated'
+                                )
+                                ->success()
+                                ->send();
+                        }
+                    ),
+
+                Action::make('selectBranch')
+                    ->label('Select Branch')
+                    ->color('gray')
+                    ->visible(
+                        fn(
+                            RegistrationRequest $record
+                        ): bool =>
+                        static::canSelectBranchAction(
+                            $record
+                        )
+                    )
+                    ->schema([
+                        Select::make('branch_id')
+                            ->label('Branch')
+                            ->options(
+                                fn(): array =>
+                                static::activeBranchOptions()
+                            )
+                            ->selectablePlaceholder(false)
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->required(),
+                    ])
+                    ->modalHeading(
+                        'Select Registration Branch'
+                    )
+                    ->modalDescription(
+                        'Only active Branches from the current Center may be selected.'
+                    )
+                    ->modalSubmitActionLabel(
+                        'Save Branch'
+                    )
+                    ->action(
+                        function (
+                            array $data,
+                            RegistrationRequest $record
+                        ): void {
+                            $actor =
+                                auth()->user();
+
+                            if (! $actor instanceof User) {
+                                static::reviewFailure(
+                                    'The authenticated User Account could not be resolved.'
+                                );
+
+                                return;
+                            }
+
+                            $branchId =
+                                filter_var(
+                                    $data['branch_id']
+                                        ?? null,
+                                    FILTER_VALIDATE_INT
+                                );
+
+                            if (
+                                $branchId === false
+                                || $branchId <= 0
+                            ) {
+                                static::reviewFailure(
+                                    'The selected Branch is invalid.'
+                                );
+
+                                return;
+                            }
+
+                            $branch =
+                                Branch::withoutGlobalScopes()
+                                ->whereKey(
+                                    $branchId
+                                )
+                                ->first();
+
+                            if ($branch === null) {
+                                static::reviewFailure(
+                                    'The selected Branch no longer exists.'
+                                );
+
+                                return;
+                            }
+
+                            try {
+                                app(
+                                    RegistrationReviewService::class
+                                )->selectBranch(
+                                    $actor,
+                                    $record,
+                                    $branch
+                                );
+                            } catch (
+                                AuthorizationException
+                                | DomainException $exception
+                            ) {
+                                static::reviewFailure(
+                                    $exception->getMessage()
+                                );
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title(
+                                    'Registration branch updated'
+                                )
+                                ->success()
+                                ->send();
+                        }
+                    ),
+
+                Action::make('reject')
+                    ->label('Reject')
+                    ->color('danger')
+                    ->visible(
+                        fn(
+                            RegistrationRequest $record
+                        ): bool =>
+                        static::canRejectAction(
+                            $record
+                        )
+                    )
+                    ->schema([
+                        Textarea::make('reason')
+                            ->label('Rejection Reason')
+                            ->rows(5)
+                            ->required(),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading(
+                        'Reject Registration Request'
+                    )
+                    ->modalDescription(
+                        'The request will be marked as Rejected and cannot be reviewed again.'
+                    )
+                    ->modalSubmitActionLabel(
+                        'Reject Request'
+                    )
+                    ->action(
+                        function (
+                            array $data,
+                            RegistrationRequest $record
+                        ): void {
+                            $actor =
+                                auth()->user();
+
+                            if (! $actor instanceof User) {
+                                static::reviewFailure(
+                                    'The authenticated User Account could not be resolved.'
+                                );
+
+                                return;
+                            }
+
+                            try {
+                                app(
+                                    RegistrationReviewService::class
+                                )->reject(
+                                    $actor,
+                                    $record,
+                                    (string) (
+                                        $data['reason']
+                                        ?? ''
+                                    )
+                                );
+                            } catch (
+                                AuthorizationException
+                                | DomainException $exception
+                            ) {
+                                static::reviewFailure(
+                                    $exception->getMessage()
+                                );
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title(
+                                    'Registration request rejected'
+                                )
+                                ->success()
+                                ->send();
+                        }
+                    ),
             ])
             ->defaultSort(
                 'created_at',
@@ -553,6 +842,186 @@ class RegistrationRequestResource extends Resource
         return $query->whereRaw(
             '1 = 0'
         );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function reviewableRoleOptions(): array
+    {
+        return [
+            SystemRole::Student->value =>
+            SystemRole::Student->label(),
+
+            SystemRole::Teacher->value =>
+            SystemRole::Teacher->label(),
+
+            SystemRole::FinanceEmployee->value =>
+            SystemRole::FinanceEmployee->label(),
+
+            SystemRole::BranchManager->value =>
+            SystemRole::BranchManager->label(),
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function activeBranchOptions(): array
+    {
+        $tenant =
+            app(TenantContext::class);
+
+        if (
+            ! $tenant->isEstablished()
+            || ! $tenant->isCenterScoped()
+            || $tenant->centerId() === null
+        ) {
+            return [];
+        }
+
+        return Branch::withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $tenant->centerId()
+            )
+            ->where(
+                'status',
+                BranchStatus::Active
+            )
+            ->orderBy('name')
+            ->pluck(
+                'name',
+                'id'
+            )
+            ->all();
+    }
+
+    private static function canSelectRoleAction(
+        RegistrationRequest $record
+    ): bool {
+        return static::authenticatedSystemRole()
+            === SystemRole::CenterOwner
+            && $record->status
+            === RegistrationRequestStatus::Pending;
+    }
+
+    private static function canSelectBranchAction(
+        RegistrationRequest $record
+    ): bool {
+        if (
+            static::authenticatedSystemRole()
+            !== SystemRole::CenterOwner
+            || $record->status
+            !== RegistrationRequestStatus::Pending
+        ) {
+            return false;
+        }
+
+        $selectedRole =
+            static::selectedSystemRole(
+                $record
+            );
+
+        return in_array(
+            $selectedRole,
+            [
+                SystemRole::Student,
+                SystemRole::FinanceEmployee,
+                SystemRole::BranchManager,
+            ],
+            true
+        );
+    }
+
+    private static function canRejectAction(
+        RegistrationRequest $record
+    ): bool {
+        if (
+            $record->status
+            !== RegistrationRequestStatus::Pending
+        ) {
+            return false;
+        }
+
+        $actorRole =
+            static::authenticatedSystemRole();
+
+        if (
+            $actorRole
+            === SystemRole::CenterOwner
+        ) {
+            return true;
+        }
+
+        if (
+            $actorRole
+            !== SystemRole::BranchManager
+        ) {
+            return false;
+        }
+
+        if (
+            static::selectedSystemRole(
+                $record
+            )
+            !== SystemRole::Student
+        ) {
+            return false;
+        }
+
+        $branchId =
+            app(BranchContext::class)
+            ->branchId();
+
+        return $branchId !== null
+            && $record->selected_branch_id
+            === $branchId;
+    }
+
+    private static function authenticatedSystemRole(): ?SystemRole
+    {
+        $user =
+            auth()->user();
+
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        return $user->systemRole();
+    }
+
+    private static function selectedSystemRole(
+        RegistrationRequest $record
+    ): ?SystemRole {
+        $record->loadMissing(
+            'selectedRole'
+        );
+
+        $code =
+            $record->selectedRole?->code;
+
+        if (! is_string($code)) {
+            return null;
+        }
+
+        return SystemRole::tryFrom(
+            $code
+        );
+    }
+
+    private static function reviewFailure(
+        string $message
+    ): void {
+        Notification::make()
+            ->title(
+                'Registration review failed'
+            )
+            ->body(
+                $message
+            )
+            ->danger()
+            ->send();
     }
 
     private static function statusLabel(
