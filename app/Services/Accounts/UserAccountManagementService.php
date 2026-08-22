@@ -49,6 +49,11 @@ class UserAccountManagementService
                 $recoveryEmail,
                 $temporaryPassword
             ): User {
+                $actor =
+                    $this->lockPersistedActor(
+                        $actor
+                    );
+
                 $center = $this->lockPersistedCenter(
                     $center
                 );
@@ -274,6 +279,11 @@ class UserAccountManagementService
                 $recoveryEmail,
                 $temporaryPassword
             ): User {
+                $actor =
+                    $this->lockPersistedActor(
+                        $actor
+                    );
+
                 $centerId =
                     $this->authorizedCenterId(
                         $actor
@@ -544,6 +554,11 @@ class UserAccountManagementService
                 $account,
                 $attributes
             ): User {
+                $actor =
+                    $this->lockPersistedActor(
+                        $actor
+                    );
+
                 $account =
                     $this->lockPersistedAccount(
                         $account
@@ -675,6 +690,11 @@ class UserAccountManagementService
                 $actor,
                 $account
             ): User {
+                $actor =
+                    $this->lockPersistedActor(
+                        $actor
+                    );
+
                 $account =
                     $this->lockPersistedAccount(
                         $account
@@ -740,6 +760,11 @@ class UserAccountManagementService
                 $actor,
                 $account
             ): User {
+                $actor =
+                    $this->lockPersistedActor(
+                        $actor
+                    );
+
                 $account =
                     $this->lockPersistedAccount(
                         $account
@@ -811,6 +836,11 @@ class UserAccountManagementService
                 $account,
                 $temporaryPassword
             ): User {
+                $actor =
+                    $this->lockPersistedActor(
+                        $actor
+                    );
+
                 $account =
                     $this->lockPersistedAccount(
                         $account
@@ -1359,6 +1389,36 @@ class UserAccountManagementService
             )
             ->lockForUpdate()
             ->firstOrFail();
+    }
+
+    private function lockPersistedActor(
+        User $actor
+    ): User {
+        /*
+        * Authorization must derive exclusively from the
+        * authoritative persisted authenticated account.
+        *
+        * Never trust mutable in-memory role, Center, Person,
+        * or lifecycle attributes supplied by the caller.
+        */
+        $persistedActor =
+            User::withoutGlobalScopes()
+            ->whereKey(
+                $actor->getKey()
+            )
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        if (
+            $persistedActor->status
+            !== AccountStatus::Active
+        ) {
+            throw new AuthorizationException(
+                'Account management requires an active authenticated account.'
+            );
+        }
+
+        return $persistedActor;
     }
 
     private function lockPersistedAccount(

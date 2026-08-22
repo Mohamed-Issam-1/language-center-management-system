@@ -2522,6 +2522,254 @@ class UserAccountManagementServiceTest extends TestCase
         );
     }
 
+    public function test_in_memory_actor_role_tampering_cannot_grant_account_creation_authority(): void
+    {
+        $center =
+            Center::factory()
+            ->active()
+            ->create();
+
+        $branchManager =
+            $this->createUserForRole(
+                SystemRole::BranchManager,
+                $center
+            );
+
+        /*
+     * Persisted role is Branch Manager.
+     *
+     * Tamper only with the supplied Eloquent instance so it
+     * appears to be a Center Owner.
+     */
+        $branchManager->role_id =
+            $this->role(
+                SystemRole::CenterOwner
+            )->id;
+
+        $branchManager->unsetRelation(
+            'role'
+        );
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        $beforeUserCount =
+            User::withoutGlobalScopes()
+            ->count();
+
+        try {
+            $this->service()->create(
+                actor: $branchManager,
+
+                center: $center,
+
+                nationalIdNumber: '989000001',
+
+                role: SystemRole::Teacher,
+
+                accountLoginIdentifier: 'tampered.actor.role',
+
+                recoveryEmail: 'tampered.role@example.test',
+
+                temporaryPassword: 'Temporary!123'
+            );
+
+            $this->fail(
+                'Expected persisted Branch Manager role to reject generic Teacher account creation.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $this->assertSame(
+            $beforeUserCount,
+            User::withoutGlobalScopes()
+                ->count()
+        );
+
+        $persisted =
+            User::withoutGlobalScopes()
+            ->whereKey(
+                $branchManager->id
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            SystemRole::BranchManager,
+            $persisted->systemRole()
+        );
+    }
+
+    public function test_in_memory_actor_center_tampering_cannot_grant_cross_center_management(): void
+    {
+        $centerA =
+            Center::factory()
+            ->active()
+            ->create();
+
+        $centerB =
+            Center::factory()
+            ->active()
+            ->create();
+
+        $centerOwner =
+            $this->createUserForRole(
+                SystemRole::CenterOwner,
+                $centerA
+            );
+
+        $teacher =
+            $this->createCenterAccount(
+                SystemRole::Teacher,
+                $centerB
+            );
+
+        $originalRecoveryEmail =
+            $teacher->recovery_email;
+
+        /*
+     * Persisted actor belongs to Center A.
+     *
+     * Tamper only with the local model so it appears
+     * to belong to Center B.
+     */
+        $centerOwner->center_id =
+            $centerB->id;
+
+        $this->establishCenterContext(
+            $centerB
+        );
+
+        try {
+            $this->service()->update(
+                $centerOwner,
+                $teacher,
+                [
+                    'recovery_email' =>
+                    'cross.center@example.test',
+                ]
+            );
+
+            $this->fail(
+                'Expected persisted actor Center scope to reject cross-Center account management.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $teacher->refresh();
+
+        $this->assertSame(
+            $originalRecoveryEmail,
+            $teacher->recovery_email
+        );
+
+        $persistedActor =
+            User::withoutGlobalScopes()
+            ->whereKey(
+                $centerOwner->id
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $centerA->id,
+            $persistedActor->center_id
+        );
+    }
+
+    public function test_stale_in_memory_active_actor_cannot_manage_accounts_after_persisted_deactivation(): void
+    {
+        $center =
+            Center::factory()
+            ->active()
+            ->create();
+
+        $centerOwner =
+            $this->createUserForRole(
+                SystemRole::CenterOwner,
+                $center
+            );
+
+        $teacher =
+            $this->createCenterAccount(
+                SystemRole::Teacher,
+                $center
+            );
+
+        $originalPassword =
+            $teacher->password;
+
+        /*
+     * Keep the supplied actor instance stale and Active,
+     * while authoritative persisted state becomes
+     * Deactivated.
+     */
+        User::withoutGlobalScopes()
+            ->whereKey(
+                $centerOwner->id
+            )
+            ->update([
+                'status' =>
+                AccountStatus::Deactivated,
+
+                'deactivated_at' =>
+                now(),
+            ]);
+
+        $this->assertSame(
+            AccountStatus::Active,
+            $centerOwner->status
+        );
+
+        $this->establishCenterContext(
+            $center
+        );
+
+        try {
+            $this->service()
+                ->issueTemporaryPassword(
+                    $centerOwner,
+                    $teacher,
+                    'ShouldNotBeIssued!123'
+                );
+
+            $this->fail(
+                'Expected persisted deactivated actor state to reject account management.'
+            );
+        } catch (AuthorizationException) {
+            $this->assertTrue(true);
+        }
+
+        $teacher->refresh();
+
+        $this->assertSame(
+            $originalPassword,
+            $teacher->password
+        );
+
+        $this->assertFalse(
+            Hash::check(
+                'ShouldNotBeIssued!123',
+                $teacher->password
+            )
+        );
+
+        $this->assertSame(
+            0,
+            AuditRecord::withoutGlobalScopes()
+                ->where(
+                    'action_type',
+                    'user_account.temporary_password_issued'
+                )
+                ->where(
+                    'subject_id',
+                    $teacher->id
+                )
+                ->count()
+        );
+    }
+
     private function service(): UserAccountManagementService
     {
         return app(
