@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\RegistrationRequestPersonalPictureController;
+use App\Http\Middleware\EstablishFilamentBranchContext;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -40,5 +42,22 @@ Route::middleware([
         [ProfileController::class, 'update']
     )->name('profile.update');
 });
+
+Route::get(
+    '/admin/registration-requests/{registrationRequest}/personal-picture',
+    RegistrationRequestPersonalPictureController::class
+)
+    ->middleware([
+        'auth',
+        'tenant.context',
+        'password.change.completed',
+        EstablishFilamentBranchContext::class,
+    ])
+    ->whereNumber(
+        'registrationRequest'
+    )
+    ->name(
+        'admin.registration-requests.personal-picture'
+    );
 
 require __DIR__ . '/auth.php';

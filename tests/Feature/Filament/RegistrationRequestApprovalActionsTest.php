@@ -3,6 +3,7 @@
 namespace Tests\Feature\Filament;
 
 use App\Filament\Resources\RegistrationRequests\Pages\ListRegistrationRequests;
+use App\Filament\Resources\RegistrationRequests\RegistrationRequestResource;
 use App\Mail\RegistrationCredentialsMail;
 use App\Models\Branch;
 use App\Models\BranchManagerAssignment;
@@ -820,6 +821,148 @@ class RegistrationRequestApprovalActionsTest extends TestCase
             $request,
             $account,
         ];
+    }
+
+    public function test_approval_confirmation_reconfirms_teacher_identity_and_classification(): void
+    {
+        $center =
+            $this->center(
+                '38'
+            );
+
+        $request =
+            $this->registrationRequest(
+                center: $center,
+                role: SystemRole::Teacher,
+                nationalId: '910000008',
+                email: 'teacher.confirmation@example.test'
+            );
+
+        $description =
+            RegistrationRequestResource
+            ::approvalConfirmationDescription(
+                $request
+            )
+            ->toHtml();
+
+        $this->assertStringContainsString(
+            'Registration Applicant',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            '910000008',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            '2000-01-01',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            'Gaza',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            'teacher.confirmation@example.test',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            '+970599000001',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            SystemRole::Teacher->label(),
+            $description
+        );
+
+        $this->assertStringContainsString(
+            'Not applicable',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            'Personal Picture:',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            'Not provided',
+            $description
+        );
+    }
+
+    public function test_approval_confirmation_reconfirms_student_branch(): void
+    {
+        $center =
+            $this->center(
+                '39'
+            );
+
+        $branch =
+            $this->branch(
+                $center
+            );
+
+        $request =
+            $this->registrationRequest(
+                center: $center,
+                role: SystemRole::Student,
+                branch: $branch,
+                nationalId: '910000009',
+                email: 'student.confirmation@example.test'
+            );
+
+        $request->forceFill([
+            'personal_picture_path' =>
+            'registration-requests/'
+                . $center->id
+                . '/personal-pictures/applicant.png',
+        ])->save();
+
+        $description =
+            RegistrationRequestResource
+            ::approvalConfirmationDescription(
+                $request
+            )
+            ->toHtml();
+
+        $this->assertStringContainsString(
+            SystemRole::Student->label(),
+            $description
+        );
+
+        $this->assertStringContainsString(
+            $branch->name,
+            $description
+        );
+
+        $this->assertStringNotContainsString(
+            'Not applicable',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            'View Personal Picture',
+            $description
+        );
+
+        $this->assertStringContainsString(
+            route(
+                'admin.registration-requests.personal-picture',
+                [
+                    'registrationRequest' =>
+                    $request->id,
+                ]
+            ),
+            html_entity_decode(
+                $description
+            )
+        );
     }
 
     private function createCenterUser(

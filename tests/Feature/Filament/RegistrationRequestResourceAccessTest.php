@@ -368,6 +368,77 @@ class RegistrationRequestResourceAccessTest extends TestCase
         );
     }
 
+    public function test_personal_picture_uses_secure_route_without_exposing_storage_path(): void
+    {
+        $center =
+            Center::factory()
+            ->create();
+
+        $owner =
+            $this->createCenterUser(
+                SystemRole::CenterOwner,
+                $center
+            );
+
+        $picturePath =
+            'registration-requests/'
+            . $center->id
+            . '/personal-pictures/private-picture.png';
+
+        $requestWithPicture =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'personal_picture_path' =>
+                $picturePath,
+            ]);
+
+        $requestWithoutPicture =
+            RegistrationRequest::factory()
+            ->for($center)
+            ->create([
+                'personal_picture_path' =>
+                null,
+            ]);
+
+        $this->actingAs(
+            $owner
+        );
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $url =
+            RegistrationRequestResource
+            ::personalPictureUrl(
+                $requestWithPicture
+            );
+
+        $this->assertSame(
+            route(
+                'admin.registration-requests.personal-picture',
+                [
+                    'registrationRequest' =>
+                    $requestWithPicture->id,
+                ]
+            ),
+            $url
+        );
+
+        $this->assertStringNotContainsString(
+            $picturePath,
+            $url
+        );
+
+        $this->assertNull(
+            RegistrationRequestResource
+                ::personalPictureUrl(
+                    $requestWithoutPicture
+                )
+        );
+    }
+
     private function establishCenterOwnerContext(
         Center $center
     ): void {

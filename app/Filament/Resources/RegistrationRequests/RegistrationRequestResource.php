@@ -29,6 +29,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\HtmlString;
 use App\Models\Person;
 use App\Services\Registration\RegistrationApprovalService;
 use App\Services\Registration\RegistrationCredentialsDeliveryService;
@@ -105,6 +106,29 @@ class RegistrationRequestResource extends Resource
                             ->label(
                                 'Phone Number'
                             ),
+
+                        TextEntry::make(
+                            'personal_picture_path'
+                        )
+                            ->label(
+                                'Personal Picture'
+                            )
+                            ->formatStateUsing(
+                                fn(): string =>
+                                'View Personal Picture'
+                            )
+                            ->placeholder(
+                                'Not provided'
+                            )
+                            ->url(
+                                fn(
+                                    RegistrationRequest $record
+                                ): ?string =>
+                                static::personalPictureUrl(
+                                    $record
+                                )
+                            )
+                            ->openUrlInNewTab(),
                     ])
                     ->columns(2),
 
@@ -508,7 +532,12 @@ class RegistrationRequestResource extends Resource
                         'Approve Registration Request'
                     )
                     ->modalDescription(
-                        'Confirm that you reviewed the applicant identity, selected role, and Branch when required. Approval will create the User Account and operational records.'
+                        fn(
+                            RegistrationRequest $record
+                        ): HtmlString =>
+                        static::approvalConfirmationDescription(
+                            $record
+                        )
                     )
                     ->modalSubmitActionLabel(
                         'Approve Registration'
@@ -1483,6 +1512,160 @@ class RegistrationRequestResource extends Resource
                 $record->selected_role_id
             )
             ->first();
+    }
+
+    public static function approvalConfirmationDescription(
+        RegistrationRequest $record
+    ): HtmlString {
+        $record->loadMissing([
+            'selectedRole',
+            'selectedBranch',
+        ]);
+
+        $selectedRole =
+            static::selectedSystemRole(
+                $record
+            );
+
+        $roleLabel =
+            $selectedRole?->label()
+            ?? 'Unclassified';
+
+        $branchLabel =
+            $selectedRole !== null
+            && static::roleRequiresBranch(
+                $selectedRole
+            )
+            ? (
+                $record->selectedBranch?->name
+                ?? 'Not selected'
+            )
+            : 'Not applicable';
+
+        $dateOfBirth =
+            $record->date_of_birth;
+
+        $dateOfBirthLabel =
+            is_object(
+                $dateOfBirth
+            )
+            && method_exists(
+                $dateOfBirth,
+                'format'
+            )
+            ? $dateOfBirth->format(
+                'Y-m-d'
+            )
+            : trim(
+                (string) $dateOfBirth
+            );
+
+        $personalPictureUrl =
+            static::personalPictureUrl(
+                $record
+            );
+
+        return new HtmlString(
+            '<div>'
+                . 'Review the following information before final approval.'
+                . '</div>'
+
+                . '<div class="mt-4 space-y-1">'
+
+                . '<div><strong>Full Name:</strong> '
+                . e(
+                    (string) $record->full_name
+                )
+                . '</div>'
+
+                . '<div><strong>National ID:</strong> '
+                . e(
+                    (string) $record->national_id_number
+                )
+                . '</div>'
+
+                . '<div><strong>Date of Birth:</strong> '
+                . e(
+                    $dateOfBirthLabel
+                )
+                . '</div>'
+
+                . '<div><strong>City:</strong> '
+                . e(
+                    (string) $record->city_of_residence
+                )
+                . '</div>'
+
+                . '<div><strong>Email:</strong> '
+                . e(
+                    (string) $record->email
+                )
+                . '</div>'
+
+                . '<div><strong>Phone:</strong> '
+                . e(
+                    (string) $record->phone_number
+                )
+                . '</div>'
+
+                . '<div><strong>Personal Picture:</strong> '
+                . (
+                    $personalPictureUrl !== null
+                    ? '<a href="'
+                    . e(
+                        $personalPictureUrl
+                    )
+                    . '" target="_blank" rel="noopener noreferrer">'
+                    . 'View Personal Picture'
+                    . '</a>'
+                    : 'Not provided'
+                )
+                . '</div>'
+
+                . '<div><strong>Role:</strong> '
+                . e(
+                    $roleLabel
+                )
+                . '</div>'
+
+                . '<div><strong>Branch:</strong> '
+                . e(
+                    $branchLabel
+                )
+                . '</div>'
+
+                . '</div>'
+
+                . '<div class="mt-4">'
+                . 'Approval will create the User Account and the required operational records.'
+                . '</div>'
+        );
+    }
+
+    public static function personalPictureUrl(
+        RegistrationRequest $record
+    ): ?string {
+        $storedPath =
+            $record->personal_picture_path;
+
+        if (
+            ! is_string(
+                $storedPath
+            )
+            || trim(
+                $storedPath
+            ) === ''
+        ) {
+            return null;
+        }
+
+        return route(
+            'admin.registration-requests.personal-picture',
+            [
+                'registrationRequest' =>
+                $record->getKey(),
+            ]
+        );
     }
 
     private static function statusLabel(
