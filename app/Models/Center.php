@@ -88,6 +88,13 @@ class Center extends Model
         );
     }
 
+    public function courseClasses(): HasMany
+    {
+        return $this->hasMany(
+            CourseClass::class
+        );
+    }
+
     public function registrationRequests(): HasMany
     {
         return $this->hasMany(
