@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\RegistrationRequestPersonalPictureController;
+use App\Http\Middleware\EstablishFilamentBranchContext;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -16,12 +18,46 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})
+    ->middleware([
+        'auth',
+        'tenant.context',
+        'password.change.completed',
+        'verified',
+    ])
+    ->name('dashboard');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+Route::middleware([
+    'auth',
+    'tenant.context',
+    'password.change.completed',
+])->group(function () {
+    Route::get(
+        '/profile',
+        [ProfileController::class, 'edit']
+    )->name('profile.edit');
+
+    Route::patch(
+        '/profile',
+        [ProfileController::class, 'update']
+    )->name('profile.update');
 });
 
-require __DIR__.'/auth.php';
+Route::get(
+    '/admin/registration-requests/{registrationRequest}/personal-picture',
+    RegistrationRequestPersonalPictureController::class
+)
+    ->middleware([
+        'auth',
+        'tenant.context',
+        'password.change.completed',
+        EstablishFilamentBranchContext::class,
+    ])
+    ->whereNumber(
+        'registrationRequest'
+    )
+    ->name(
+        'admin.registration-requests.personal-picture'
+    );
+
+require __DIR__ . '/auth.php';

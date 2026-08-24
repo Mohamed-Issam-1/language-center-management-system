@@ -22,6 +22,7 @@ pnpm-debug.log*
 /public/storage
 /storage/*.key
 /storage/logs/*.log
+/storage/framework/lsp-*.php
 /bootstrap/cache/*.php
 
 # Testing and code coverage
