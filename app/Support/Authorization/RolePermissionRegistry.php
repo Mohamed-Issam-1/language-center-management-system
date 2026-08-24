@@ -23,6 +23,7 @@ final class RolePermissionRegistry
             SystemRole::CenterOwner => [
                 SystemPermission::ManageBranches,
                 SystemPermission::ManageClassrooms,
+                SystemPermission::ManageAcademicStructure,
                 SystemPermission::ManageStaffAccounts,
                 SystemPermission::ManageStudentAccounts,
                 SystemPermission::ManageStudentRecords,

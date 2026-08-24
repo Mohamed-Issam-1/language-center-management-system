@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-
-
 class Center extends Model
 {
     /** @use HasFactory<CenterFactory> */
@@ -36,23 +34,50 @@ class Center extends Model
 
     public function people(): HasMany
     {
-        return $this->hasMany(Person::class);
+        return $this->hasMany(
+            Person::class
+        );
     }
 
     public function users(): HasMany
     {
-        return $this->hasMany(User::class);
+        return $this->hasMany(
+            User::class
+        );
     }
 
     public function branches(): HasMany
     {
-        return $this->hasMany(Branch::class);
+        return $this->hasMany(
+            Branch::class
+        );
     }
 
     public function classrooms(): HasMany
     {
         return $this->hasMany(
             Classroom::class
+        );
+    }
+
+    public function languages(): HasMany
+    {
+        return $this->hasMany(
+            Language::class
+        );
+    }
+
+    public function academicLevels(): HasMany
+    {
+        return $this->hasMany(
+            AcademicLevel::class
+        );
+    }
+
+    public function courses(): HasMany
+    {
+        return $this->hasMany(
+            Course::class
         );
     }
 
