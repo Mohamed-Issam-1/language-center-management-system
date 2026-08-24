@@ -2,32 +2,41 @@
 
 namespace App\Models;
 
-use App\Support\Enums\StaffStatus;
+use App\Support\Enums\AcademicRecordStatus;
 use App\Support\Traits\HasCenterScope;
-use Database\Factories\TeacherFactory;
+use Database\Factories\AcademicLevelFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Teacher extends Model
+class AcademicLevel extends Model
 {
-    /** @use HasFactory<TeacherFactory> */
+    /** @use HasFactory<AcademicLevelFactory> */
     use HasFactory, HasCenterScope;
 
     protected $fillable = [
         'center_id',
-        'person_id',
-        'user_id',
+        'language_id',
+        'name',
+        'code',
+        'sequence_number',
+        'description',
         'status',
-        'deactivated_at',
+        'archived_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'status' => StaffStatus::class,
-            'deactivated_at' => 'datetime',
+            'sequence_number' =>
+            'integer',
+
+            'status' =>
+            AcademicRecordStatus::class,
+
+            'archived_at' =>
+            'datetime',
         ];
     }
 
@@ -38,37 +47,29 @@ class Teacher extends Model
         );
     }
 
-    public function person(): BelongsTo
+    public function language(): BelongsTo
     {
         return $this->belongsTo(
-            Person::class
+            Language::class
         );
     }
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(
-            User::class
-        );
-    }
-
-    public function assignedCourseClasses(): HasMany
+    public function courses(): HasMany
     {
         return $this->hasMany(
-            CourseClass::class,
-            'assigned_teacher_id'
+            Course::class
         );
     }
 
     public function isActive(): bool
     {
         return $this->status
-            === StaffStatus::Active;
+            === AcademicRecordStatus::Active;
     }
 
-    public function isDeactivated(): bool
+    public function isArchived(): bool
     {
         return $this->status
-            === StaffStatus::Deactivated;
+            === AcademicRecordStatus::Archived;
     }
 }

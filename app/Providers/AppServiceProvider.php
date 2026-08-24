@@ -7,10 +7,18 @@ use App\Models\Center;
 use App\Models\Classroom;
 use App\Models\User;
 use App\Models\Student;
+use App\Models\AcademicLevel;
+use App\Models\Course;
+use App\Models\Language;
+use App\Models\CourseClass;
 use App\Policies\BranchPolicy;
 use App\Policies\CenterPolicy;
 use App\Policies\ClassroomPolicy;
 use App\Policies\StudentPolicy;
+use App\Policies\AcademicLevelPolicy;
+use App\Policies\CoursePolicy;
+use App\Policies\LanguagePolicy;
+use App\Policies\CourseClassPolicy;
 use App\Support\Enums\SystemPermission;
 use App\Support\Tenancy\BranchContext;
 use App\Support\Tenancy\TenantContext;
@@ -56,6 +64,36 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(
             Classroom::class,
             ClassroomPolicy::class
+        );
+
+        Gate::policy(
+            Language::class,
+            LanguagePolicy::class
+        );
+
+        Gate::policy(
+            AcademicLevel::class,
+            AcademicLevelPolicy::class
+        );
+
+        Gate::policy(
+            Course::class,
+            CoursePolicy::class
+        );
+
+        Gate::policy(
+            Student::class,
+            StudentPolicy::class
+        );
+
+        Gate::policy(
+            Course::class,
+            CoursePolicy::class
+        );
+
+        Gate::policy(
+            CourseClass::class,
+            CourseClassPolicy::class
         );
 
         Gate::policy(

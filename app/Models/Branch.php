@@ -87,6 +87,13 @@ class Branch extends Model
         );
     }
 
+    public function courseClasses(): HasMany
+    {
+        return $this->hasMany(
+            CourseClass::class
+        );
+    }
+
     public function students(): HasMany
     {
         return $this->hasMany(
