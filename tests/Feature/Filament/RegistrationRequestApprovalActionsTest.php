@@ -937,7 +937,7 @@ class RegistrationRequestApprovalActionsTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            $branch->name,
+            e($branch->name),
             $description
         );
 
