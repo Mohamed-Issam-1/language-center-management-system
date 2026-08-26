@@ -24,6 +24,7 @@ final class RolePermissionRegistry
                 SystemPermission::ManageBranches,
                 SystemPermission::ManageClassrooms,
                 SystemPermission::ManageClasses,
+                SystemPermission::ManageEnrollments,
                 SystemPermission::ManageAcademicStructure,
                 SystemPermission::ManageStaffAccounts,
                 SystemPermission::ManageStudentAccounts,
@@ -37,6 +38,7 @@ final class RolePermissionRegistry
             SystemRole::BranchManager => [
                 SystemPermission::ManageClassrooms,
                 SystemPermission::ManageClasses,
+                SystemPermission::ManageEnrollments,
                 SystemPermission::ManageStudentAccounts,
                 SystemPermission::ManageStudentRecords,
                 SystemPermission::ViewStudentRecords,

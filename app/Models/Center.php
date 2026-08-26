@@ -88,6 +88,20 @@ class Center extends Model
         );
     }
 
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(
+            Enrollment::class
+        );
+    }
+
+    public function enrollmentHistories(): HasMany
+    {
+        return $this->hasMany(
+            EnrollmentHistory::class
+        );
+    }
+
     public function courseClasses(): HasMany
     {
         return $this->hasMany(
