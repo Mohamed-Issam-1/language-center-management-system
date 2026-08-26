@@ -18,37 +18,22 @@ export default function Login({
   status?: string;
   canResetPassword?: boolean;
 }) {
-  const {
-    data,
-    setData,
-    post,
-    processing,
-    errors,
-    reset,
-    clearErrors,
-    setError,
-  } = useForm({
-    login_identifier: "",
+  const { data, setData, post, processing, errors, clearErrors } = useForm({
+    account_login_identifier: "",
     password: "",
     remember: false,
   });
 
   const [submitted, setSubmitted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  type DemoMode = "real" | "error" | "success";
 
-  const DEMO_MODE = "real" as DemoMode;
+  const loginHasError = submitted && !data.account_login_identifier.trim();
 
-  const loginHasError =
-    Boolean(errors.login_identifier) ||
-    (submitted && !data.login_identifier.trim());
-
-  const passwordHasError =
-    Boolean(errors.password) || (submitted && !data.password);
+  const passwordHasError = submitted && !data.password;
 
   const clientValidationError = submitted
-    ? !data.login_identifier.trim()
-      ? "Please enter your email address."
+    ? !data.account_login_identifier.trim()
+      ? "Please enter your username."
       : !data.password
         ? "Please enter your password."
         : null
@@ -57,37 +42,20 @@ export default function Login({
   // Server errors take priority over client-side validation.
 
   const displayedError =
-    errors.login_identifier || errors.password || clientValidationError;
-
+    errors.account_login_identifier || errors.password || clientValidationError;
   const submit: FormEventHandler = (e) => {
     e.preventDefault();
 
     setSubmitted(true);
 
-    if (!data.login_identifier.trim() || !data.password) {
+    if (!data.account_login_identifier.trim() || !data.password) {
       return;
     }
 
     clearErrors();
 
-    if (DEMO_MODE === "error") {
-      setError({
-        login_identifier: "Incorrect email or password.",
-        password: "Incorrect email or password.",
-      });
-      reset("password");
-
-      return;
-    }
-
-    if (DEMO_MODE === "success") {
-      setShowSuccess(true);
-      return;
-    }
-
     post(route("login"));
   };
-
   return (
     <GuestLayout>
       <Head title="Sign In" />
@@ -101,11 +69,11 @@ export default function Login({
 
           {/* Heading */}
           <div>
-            <h1 className="text-[32px] mt-4 font-bold leading-tight tracking-[-0.04em] text-[#22252d] lg:text-[42px]">
+            <h1 className="mt-4 text-[20px] font-bold leading-tight tracking-[-0.03em] text-[#22252d] lg:text-[32px]">
               Sign In
             </h1>
 
-            <p className="mt-[10px] text-[13px] leading-[27px] text-[#adb2be] lg:text-[20px]">
+            <p className="mt-[6px] text-[11px] leading-[18px] text-[#adb2be] lg:mt-[8px] lg:text-[14px] lg:leading-[22px]">
               Enter your credentials to access your account.
             </p>
           </div>
@@ -155,26 +123,26 @@ export default function Login({
               )}
 
               <form onSubmit={submit} className="mt-[20px] lg:mt-[34px]">
-                {/* Email */}
+                {/* Username */}
                 <div>
                   <InputLabel
-                    htmlFor="login_identifier"
-                    value="Email Address"
+                    htmlFor="account_login_identifier"
+                    value="USERNAME"
                   />
 
                   <TextInput
-                    id="login_identifier"
+                    id="account_login_identifier"
                     type="text"
-                    name="login_identifier"
-                    value={data.login_identifier}
-                    placeholder="name@center.com"
+                    name="account_login_identifier"
+                    value={data.account_login_identifier}
+                    placeholder="Enter your username"
                     autoComplete="username"
                     isFocused
                     hasError={loginHasError}
                     aria-invalid={loginHasError}
                     onChange={(e) => {
-                      setData("login_identifier", e.target.value);
-                      clearErrors("login_identifier");
+                      setData("account_login_identifier", e.target.value);
+                      clearErrors("account_login_identifier");
                     }}
                   />
                 </div>
@@ -193,7 +161,7 @@ export default function Login({
                     aria-invalid={passwordHasError}
                     onChange={(e) => {
                       setData("password", e.target.value);
-                      clearErrors("password", "login_identifier");
+                      clearErrors("password", "account_login_identifier");
                     }}
                   />
                 </div>
@@ -245,14 +213,11 @@ export default function Login({
 
                 {/* Register */}
                 <p className="mt-[11px] text-center text-[12px] text-[#adb2bd] lg:mt-[16px] lg:text-[18px]">
-                  Don&apos;t have an account?{" "}
-                  <Link
-                    href={route("register")}
-                    className="font-semibold text-[#3842c9] transition hover:text-[#252fac]"
-                  >
-                    Create one
-                  </Link>
-                </p>
+  Don&apos;t have an account?{" "}
+  <span className="font-semibold text-[#3842c9]">
+    Create one
+  </span>
+</p>
               </form>
             </>
           )}

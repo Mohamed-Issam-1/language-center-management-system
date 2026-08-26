@@ -33,12 +33,12 @@ export default function PasswordInput({
             >
                 {visible ? (
                     <EyeOff
-                        size={21}
+                        size={18}
                         strokeWidth={1.8}
                     />
                 ) : (
                     <Eye
-                        size={21}
+                        size={18}
                         strokeWidth={1.8}
                     />
                 )}

@@ -50,7 +50,7 @@ export default function GuestLayout({
 
             {/* Right authentication content */}
             <main className="flex min-h-[calc(100vh-171px)] items-start justify-center px-3 lg:min-h-screen lg:items-center lg:px-16 lg:py-10">
-                <div className="flex w-full max-w-[500px] flex-col rounded-b-[18px] bg-white px-[18px] pb-6 shadow-[0_8px_25px_rgba(39,54,130,0.08)] lg:rounded-none lg:bg-transparent lg:px-0 lg:pb-0 lg:shadow-none">
+                <div className="flex w-full max-w-[460px] flex-col rounded-b-[18px] bg-white px-[18px] pb-6 shadow-[0_8px_25px_rgba(39,54,130,0.08)] lg:rounded-none lg:bg-transparent lg:px-0 lg:pb-0 lg:shadow-none">
                     {children}
                 </div>
             </main>
