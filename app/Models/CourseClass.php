@@ -9,6 +9,7 @@ use Database\Factories\CourseClassFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CourseClass extends Model
 {
@@ -60,6 +61,14 @@ class CourseClass extends Model
     {
         return $this->belongsTo(
             Course::class
+        );
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(
+            Enrollment::class,
+            'class_id'
         );
     }
 
