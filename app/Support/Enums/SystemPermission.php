@@ -14,6 +14,10 @@ enum SystemPermission: string
 
     case ManageEnrollments = 'manage_enrollments';
 
+    case ManageSchedules = 'manage_schedules';
+
+    case ViewSchedules = 'view_schedules';
+
     case ManageAcademicStructure = 'manage_academic_structure';
 
     case ManageCenterOwnerAccounts = 'manage_center_owner_accounts';

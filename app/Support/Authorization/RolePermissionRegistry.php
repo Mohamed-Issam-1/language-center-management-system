@@ -25,6 +25,8 @@ final class RolePermissionRegistry
                 SystemPermission::ManageClassrooms,
                 SystemPermission::ManageClasses,
                 SystemPermission::ManageEnrollments,
+                SystemPermission::ManageSchedules,
+                SystemPermission::ViewSchedules,
                 SystemPermission::ManageAcademicStructure,
                 SystemPermission::ManageStaffAccounts,
                 SystemPermission::ManageStudentAccounts,
@@ -39,6 +41,8 @@ final class RolePermissionRegistry
                 SystemPermission::ManageClassrooms,
                 SystemPermission::ManageClasses,
                 SystemPermission::ManageEnrollments,
+                SystemPermission::ManageSchedules,
+                SystemPermission::ViewSchedules,
                 SystemPermission::ManageStudentAccounts,
                 SystemPermission::ManageStudentRecords,
                 SystemPermission::ViewStudentRecords,
@@ -55,6 +59,7 @@ final class RolePermissionRegistry
 
             SystemRole::Teacher => [
                 SystemPermission::ViewStudentRecords,
+                SystemPermission::ViewSchedules,
                 SystemPermission::ViewReports,
             ],
 
