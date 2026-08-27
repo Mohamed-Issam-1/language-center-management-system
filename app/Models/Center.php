@@ -123,6 +123,20 @@ class Center extends Model
         );
     }
 
+    public function attendanceStatuses(): HasMany
+    {
+        return $this->hasMany(
+            AttendanceStatus::class
+        );
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(
+            Attendance::class
+        );
+    }
+
     public function registrationRequests(): HasMany
     {
         return $this->hasMany(

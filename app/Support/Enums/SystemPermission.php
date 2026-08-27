@@ -18,6 +18,12 @@ enum SystemPermission: string
 
     case ViewSchedules = 'view_schedules';
 
+    case ManageAttendance = 'manage_attendance';
+
+    case ViewAttendance = 'view_attendance';
+
+    case ManageAttendanceSettings = 'manage_attendance_settings';
+
     case ManageAcademicStructure = 'manage_academic_structure';
 
     case ManageCenterOwnerAccounts = 'manage_center_owner_accounts';

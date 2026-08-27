@@ -8,6 +8,7 @@ use Database\Factories\ClassSessionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ClassSession extends Model
 {
@@ -93,5 +94,13 @@ class ClassSession extends Model
     {
         return $this->session_status
             === ClassSessionStatus::Cancelled;
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(
+            Attendance::class,
+            'session_id'
+        );
     }
 }

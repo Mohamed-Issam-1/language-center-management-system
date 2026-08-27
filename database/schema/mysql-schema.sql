@@ -43,6 +43,57 @@ CREATE TABLE `account_identifier_sequences` (
   UNIQUE KEY `account_identifier_sequences_scope_unique` (`center_identifier_code`,`role_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `attendance_statuses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `attendance_statuses` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `code` varchar(50) NOT NULL,
+  `contribution_value` decimal(5,2) NOT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `attendance_statuses_center_code_unique` (`center_id`,`code`),
+  UNIQUE KEY `attendance_statuses_id_center_unique` (`id`,`center_id`),
+  KEY `attendance_statuses_center_active_index` (`center_id`,`is_active`),
+  CONSTRAINT `attendance_statuses_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `attendances`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `attendances` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `session_id` bigint(20) unsigned NOT NULL,
+  `enrollment_id` bigint(20) unsigned NOT NULL,
+  `attendance_status_id` bigint(20) unsigned NOT NULL,
+  `recorded_by_user_id` bigint(20) unsigned NOT NULL,
+  `late_minutes` int(10) unsigned NOT NULL DEFAULT 0,
+  `excuse` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `recorded_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `attendances_session_enrollment_unique` (`center_id`,`session_id`,`enrollment_id`),
+  UNIQUE KEY `attendances_id_center_unique` (`id`,`center_id`),
+  KEY `attendances_session_center_foreign` (`session_id`,`center_id`),
+  KEY `attendances_enrollment_center_foreign` (`enrollment_id`,`center_id`),
+  KEY `attendances_status_center_foreign` (`attendance_status_id`,`center_id`),
+  KEY `attendances_recorder_center_foreign` (`recorded_by_user_id`,`center_id`),
+  KEY `attendances_center_enrollment_index` (`center_id`,`enrollment_id`),
+  KEY `attendances_center_status_index` (`center_id`,`attendance_status_id`),
+  KEY `attendances_center_recorder_index` (`center_id`,`recorded_by_user_id`),
+  CONSTRAINT `attendances_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`),
+  CONSTRAINT `attendances_enrollment_center_foreign` FOREIGN KEY (`enrollment_id`, `center_id`) REFERENCES `enrollments` (`id`, `center_id`),
+  CONSTRAINT `attendances_recorder_center_foreign` FOREIGN KEY (`recorded_by_user_id`, `center_id`) REFERENCES `users` (`id`, `center_id`),
+  CONSTRAINT `attendances_session_center_foreign` FOREIGN KEY (`session_id`, `center_id`) REFERENCES `class_sessions` (`id`, `center_id`),
+  CONSTRAINT `attendances_status_center_foreign` FOREIGN KEY (`attendance_status_id`, `center_id`) REFERENCES `attendance_statuses` (`id`, `center_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `audit_records`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -782,3 +833,5 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (29,'2026_08_26_115
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (30,'2026_08_26_120000_create_class_schedules_table',2);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (31,'2026_08_26_120100_create_class_sessions_table',2);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (32,'2026_08_26_120200_add_occurrence_date_to_class_sessions_table',3);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (33,'2026_08_27_085844_create_attendance_statuses_table',4);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (35,'2026_08_27_085921_create_attendances_table',5);
