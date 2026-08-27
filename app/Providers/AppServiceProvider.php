@@ -14,6 +14,10 @@ use App\Models\CourseClass;
 use App\Models\Enrollment;
 use App\Models\ClassSchedule;
 use App\Models\ClassSession;
+use App\Models\Attendance;
+use App\Models\AttendanceStatus;
+use App\Policies\AttendancePolicy;
+use App\Policies\AttendanceStatusPolicy;
 use App\Policies\BranchPolicy;
 use App\Policies\CenterPolicy;
 use App\Policies\ClassroomPolicy;
@@ -120,6 +124,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(
             Student::class,
             StudentPolicy::class
+        );
+
+        Gate::policy(
+            Attendance::class,
+            AttendancePolicy::class
+        );
+
+        Gate::policy(
+            AttendanceStatus::class,
+            AttendanceStatusPolicy::class
         );
 
         /*

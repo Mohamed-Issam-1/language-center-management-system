@@ -97,4 +97,11 @@ class Enrollment extends Model
         return $this->enrollment_status
             === EnrollmentStatus::Cancelled;
     }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(
+            Attendance::class
+        );
+    }
 }

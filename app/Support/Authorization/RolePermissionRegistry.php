@@ -31,6 +31,8 @@ final class RolePermissionRegistry
                 SystemPermission::ManageStaffAccounts,
                 SystemPermission::ManageStudentAccounts,
                 SystemPermission::ManageStudentRecords,
+                SystemPermission::ViewAttendance,
+                SystemPermission::ManageAttendanceSettings,
                 SystemPermission::ViewStudentRecords,
                 SystemPermission::ViewFinancialData,
                 SystemPermission::ManageFinancialOperations,
@@ -45,6 +47,8 @@ final class RolePermissionRegistry
                 SystemPermission::ViewSchedules,
                 SystemPermission::ManageStudentAccounts,
                 SystemPermission::ManageStudentRecords,
+                SystemPermission::ManageAttendance,
+                SystemPermission::ViewAttendance,
                 SystemPermission::ViewStudentRecords,
                 SystemPermission::ViewFinancialData,
                 SystemPermission::ManageFinancialOperations,
@@ -61,12 +65,15 @@ final class RolePermissionRegistry
                 SystemPermission::ViewStudentRecords,
                 SystemPermission::ViewSchedules,
                 SystemPermission::ViewReports,
+                SystemPermission::ManageAttendance,
+                SystemPermission::ViewAttendance,
             ],
 
             SystemRole::Student => [
                 SystemPermission::ViewStudentRecords,
                 SystemPermission::ViewFinancialData,
                 SystemPermission::ViewReports,
+                SystemPermission::ViewAttendance,
             ],
         };
     }
