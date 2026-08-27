@@ -186,6 +186,75 @@ CREATE TABLE `centers` (
   KEY `centers_status_index` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `class_schedules`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `class_schedules` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `class_id` bigint(20) unsigned NOT NULL,
+  `classroom_id` bigint(20) unsigned NOT NULL,
+  `teacher_id` bigint(20) unsigned NOT NULL,
+  `day_of_week` tinyint(3) unsigned NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `effective_from` date NOT NULL,
+  `effective_until` date NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `class_schedules_id_center_unique` (`id`,`center_id`),
+  UNIQUE KEY `class_schedules_id_class_center_unique` (`id`,`class_id`,`center_id`),
+  KEY `class_schedules_class_center_foreign` (`class_id`,`center_id`),
+  KEY `class_schedules_classroom_center_foreign` (`classroom_id`,`center_id`),
+  KEY `class_schedules_teacher_center_foreign` (`teacher_id`,`center_id`),
+  KEY `class_schedules_center_class_status_index` (`center_id`,`class_id`,`status`),
+  KEY `class_schedules_teacher_day_status_index` (`center_id`,`teacher_id`,`day_of_week`,`status`),
+  KEY `class_schedules_room_day_status_index` (`center_id`,`classroom_id`,`day_of_week`,`status`),
+  CONSTRAINT `class_schedules_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`),
+  CONSTRAINT `class_schedules_class_center_foreign` FOREIGN KEY (`class_id`, `center_id`) REFERENCES `course_classes` (`id`, `center_id`),
+  CONSTRAINT `class_schedules_classroom_center_foreign` FOREIGN KEY (`classroom_id`, `center_id`) REFERENCES `classrooms` (`id`, `center_id`),
+  CONSTRAINT `class_schedules_teacher_center_foreign` FOREIGN KEY (`teacher_id`, `center_id`) REFERENCES `teachers` (`id`, `center_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `class_sessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `class_sessions` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `class_id` bigint(20) unsigned NOT NULL,
+  `schedule_id` bigint(20) unsigned NOT NULL,
+  `occurrence_date` date NOT NULL,
+  `classroom_id` bigint(20) unsigned NOT NULL,
+  `teacher_id` bigint(20) unsigned NOT NULL,
+  `session_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `topic` varchar(255) DEFAULT NULL,
+  `session_status` varchar(20) NOT NULL DEFAULT 'scheduled',
+  `cancellation_reason` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `class_sessions_schedule_date_unique` (`center_id`,`schedule_id`,`session_date`),
+  UNIQUE KEY `class_sessions_id_center_unique` (`id`,`center_id`),
+  UNIQUE KEY `class_sessions_schedule_occurrence_unique` (`center_id`,`schedule_id`,`occurrence_date`),
+  KEY `class_sessions_class_center_foreign` (`class_id`,`center_id`),
+  KEY `class_sessions_schedule_class_center_foreign` (`schedule_id`,`class_id`,`center_id`),
+  KEY `class_sessions_classroom_center_foreign` (`classroom_id`,`center_id`),
+  KEY `class_sessions_teacher_center_foreign` (`teacher_id`,`center_id`),
+  KEY `class_sessions_class_date_status_index` (`center_id`,`class_id`,`session_date`,`session_status`),
+  KEY `class_sessions_teacher_date_status_index` (`center_id`,`teacher_id`,`session_date`,`session_status`),
+  KEY `class_sessions_room_date_status_index` (`center_id`,`classroom_id`,`session_date`,`session_status`),
+  CONSTRAINT `class_sessions_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`),
+  CONSTRAINT `class_sessions_class_center_foreign` FOREIGN KEY (`class_id`, `center_id`) REFERENCES `course_classes` (`id`, `center_id`),
+  CONSTRAINT `class_sessions_classroom_center_foreign` FOREIGN KEY (`classroom_id`, `center_id`) REFERENCES `classrooms` (`id`, `center_id`),
+  CONSTRAINT `class_sessions_schedule_class_center_foreign` FOREIGN KEY (`schedule_id`, `class_id`, `center_id`) REFERENCES `class_schedules` (`id`, `class_id`, `center_id`),
+  CONSTRAINT `class_sessions_teacher_center_foreign` FOREIGN KEY (`teacher_id`, `center_id`) REFERENCES `teachers` (`id`, `center_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `classrooms`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -203,6 +272,7 @@ CREATE TABLE `classrooms` (
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `classrooms_id_branch_center_unique` (`id`,`branch_id`,`center_id`),
+  UNIQUE KEY `classrooms_id_center_unique` (`id`,`center_id`),
   KEY `classrooms_branch_center_foreign` (`branch_id`,`center_id`),
   KEY `classrooms_center_branch_index` (`center_id`,`branch_id`),
   KEY `classrooms_center_status_index` (`center_id`,`status`),
@@ -708,3 +778,7 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (25,'2026_08_24_134
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (26,'2026_08_24_134645_create_course_classes_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (27,'2026_08_24_175603_create_enrollments_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (28,'2026_08_24_175626_create_enrollment_histories_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (29,'2026_08_26_115900_add_center_safe_identity_to_classrooms_table',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (30,'2026_08_26_120000_create_class_schedules_table',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (31,'2026_08_26_120100_create_class_sessions_table',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (32,'2026_08_26_120200_add_occurrence_date_to_class_sessions_table',3);

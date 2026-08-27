@@ -12,6 +12,8 @@ use App\Models\Course;
 use App\Models\Language;
 use App\Models\CourseClass;
 use App\Models\Enrollment;
+use App\Models\ClassSchedule;
+use App\Models\ClassSession;
 use App\Policies\BranchPolicy;
 use App\Policies\CenterPolicy;
 use App\Policies\ClassroomPolicy;
@@ -21,6 +23,8 @@ use App\Policies\CoursePolicy;
 use App\Policies\LanguagePolicy;
 use App\Policies\CourseClassPolicy;
 use App\Policies\EnrollmentPolicy;
+use App\Policies\ClassSchedulePolicy;
+use App\Policies\ClassSessionPolicy;
 use App\Support\Enums\SystemPermission;
 use App\Support\Tenancy\BranchContext;
 use App\Support\Tenancy\TenantContext;
@@ -101,6 +105,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(
             Enrollment::class,
             EnrollmentPolicy::class
+        );
+
+        Gate::policy(
+            ClassSchedule::class,
+            ClassSchedulePolicy::class
+        );
+
+        Gate::policy(
+            ClassSession::class,
+            ClassSessionPolicy::class
         );
 
         Gate::policy(

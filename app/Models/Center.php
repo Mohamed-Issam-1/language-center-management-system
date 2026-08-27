@@ -109,6 +109,20 @@ class Center extends Model
         );
     }
 
+    public function classSchedules(): HasMany
+    {
+        return $this->hasMany(
+            ClassSchedule::class
+        );
+    }
+
+    public function classSessions(): HasMany
+    {
+        return $this->hasMany(
+            ClassSession::class
+        );
+    }
+
     public function registrationRequests(): HasMany
     {
         return $this->hasMany(

@@ -88,6 +88,22 @@ class CourseClass extends Model
         );
     }
 
+    public function classSchedules(): HasMany
+    {
+        return $this->hasMany(
+            ClassSchedule::class,
+            'class_id'
+        );
+    }
+
+    public function classSessions(): HasMany
+    {
+        return $this->hasMany(
+            ClassSession::class,
+            'class_id'
+        );
+    }
+
     public function isPlanned(): bool
     {
         return $this->class_status
