@@ -20,7 +20,7 @@ class AuthenticatedSessionController extends Controller
              * Self-service password recovery is intentionally
              * unavailable in the LCMS MVP.
              */
-            'canResetPassword' => false,
+            'canResetPassword' => true,
             'status' => session('status'),
         ]);
     }
