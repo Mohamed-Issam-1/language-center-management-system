@@ -39,9 +39,7 @@ class PasswordResetLinkController extends Controller
             ->where(
                 'account_login_identifier',
                 trim(
-                    $validated[
-                        'account_login_identifier'
-                    ]
+                    $validated['account_login_identifier']
                 )
             )
             ->where(
@@ -56,7 +54,7 @@ class PasswordResetLinkController extends Controller
         ) {
             throw ValidationException::withMessages([
                 'account_login_identifier' =>
-                    'Unable to process the password recovery request.',
+                'Unable to process the password recovery request.',
             ]);
         }
 
@@ -78,18 +76,18 @@ class PasswordResetLinkController extends Controller
 
         $recoveryCode =
             PasswordRecoveryCode::query()
-                ->create([
-                    'user_id' => $user->id,
+            ->create([
+                'user_id' => $user->id,
 
-                    'code_hash' => hash_hmac(
-                        'sha256',
-                        $code,
-                        config('app.key')
-                    ),
+                'code_hash' => hash_hmac(
+                    'sha256',
+                    $code,
+                    config('app.key')
+                ),
 
-                    'expires_at' =>
-                        now()->addMinutes(30),
-                ]);
+                'expires_at' =>
+                now()->addMinutes(30),
+            ]);
 
         try {
             Mail::to(
@@ -107,18 +105,18 @@ class PasswordResetLinkController extends Controller
 
             throw ValidationException::withMessages([
                 'account_login_identifier' =>
-                    'Unable to process the password recovery request.',
+                'Unable to process the password recovery request.',
             ]);
         }
 
         $request->session()->put([
             'password_recovery_user_id' =>
-                $user->id,
+            $user->id,
 
             'password_recovery_email' =>
-                $this->maskEmail(
-                    $user->recovery_email
-                ),
+            $this->maskEmail(
+                $user->recovery_email
+            ),
         ]);
 
         return redirect()->route(
@@ -143,9 +141,262 @@ class PasswordResetLinkController extends Controller
             'Auth/VerifyRecoveryCode',
             [
                 'maskedEmail' =>
-                    $request->session()->get(
-                        'password_recovery_email'
-                    ),
+                $request->session()->get(
+                    'password_recovery_email'
+                ),
+            ]
+        );
+    }
+
+    public function verifyCode(
+        Request $request
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'code' => [
+                'required',
+                'digits:5',
+            ],
+        ]);
+
+        $userId = $request->session()->get(
+            'password_recovery_user_id'
+        );
+
+        if ($userId === null) {
+            return redirect()->route(
+                'password.request'
+            );
+        }
+
+        $recoveryCode =
+            PasswordRecoveryCode::query()
+            ->where(
+                'user_id',
+                $userId
+            )
+            ->latest('id')
+            ->first();
+
+        if ($recoveryCode === null) {
+            throw ValidationException::withMessages([
+                'code' =>
+                'Invalid verification code.',
+            ]);
+        }
+
+        if ($recoveryCode->used_at !== null) {
+            throw ValidationException::withMessages([
+                'code' =>
+                'This verification code has already been used.',
+            ]);
+        }
+
+        if (
+            $recoveryCode->expires_at
+            ->isPast()
+        ) {
+            throw ValidationException::withMessages([
+                'code' =>
+                'This verification code has expired. Please request a new code.',
+            ]);
+        }
+
+        $submittedHash = hash_hmac(
+            'sha256',
+            $validated['code'],
+            config('app.key')
+        );
+
+        if (
+            ! hash_equals(
+                $recoveryCode->code_hash,
+                $submittedHash
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'code' =>
+                'Invalid verification code.',
+            ]);
+        }
+
+        $recoveryCode->forceFill([
+            'verified_at' => now(),
+        ])->save();
+
+        $request->session()->put(
+            'password_recovery_code_id',
+            $recoveryCode->id
+        );
+
+        return redirect()->route(
+            'password.recovery.reset'
+        );
+    }
+
+    public function resend(
+        Request $request
+    ): RedirectResponse {
+        $userId = $request->session()->get(
+            'password_recovery_user_id'
+        );
+
+        if ($userId === null) {
+            return redirect()->route(
+                'password.request'
+            );
+        }
+
+        $user = User::query()
+            ->find($userId);
+
+        if (
+            $user === null
+            || blank($user->recovery_email)
+        ) {
+            throw ValidationException::withMessages([
+                'code' =>
+                'Unable to resend the verification code.',
+            ]);
+        }
+
+        $latestCode =
+            PasswordRecoveryCode::query()
+            ->where(
+                'user_id',
+                $user->id
+            )
+            ->latest('id')
+            ->first();
+
+        if ($latestCode !== null) {
+            $secondsSinceLastCode =
+                (int) $latestCode
+                    ->created_at
+                    ->diffInSeconds(
+                        now()
+                    );
+
+            if (
+                $secondsSinceLastCode < 60
+            ) {
+                $remaining =
+                    60 -
+                    $secondsSinceLastCode;
+
+                throw ValidationException::withMessages([
+                    'code' =>
+                    "Please wait {$remaining} seconds before requesting another code.",
+                ]);
+            }
+        }
+
+        PasswordRecoveryCode::query()
+            ->where(
+                'user_id',
+                $user->id
+            )
+            ->whereNull('used_at')
+            ->where(
+                'expires_at',
+                '>',
+                now()
+            )
+            ->update([
+                'expires_at' => now(),
+            ]);
+
+        $code = (string) random_int(
+            10000,
+            99999
+        );
+
+        $recoveryCode =
+            PasswordRecoveryCode::query()
+            ->create([
+                'user_id' =>
+                $user->id,
+
+                'code_hash' =>
+                hash_hmac(
+                    'sha256',
+                    $code,
+                    config(
+                        'app.key'
+                    )
+                ),
+
+                'expires_at' =>
+                now()->addMinutes(
+                    30
+                ),
+            ]);
+
+        try {
+            Mail::to(
+                $user->recovery_email
+            )->send(
+                new PasswordRecoveryCodeMail(
+                    $user->name,
+                    $code
+                )
+            );
+        } catch (Throwable $exception) {
+            $recoveryCode->delete();
+
+            report($exception);
+
+            throw ValidationException::withMessages([
+                'code' =>
+                'Unable to resend the verification code.',
+            ]);
+        }
+
+        return back();
+    }
+
+    public function reset(
+        Request $request
+    ): Response|RedirectResponse {
+        $recoveryCodeId =
+            $request->session()->get(
+                'password_recovery_code_id'
+            );
+
+        if ($recoveryCodeId === null) {
+            return redirect()->route(
+                'password.request'
+            );
+        }
+
+        $recoveryCode =
+            PasswordRecoveryCode::query()
+            ->whereKey(
+                $recoveryCodeId
+            )
+            ->whereNotNull(
+                'verified_at'
+            )
+            ->whereNull(
+                'used_at'
+            )
+            ->first();
+
+        if ($recoveryCode === null) {
+            return redirect()->route(
+                'password.request'
+            );
+        }
+
+        return Inertia::render(
+            'Auth/ResetPassword',
+            [
+                /*
+             * Temporary compatibility props.
+             * We will replace the old
+             * token/email reset contract next.
+             */
+                'token' => '',
+                'email' => '',
             ]
         );
     }
