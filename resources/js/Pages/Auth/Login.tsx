@@ -1,6 +1,6 @@
-import { FormEventHandler, useState } from "react";
+import { FormEventHandler, useEffect, useState } from "react";
 import { ArrowRight, Check, TriangleAlert } from "lucide-react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 
 import Checkbox from "@/Components/Checkbox";
 import InputLabel from "@/Components/InputLabel";
@@ -14,9 +14,13 @@ import GuestLayout from "@/Layouts/GuestLayout";
 export default function Login({
   status,
   canResetPassword = true,
+  showSuccessInitially = false,
+  successRedirectTo,
 }: {
   status?: string;
   canResetPassword?: boolean;
+  showSuccessInitially?: boolean;
+  successRedirectTo?: string;
 }) {
   const { data, setData, post, processing, errors, clearErrors } = useForm({
     account_login_identifier: "",
@@ -25,7 +29,19 @@ export default function Login({
   });
 
   const [submitted, setSubmitted] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const showSuccess = showSuccessInitially;
+
+  useEffect(() => {
+    if (!showSuccess || !successRedirectTo) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      router.visit(successRedirectTo);
+    }, 1200);
+
+    return () => window.clearTimeout(timeout);
+  }, [showSuccess, successRedirectTo]);
 
   const loginHasError = submitted && !data.account_login_identifier.trim();
 
@@ -213,11 +229,11 @@ export default function Login({
 
                 {/* Register */}
                 <p className="mt-[11px] text-center text-[12px] text-[#adb2bd] lg:mt-[16px] lg:text-[18px]">
-  Don&apos;t have an account?{" "}
-  <span className="font-semibold text-[#3842c9]">
-    Create one
-  </span>
-</p>
+                  Don&apos;t have an account?{" "}
+                  <span className="font-semibold text-[#3842c9]">
+                    Create one
+                  </span>
+                </p>
               </form>
             </>
           )}

@@ -44,17 +44,45 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         if ($user->must_change_password) {
-            return redirect()
-                ->route('profile.edit')
-                ->with(
-                    'status',
-                    'You must change your temporary password before continuing.'
-                );
+            $redirectTo = route(
+                'profile.edit',
+                absolute: false
+            );
+        } else {
+            $redirectTo = $request->session()->pull(
+                'url.intended',
+                route('dashboard', absolute: false)
+            );
         }
 
-        return redirect()->intended(
+        $request->session()->put(
+            'post_login_redirect',
+            $redirectTo
+        );
+
+        return redirect()->route('login.success');
+    }
+
+    public function success(Request $request): Response
+    {
+        $redirectTo = $request->session()->pull(
+            'post_login_redirect',
             route('dashboard', absolute: false)
         );
+
+        if ($request->user()?->must_change_password) {
+            $request->session()->flash(
+                'status',
+                'You must change your temporary password before continuing.'
+            );
+        }
+
+        return Inertia::render('Auth/Login', [
+            'canResetPassword' => false,
+            'status' => null,
+            'showSuccessInitially' => true,
+            'successRedirectTo' => $redirectTo,
+        ]);
     }
 
     public function destroy(Request $request): RedirectResponse

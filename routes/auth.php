@@ -22,6 +22,10 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get(
+        'login/success',
+        [AuthenticatedSessionController::class, 'success']
+    )->name('login.success');
     /*
      * These two operations must remain available while a user is
      * completing a forced password change.
