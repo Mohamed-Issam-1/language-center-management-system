@@ -4,6 +4,7 @@ namespace App\Http\Requests\Registration;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Str;
 
 class StoreRegistrationRequest extends FormRequest
@@ -115,6 +116,25 @@ class StoreRegistrationRequest extends FormRequest
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
+            ],
+
+            'branch_id' => [
+                'required',
+                'integer',
+                'exists:branches,id',
+            ],
+
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'confirmed',
+            ],
+
+            'terms' => [
+                'accepted',
             ],
         ];
     }

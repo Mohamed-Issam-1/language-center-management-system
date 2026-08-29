@@ -16,6 +16,8 @@ class RegistrationRequest extends Model
 
     protected $fillable = [
         'center_id',
+        'person_id',
+        'user_id',
         'national_id_number',
         'full_name',
         'date_of_birth',
@@ -93,5 +95,19 @@ class RegistrationRequest extends Model
     {
         return $this->status
             === RegistrationRequestStatus::Rejected;
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(
+            Person::class
+        );
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class
+        );
     }
 }
