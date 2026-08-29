@@ -42,6 +42,11 @@ Route::middleware('guest')->group(function () {
     )->name('password.recovery.reset');
 
     Route::post(
+        'forgot-password/reset',
+        [PasswordResetLinkController::class, 'resetPassword']
+    )->name('password.recovery.reset.store');
+
+    Route::post(
         'forgot-password',
         [PasswordResetLinkController::class, 'store']
     )->name('password.recovery.send');

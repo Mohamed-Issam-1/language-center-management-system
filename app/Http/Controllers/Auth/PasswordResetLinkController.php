@@ -11,6 +11,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -357,12 +360,38 @@ class PasswordResetLinkController extends Controller
     public function reset(
         Request $request
     ): Response|RedirectResponse {
+        /*
+     * Allow the success screen to be displayed
+     * after the recovery session has been cleared.
+     */
+        if (
+            $request->session()->get(
+                'passwordResetSuccessful',
+                false
+            )
+        ) {
+            return Inertia::render(
+                'Auth/ResetPassword',
+                [
+                    'passwordResetSuccessful' => true,
+                ]
+            );
+        }
+
         $recoveryCodeId =
             $request->session()->get(
                 'password_recovery_code_id'
             );
 
-        if ($recoveryCodeId === null) {
+        $userId =
+            $request->session()->get(
+                'password_recovery_user_id'
+            );
+
+        if (
+            $recoveryCodeId === null
+            || $userId === null
+        ) {
             return redirect()->route(
                 'password.request'
             );
@@ -370,8 +399,10 @@ class PasswordResetLinkController extends Controller
 
         $recoveryCode =
             PasswordRecoveryCode::query()
-            ->whereKey(
-                $recoveryCodeId
+            ->whereKey($recoveryCodeId)
+            ->where(
+                'user_id',
+                $userId
             )
             ->whereNotNull(
                 'verified_at'
@@ -381,7 +412,10 @@ class PasswordResetLinkController extends Controller
             )
             ->first();
 
-        if ($recoveryCode === null) {
+        if (
+            $recoveryCode === null
+            || $recoveryCode->expires_at->isPast()
+        ) {
             return redirect()->route(
                 'password.request'
             );
@@ -390,15 +424,128 @@ class PasswordResetLinkController extends Controller
         return Inertia::render(
             'Auth/ResetPassword',
             [
-                /*
-             * Temporary compatibility props.
-             * We will replace the old
-             * token/email reset contract next.
-             */
-                'token' => '',
-                'email' => '',
+                'passwordResetSuccessful' => false,
             ]
         );
+    }
+
+    public function resetPassword(
+        Request $request
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'password' => [
+                'required',
+                Password::defaults(),
+                'confirmed',
+            ],
+        ]);
+
+        $recoveryCodeId =
+            $request->session()->get(
+                'password_recovery_code_id'
+            );
+
+        $userId =
+            $request->session()->get(
+                'password_recovery_user_id'
+            );
+
+        if (
+            $recoveryCodeId === null
+            || $userId === null
+        ) {
+            return redirect()->route(
+                'password.request'
+            );
+        }
+
+        DB::transaction(function () use (
+            $recoveryCodeId,
+            $userId,
+            $validated
+        ): void {
+            $recoveryCode =
+                PasswordRecoveryCode::query()
+                ->whereKey(
+                    $recoveryCodeId
+                )
+                ->where(
+                    'user_id',
+                    $userId
+                )
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                $recoveryCode === null
+                || $recoveryCode->verified_at === null
+                || $recoveryCode->used_at !== null
+                || $recoveryCode->expires_at->isPast()
+            ) {
+                throw ValidationException::withMessages([
+                    'password' =>
+                    'This password recovery request is no longer valid.',
+                ]);
+            }
+
+            $user = User::query()
+                ->whereKey($userId)
+                ->where(
+                    'status',
+                    AccountStatus::Active
+                )
+                ->lockForUpdate()
+                ->first();
+
+            if ($user === null) {
+                throw ValidationException::withMessages([
+                    'password' =>
+                    'Unable to process the password recovery request.',
+                ]);
+            }
+
+            $user->forceFill([
+                'password' => Hash::make(
+                    $validated['password']
+                ),
+
+                'password_changed_at' => now(),
+
+                'must_change_password' => false,
+
+                'temporary_password_used_at' => null,
+
+                'failed_login_attempts' => 0,
+
+                'locked_until' => null,
+            ])->save();
+
+            /*
+         * A recovery code is single-use.
+         */
+            $recoveryCode->forceFill([
+                'used_at' => now(),
+            ])->save();
+        });
+
+        /*
+     * Recovery is complete. Do not leave the
+     * verification state in the session.
+     */
+        $request->session()->forget([
+            'password_recovery_user_id',
+            'password_recovery_email',
+            'password_recovery_code_id',
+        ]);
+
+        return redirect()
+            ->route(
+                'password.recovery.reset'
+            )
+            ->with(
+                'passwordResetSuccessful',
+                true
+            );
     }
 
     private function maskEmail(
