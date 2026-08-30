@@ -82,11 +82,48 @@ class AdminPanelAccessTest extends TestCase
             );
 
         $response->assertRedirect(
+            route(
+                'login.success',
+                absolute: false
+            )
+        );
+
+        $response->assertSessionHas(
+            'post_login_redirect',
             url('/admin')
         );
 
         $this->assertAuthenticatedAs(
             $user
+        );
+
+        $successResponse =
+            $this->get('/login/success');
+
+        $successResponse
+            ->assertOk()
+            ->assertInertia(
+                fn(
+                    \Inertia\Testing\AssertableInertia $page
+                ) =>
+                $page
+                    ->component('Auth/Login')
+                    ->where(
+                        'showSuccessInitially',
+                        true
+                    )
+                    ->where(
+                        'successRedirectTo',
+                        url('/admin')
+                    )
+                    ->where(
+                        'canResetPassword',
+                        false
+                    )
+            );
+
+        $this->assertNull(
+            session('post_login_redirect')
         );
     }
 

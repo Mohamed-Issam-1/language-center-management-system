@@ -1,6 +1,11 @@
-import { FormEventHandler, useState } from "react";
+import { FormEventHandler, useEffect, useState } from "react";
 import { ArrowRight, Check, TriangleAlert } from "lucide-react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import {
+  Head,
+  Link,
+  router,
+  useForm,
+} from "@inertiajs/react";
 
 import Checkbox from "@/Components/Checkbox";
 import InputLabel from "@/Components/InputLabel";
@@ -13,10 +18,14 @@ import GuestLayout from "@/Layouts/GuestLayout";
 
 export default function Login({
   status,
-  canResetPassword = true,
+  canResetPassword = false,
+  showSuccessInitially = false,
+  successRedirectTo,
 }: {
   status?: string;
   canResetPassword?: boolean;
+  showSuccessInitially?: boolean;
+  successRedirectTo?: string;
 }) {
   const {
     data,
@@ -24,9 +33,7 @@ export default function Login({
     post,
     processing,
     errors,
-    reset,
     clearErrors,
-    setError,
   } = useForm({
     account_login_identifier: "",
     password: "",
@@ -34,11 +41,25 @@ export default function Login({
   });
 
   const [submitted, setSubmitted] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+const showSuccess = showSuccessInitially;
 
-  type DemoMode = "real" | "error" | "success";
+useEffect(() => {
+  if (
+    !showSuccess ||
+    !successRedirectTo
+  ) {
+    return;
+  }
 
-  const DEMO_MODE = "real" as DemoMode;
+  const timeout = window.setTimeout(() => {
+    router.visit(successRedirectTo);
+  }, 1200);
+
+  return () => window.clearTimeout(timeout);
+}, [
+  showSuccess,
+  successRedirectTo,
+]);
 
   const loginHasError =
     Boolean(errors.account_login_identifier) ||
@@ -75,25 +96,6 @@ export default function Login({
     }
 
     clearErrors();
-
-    if (DEMO_MODE === "error") {
-      setError({
-        account_login_identifier:
-          "Incorrect login ID or password.",
-        password:
-          "Incorrect login ID or password.",
-      });
-
-      reset("password");
-
-      return;
-    }
-
-    if (DEMO_MODE === "success") {
-      setShowSuccess(true);
-
-      return;
-    }
 
     post(route("login"));
   };
@@ -147,7 +149,7 @@ export default function Login({
               </h2>
 
               <p className="mt-[8px] text-[13px] text-[#adb2be] lg:text-[18px]">
-                Redirecting to your dashboard...
+                Redirecting to your account...
               </p>
 
               {/* Loading circle */}

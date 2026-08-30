@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ForcedPasswordChangeTest extends TestCase
@@ -27,8 +28,30 @@ class ForcedPasswordChangeTest extends TestCase
         $this->assertAuthenticatedAs($user);
 
         $response->assertRedirect(
-            route('profile.edit', absolute: false)
+            route('login.success', absolute: false)
         );
+
+        $successResponse =
+            $this->get('/login/success');
+
+        $successResponse
+            ->assertOk()
+            ->assertInertia(
+                fn(Assert $page): Assert =>
+                $page
+                    ->component('Auth/Login')
+                    ->where(
+                        'showSuccessInitially',
+                        true
+                    )
+                    ->where(
+                        'successRedirectTo',
+                        route(
+                            'profile.edit',
+                            absolute: false
+                        )
+                    )
+            );
 
         $user->refresh();
 
@@ -195,10 +218,28 @@ class ForcedPasswordChangeTest extends TestCase
 
         $loginResponse->assertRedirect(
             route(
-                'profile.edit',
+                'login.success',
                 absolute: false
             )
         );
+
+        $successResponse =
+            $this->get('/login/success');
+
+        $successResponse
+            ->assertOk()
+            ->assertInertia(
+                fn(Assert $page): Assert =>
+                $page
+                    ->component('Auth/Login')
+                    ->where(
+                        'successRedirectTo',
+                        route(
+                            'profile.edit',
+                            absolute: false
+                        )
+                    )
+            );
 
         /*
      * Establish a permanent password.
@@ -293,14 +334,71 @@ class ForcedPasswordChangeTest extends TestCase
 
         $newPasswordResponse->assertRedirect(
             route(
-                'dashboard',
+                'login.success',
                 absolute: false
             )
         );
+
+        $newSuccessResponse =
+            $this->get('/login/success');
+
+        $newSuccessResponse
+            ->assertOk()
+            ->assertInertia(
+                fn(Assert $page): Assert =>
+                $page
+                    ->component('Auth/Login')
+                    ->where(
+                        'successRedirectTo',
+                        route(
+                            'dashboard',
+                            absolute: false
+                        )
+                    )
+            );
 
         $dashboardResponse =
             $this->get('/dashboard');
 
         $dashboardResponse->assertOk();
+    }
+
+    public function test_login_success_cannot_bypass_forced_password_change_destination(): void
+    {
+        $user = User::factory()
+            ->requiresPasswordChange()
+            ->create([
+                'temporary_password_used_at' => now(),
+            ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession([
+                'post_login_redirect' => '/dashboard',
+            ])
+            ->get('/login/success');
+
+        $response
+            ->assertOk()
+            ->assertInertia(
+                fn(Assert $page): Assert =>
+                $page
+                    ->component('Auth/Login')
+                    ->where(
+                        'showSuccessInitially',
+                        true
+                    )
+                    ->where(
+                        'successRedirectTo',
+                        route(
+                            'profile.edit',
+                            absolute: false
+                        )
+                    )
+            );
+
+        $this->assertNull(
+            session('post_login_redirect')
+        );
     }
 }

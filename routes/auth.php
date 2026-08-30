@@ -32,6 +32,11 @@ Route::middleware('auth')->group(function () {
      * These two operations must remain available while a user is
      * completing a forced password change.
      */
+    Route::get(
+        'login/success',
+        [AuthenticatedSessionController::class, 'success']
+    )->name('login.success');
+
     Route::put(
         'password',
         [PasswordController::class, 'update']
