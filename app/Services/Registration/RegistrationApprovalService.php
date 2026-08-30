@@ -7,15 +7,15 @@ use App\Models\Center;
 use App\Models\Person;
 use App\Models\RegistrationRequest;
 use App\Models\Role;
+use App\Models\Student;
 use App\Models\User;
-use App\Services\Accounts\AccountIdentifierGenerator;
 use App\Services\Accounts\UserAccountManagementService;
 use App\Services\Audit\AuditRecorder;
-use App\Services\Branches\StaffBranchAssignmentService;
-use App\Services\Staff\StaffOperationalManagementService;
 use App\Services\Students\StudentManagementService;
 use App\Support\Enums\AccountStatus;
+use App\Support\Enums\CenterStatus;
 use App\Support\Enums\RegistrationRequestStatus;
+use App\Support\Enums\StudentStatus;
 use App\Support\Enums\SystemRole;
 use App\Support\Tenancy\BranchContext;
 use DomainException;
@@ -31,10 +31,7 @@ class RegistrationApprovalService
     public function __construct(
         private readonly RegistrationReviewService $review,
         private readonly UserAccountManagementService $accounts,
-        private readonly AccountIdentifierGenerator $identifiers,
         private readonly StudentManagementService $students,
-        private readonly StaffOperationalManagementService $staff,
-        private readonly StaffBranchAssignmentService $staffAssignments,
         private readonly AuditRecorder $audit,
         private readonly BranchContext $branchContext
     ) {}
@@ -48,106 +45,100 @@ class RegistrationApprovalService
                 $actor,
                 $request
             ): RegistrationApprovalResult {
-                $actor =
-                    $this->lockPersistedActor(
-                        $actor
-                    );
+                $actor = $this->lockPersistedActor(
+                    $actor
+                );
 
-                $request =
-                    $this->lockPersistedRequest(
-                        $request
-                    );
+                $request = $this->lockPersistedRequest(
+                    $request
+                );
 
                 $this->ensurePending(
                     $request
                 );
 
-                $role =
-                    $this->selectedSystemRole(
-                        $request
-                    );
+                /*
+                 * Public self-registration is a Student-only workflow.
+                 * The role is assigned during submission and must not
+                 * be changed during approval.
+                 */
+                $role = $this->selectedSystemRole(
+                    $request
+                );
 
                 /*
-                 * Re-run the existing review authorization
-                 * immediately before final approval.
-                 *
-                 * selectRole() is idempotent when the selected
-                 * Role is already correct, so it performs
-                 * authorization without producing duplicate
-                 * Audit history.
+                 * Re-run the existing review authorization immediately
+                 * before approval. Because the Student role is already
+                 * selected, this is authorization-only and idempotent.
                  */
-                $request =
-                    $this->review->selectRole(
-                        $actor,
-                        $request,
-                        $role
-                    );
+                $request = $this->review->selectRole(
+                    $actor,
+                    $request,
+                    $role
+                );
 
-                $center =
-                    $this->lockPersistedCenter(
-                        $request->center_id
-                    );
+                $center = $this->lockPersistedCenter(
+                    $request->center_id
+                );
 
-                $branch =
-                    $this->resolveApprovalBranch(
-                        $actor,
-                        $request,
-                        $role
+                if ($center->status !== CenterStatus::Active) {
+                    throw new DomainException(
+                        'A self-registration request may be approved only while its language center is active.'
                     );
+                }
 
-                $identity =
-                    $this->validatedIdentity(
-                        $request
-                    );
+                $branch = $this->resolveApprovalBranch(
+                    $actor,
+                    $request
+                );
 
-                $person =
-                    $this->resolveAndSynchronizePerson(
-                        $actor,
-                        $request,
-                        $identity
-                    );
+                $identity = $this->validatedIdentity(
+                    $request
+                );
 
                 /*
-                 * Account identifier allocation must remain
-                 * inside this outer transaction.
-                 *
-                 * If any later approval step fails, the sequence
-                 * allocation rolls back with the rest of the
-                 * approval workflow.
+                 * The SRS requires Person and the Pending Student User
+                 * to exist from the original self-registration.
+                 * Approval therefore reuses those records instead of
+                 * creating replacements.
                  */
-                $accountIdentifier =
-                    $this->identifiers->generate(
-                        $center,
-                        $role
-                    );
+                $person = $this->resolveAndSynchronizePerson(
+                    $actor,
+                    $request,
+                    $identity
+                );
+
+                $account = $this->resolvePendingAccount(
+                    $request,
+                    $person
+                );
 
                 /*
-                 * The plaintext temporary password exists only
-                 * in memory long enough to create the account
-                 * and later construct the credentials message.
-                 *
-                 * UserAccountManagementService stores only the
-                 * password hash.
+                 * Reuse a matching Student when one already exists.
+                 * Otherwise create it. The Student is linked before
+                 * account activation so a Branch Manager's account
+                 * management authorization can prove branch ownership.
                  */
-                $temporaryPassword =
-                    Str::password(20);
+                $student = $this->resolveStudent(
+                    $actor,
+                    $branch,
+                    $person
+                );
 
-                $account =
-                    $this->createRoleState(
-                        actor: $actor,
-                        center: $center,
-                        branch: $branch,
-                        person: $person,
-                        role: $role,
-                        accountIdentifier: $accountIdentifier,
-                        recoveryEmail: $identity['email'],
-                        temporaryPassword: $temporaryPassword
-                    );
+                $student = $this->students->linkAccount(
+                    $actor,
+                    $student,
+                    $account
+                );
 
-                $beforeValues =
-                    $this->registrationAuditValues(
-                        $request
-                    );
+                $account = $this->accounts->activate(
+                    $actor,
+                    $account
+                );
+
+                $beforeValues = $this->registrationAuditValues(
+                    $request
+                );
 
                 $request->forceFill([
                     'status' =>
@@ -181,19 +172,27 @@ class RegistrationApprovalService
                 $person->refresh();
 
                 $account->refresh();
-
                 $account->loadMissing([
                     'role',
                     'person',
                     'center',
                 ]);
 
+                /*
+                 * RegistrationApprovalResult still contains the old
+                 * temporary-password fields. Self-registration no
+                 * longer creates or sends a temporary password, so an
+                 * empty compatibility value is returned for now.
+                 *
+                 * The result object / Filament credential-delivery
+                 * action should be cleaned up in the next checkpoint.
+                 */
                 return new RegistrationApprovalResult(
                     registrationRequest: $request,
                     person: $person,
                     account: $account,
-                    role: $role,
-                    temporaryPassword: $temporaryPassword,
+                    role: SystemRole::Student,
+                    temporaryPassword: '',
                     recipientEmail: $identity['email']
                 );
             },
@@ -203,46 +202,17 @@ class RegistrationApprovalService
 
     private function resolveApprovalBranch(
         User $actor,
-        RegistrationRequest $request,
-        SystemRole $role
-    ): ?Branch {
-        if (
-            ! $this->roleRequiresBranch(
-                $role
-            )
-        ) {
-            if (
-                $request->selected_branch_id
-                !== null
-            ) {
-                throw new DomainException(
-                    sprintf(
-                        '%s registration must not have a Branch selected.',
-                        $role->label()
-                    )
-                );
-            }
-
-            return null;
-        }
-
-        if (
-            $request->selected_branch_id
-            === null
-        ) {
+        RegistrationRequest $request
+    ): Branch {
+        if ($request->selected_branch_id === null) {
             throw new DomainException(
-                sprintf(
-                    '%s registration requires a selected Branch before approval.',
-                    $role->label()
-                )
+                'Student self-registration requires a selected Branch before approval.'
             );
         }
 
-        $branch =
-            Branch::withoutGlobalScopes()
+        $branch = Branch::withoutGlobalScopes()
             ->whereKey(
-                $request
-                    ->selected_branch_id
+                $request->selected_branch_id
             )
             ->where(
                 'center_id',
@@ -258,14 +228,11 @@ class RegistrationApprovalService
         }
 
         /*
-         * Re-run persisted Branch and Role authorization.
-         *
-         * selectBranch() verifies:
+         * selectBranch() re-checks:
          * - same Center,
          * - active Branch,
-         * - role requires Branch,
          * - reviewer permissions,
-         * - Branch Manager owns the exact Branch.
+         * - Branch Manager ownership.
          */
         $this->review->selectBranch(
             $actor,
@@ -273,31 +240,13 @@ class RegistrationApprovalService
             $branch
         );
 
-        /*
-         * Student services additionally require request-level
-         * BranchContext for Branch Manager operations.
-         *
-         * The Approval service must never invent or change the
-         * current request context.
-         */
         if (
             $actor->systemRole()
             === SystemRole::BranchManager
         ) {
             if (
-                $role
-                !== SystemRole::Student
-            ) {
-                throw new AuthorizationException(
-                    'Branch Manager may approve only Student Registration Requests.'
-                );
-            }
-
-            if (
-                ! $this->branchContext
-                    ->isBranchScoped()
-                || $this->branchContext
-                ->branchId()
+                ! $this->branchContext->isBranchScoped()
+                || $this->branchContext->branchId()
                 !== $branch->id
             ) {
                 throw new AuthorizationException(
@@ -325,46 +274,41 @@ class RegistrationApprovalService
         RegistrationRequest $request,
         array $identity
     ): Person {
-        $person =
-            Person::withoutGlobalScopes()
+        if ($request->person_id === null) {
+            throw new DomainException(
+                'Self-registration approval requires the Person created during submission.'
+            );
+        }
+
+        $person = Person::withoutGlobalScopes()
+            ->whereKey(
+                $request->person_id
+            )
             ->where(
                 'center_id',
                 $request->center_id
-            )
-            ->where(
-                'national_id_number',
-                $identity['national_id_number']
             )
             ->lockForUpdate()
             ->first();
 
         if ($person === null) {
-            $person =
-                Person::withoutGlobalScopes()
-                ->create([
-                    'center_id' =>
-                    $request->center_id,
-
-                    ...$identity,
-                ])
-                ->refresh();
-
-            $this->audit->record(
-                actor: $actor,
-                actionType: 'person.registration_identity_created',
-                subject: $person,
-                afterValues: $this->personAuditValues(
-                    $person
-                )
+            throw new DomainException(
+                'The Person linked to this self-registration request no longer exists in the target Center.'
             );
-
-            return $person;
         }
 
-        $beforeValues =
-            $this->personAuditValues(
-                $person
+        if (
+            trim((string) $person->national_id_number)
+            !== $identity['national_id_number']
+        ) {
+            throw new DomainException(
+                'The self-registration Person does not match the request National ID.'
             );
+        }
+
+        $beforeValues = $this->personAuditValues(
+            $person
+        );
 
         $person->forceFill([
             'full_name' =>
@@ -386,10 +330,6 @@ class RegistrationApprovalService
             $identity['personal_picture_path'],
         ]);
 
-        /*
-         * Re-approval of identical validated identity data
-         * should not produce duplicate Person Audit history.
-         */
         if (! $person->isDirty()) {
             return $person->refresh();
         }
@@ -410,272 +350,126 @@ class RegistrationApprovalService
         return $person;
     }
 
-    private function createRoleState(
-        User $actor,
-        Center $center,
-        ?Branch $branch,
-        Person $person,
-        SystemRole $role,
-        string $accountIdentifier,
-        string $recoveryEmail,
-        string $temporaryPassword
+    private function resolvePendingAccount(
+        RegistrationRequest $request,
+        Person $person
     ): User {
-        return match ($role) {
-            SystemRole::CenterOwner =>
-            $this->createGenericAccount(
-                actor: $actor,
-                center: $center,
-                person: $person,
-                role: $role,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            ),
-
-            SystemRole::Teacher =>
-            $this->createTeacherState(
-                actor: $actor,
-                center: $center,
-                person: $person,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            ),
-
-            SystemRole::BranchManager =>
-            $this->createBranchManagerState(
-                actor: $actor,
-                center: $center,
-                branch: $this->requireBranch(
-                    $branch,
-                    $role
-                ),
-                person: $person,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            ),
-
-            SystemRole::FinanceEmployee =>
-            $this->createFinanceEmployeeState(
-                actor: $actor,
-                center: $center,
-                branch: $this->requireBranch(
-                    $branch,
-                    $role
-                ),
-                person: $person,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            ),
-
-            SystemRole::Student =>
-            $this->createStudentState(
-                actor: $actor,
-                branch: $this->requireBranch(
-                    $branch,
-                    $role
-                ),
-                person: $person,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            ),
-
-            SystemRole::PlatformOwner =>
-            throw new LogicException(
-                'Platform Owner is not a valid target for Center Registration approval.'
-            ),
-        };
-    }
-
-    private function createGenericAccount(
-        User $actor,
-        Center $center,
-        Person $person,
-        SystemRole $role,
-        string $accountIdentifier,
-        string $recoveryEmail,
-        string $temporaryPassword
-    ): User {
-        return $this->accounts->create(
-            actor: $actor,
-            center: $center,
-            nationalIdNumber: $person->national_id_number,
-            role: $role,
-            accountLoginIdentifier: $accountIdentifier,
-            recoveryEmail: $recoveryEmail,
-            temporaryPassword: $temporaryPassword
-        );
-    }
-
-    private function createTeacherState(
-        User $actor,
-        Center $center,
-        Person $person,
-        string $accountIdentifier,
-        string $recoveryEmail,
-        string $temporaryPassword
-    ): User {
-        $account =
-            $this->createGenericAccount(
-                actor: $actor,
-                center: $center,
-                person: $person,
-                role: SystemRole::Teacher,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
+        if ($request->user_id === null) {
+            throw new DomainException(
+                'Self-registration approval requires the Pending User Account created during submission.'
             );
+        }
 
-        $teacher =
-            $this->staff->createTeacher(
-                $actor,
-                $person
+        $account = User::withoutGlobalScopes()
+            ->with('role')
+            ->whereKey(
+                $request->user_id
+            )
+            ->where(
+                'center_id',
+                $request->center_id
+            )
+            ->where(
+                'person_id',
+                $person->id
+            )
+            ->lockForUpdate()
+            ->first();
+
+        if ($account === null) {
+            throw new DomainException(
+                'The Pending User Account linked to this self-registration request no longer exists or no longer matches its Person and Center.'
             );
+        }
 
-        $this->staff->linkTeacherAccount(
-            $actor,
-            $teacher,
-            $account
-        );
+        if (
+            $account->systemRole()
+            !== SystemRole::Student
+        ) {
+            throw new DomainException(
+                'A self-registration request must be linked to a Student User Account.'
+            );
+        }
+
+        if (
+            $account->status
+            !== AccountStatus::Pending
+        ) {
+            throw new DomainException(
+                'Only the Pending User Account created for this self-registration request may be activated by approval.'
+            );
+        }
+
+        if (
+            trim(
+                (string)
+                $account->account_login_identifier
+            ) === ''
+        ) {
+            throw new DomainException(
+                'The Pending Student User Account does not have a login identifier.'
+            );
+        }
+
+        if ($account->must_change_password) {
+            throw new DomainException(
+                'The self-registered Student Account must retain the applicant-selected password.'
+            );
+        }
 
         return $account;
     }
 
-    private function createBranchManagerState(
-        User $actor,
-        Center $center,
-        Branch $branch,
-        Person $person,
-        string $accountIdentifier,
-        string $recoveryEmail,
-        string $temporaryPassword
-    ): User {
-        $account =
-            $this->createGenericAccount(
-                actor: $actor,
-                center: $center,
-                person: $person,
-                role: SystemRole::BranchManager,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            );
-
-        $record =
-            $this->staff
-            ->createBranchManager(
-                $actor,
-                $person
-            );
-
-        $this->staff
-            ->linkBranchManagerAccount(
-                $actor,
-                $record,
-                $account
-            );
-
-        $this->staffAssignments
-            ->assignBranchManager(
-                $actor,
-                $account,
-                $branch
-            );
-
-        return $account;
-    }
-
-    private function createFinanceEmployeeState(
-        User $actor,
-        Center $center,
-        Branch $branch,
-        Person $person,
-        string $accountIdentifier,
-        string $recoveryEmail,
-        string $temporaryPassword
-    ): User {
-        $account =
-            $this->createGenericAccount(
-                actor: $actor,
-                center: $center,
-                person: $person,
-                role: SystemRole::FinanceEmployee,
-                accountIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            );
-
-        $record =
-            $this->staff
-            ->createFinanceEmployee(
-                $actor,
-                $person
-            );
-
-        $this->staff
-            ->linkFinanceEmployeeAccount(
-                $actor,
-                $record,
-                $account
-            );
-
-        $this->staffAssignments
-            ->assignFinanceEmployee(
-                $actor,
-                $account,
-                $branch
-            );
-
-        return $account;
-    }
-
-    private function createStudentState(
+    private function resolveStudent(
         User $actor,
         Branch $branch,
-        Person $person,
-        string $accountIdentifier,
-        string $recoveryEmail,
-        string $temporaryPassword
-    ): User {
-        /*
-         * StudentManagementService reuses the Person through
-         * Center + National ID, so the approved full Person
-         * identity synchronized earlier remains authoritative.
-         */
-        $student =
-            $this->students->register(
+        Person $person
+    ): Student {
+        $student = Student::withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $person->center_id
+            )
+            ->where(
+                'person_id',
+                $person->id
+            )
+            ->lockForUpdate()
+            ->first();
+
+        if ($student === null) {
+            return $this->students->register(
                 actor: $actor,
                 branch: $branch,
                 nationalIdNumber: $person->national_id_number
             );
+        }
 
-        return $this->accounts
-            ->createStudentAccountForStudent(
-                actor: $actor,
-                student: $student,
-                accountLoginIdentifier: $accountIdentifier,
-                recoveryEmail: $recoveryEmail,
-                temporaryPassword: $temporaryPassword
-            );
-    }
-
-    private function requireBranch(
-        ?Branch $branch,
-        SystemRole $role
-    ): Branch {
-        if ($branch === null) {
-            throw new LogicException(
-                sprintf(
-                    '%s approval requires a resolved Branch.',
-                    $role->label()
-                )
+        if (
+            $student->status
+            === StudentStatus::Archived
+        ) {
+            $student = $this->students->restore(
+                $actor,
+                $student
             );
         }
 
-        return $branch;
+        if (
+            $student->branch_id
+            !== $branch->id
+        ) {
+            $student = $this->students->update(
+                $actor,
+                $student,
+                [
+                    'branch_id' =>
+                    $branch->id,
+                ]
+            );
+        }
+
+        return $student;
     }
 
     /**
@@ -692,37 +486,32 @@ class RegistrationApprovalService
     private function validatedIdentity(
         RegistrationRequest $request
     ): array {
-        $nationalIdNumber =
+        $nationalIdNumber = trim(
+            (string)
+            $request->national_id_number
+        );
+
+        $fullName = trim(
+            (string)
+            $request->full_name
+        );
+
+        $city = trim(
+            (string)
+            $request->city_of_residence
+        );
+
+        $email = Str::lower(
             trim(
                 (string)
-                $request->national_id_number
-            );
+                $request->email
+            )
+        );
 
-        $fullName =
-            trim(
-                (string)
-                $request->full_name
-            );
-
-        $city =
-            trim(
-                (string)
-                $request->city_of_residence
-            );
-
-        $email =
-            Str::lower(
-                trim(
-                    (string)
-                    $request->email
-                )
-            );
-
-        $phone =
-            trim(
-                (string)
-                $request->phone_number
-            );
+        $phone = trim(
+            (string)
+            $request->phone_number
+        );
 
         if ($nationalIdNumber === '') {
             throw new DomainException(
@@ -766,8 +555,7 @@ class RegistrationApprovalService
             );
         }
 
-        $picture =
-            $request
+        $picture = $request
             ->personal_picture_path;
 
         if (is_string($picture)) {
@@ -809,20 +597,15 @@ class RegistrationApprovalService
     private function selectedSystemRole(
         RegistrationRequest $request
     ): SystemRole {
-        if (
-            $request->selected_role_id
-            === null
-        ) {
+        if ($request->selected_role_id === null) {
             throw new DomainException(
-                'A System Role must be selected before final Registration approval.'
+                'A self-registration request must already have the Student role assigned.'
             );
         }
 
-        $role =
-            Role::query()
+        $role = Role::query()
             ->find(
-                $request
-                    ->selected_role_id
+                $request->selected_role_id
             );
 
         if ($role === null) {
@@ -831,10 +614,9 @@ class RegistrationApprovalService
             );
         }
 
-        $systemRole =
-            SystemRole::tryFrom(
-                $role->code
-            );
+        $systemRole = SystemRole::tryFrom(
+            $role->code
+        );
 
         if ($systemRole === null) {
             throw new LogicException(
@@ -844,28 +626,14 @@ class RegistrationApprovalService
 
         if (
             $systemRole
-            === SystemRole::PlatformOwner
+            !== SystemRole::Student
         ) {
             throw new DomainException(
-                'Platform Owner is not a valid Center Registration role.'
+                'Public self-registration approval supports the Student role only.'
             );
         }
 
-        return $systemRole;
-    }
-
-    private function roleRequiresBranch(
-        SystemRole $role
-    ): bool {
-        return in_array(
-            $role,
-            [
-                SystemRole::BranchManager,
-                SystemRole::FinanceEmployee,
-                SystemRole::Student,
-            ],
-            true
-        );
+        return SystemRole::Student;
     }
 
     private function ensurePending(
@@ -884,14 +652,12 @@ class RegistrationApprovalService
     private function lockPersistedActor(
         User $actor
     ): User {
-        $actorId =
-            $this->numericModelId(
-                $actor,
-                'Registration approval actor'
-            );
+        $actorId = $this->numericModelId(
+            $actor,
+            'Registration approval actor'
+        );
 
-        $actor =
-            User::withoutGlobalScopes()
+        $actor = User::withoutGlobalScopes()
             ->with('role')
             ->whereKey(
                 $actorId
@@ -920,14 +686,12 @@ class RegistrationApprovalService
     private function lockPersistedRequest(
         RegistrationRequest $request
     ): RegistrationRequest {
-        $requestId =
-            $this->numericModelId(
-                $request,
-                'Registration Request'
-            );
+        $requestId = $this->numericModelId(
+            $request,
+            'Registration Request'
+        );
 
-        $request =
-            RegistrationRequest::withoutGlobalScopes()
+        $request = RegistrationRequest::withoutGlobalScopes()
             ->whereKey(
                 $requestId
             )
@@ -946,8 +710,7 @@ class RegistrationApprovalService
     private function lockPersistedCenter(
         int $centerId
     ): Center {
-        $center =
-            Center::withoutGlobalScopes()
+        $center = Center::withoutGlobalScopes()
             ->whereKey(
                 $centerId
             )
@@ -979,23 +742,25 @@ class RegistrationApprovalService
             )->value,
 
             'selected_branch_id' =>
-            $request
-                ->selected_branch_id,
+            $request->selected_branch_id,
+
+            'person_id' =>
+            $request->person_id,
+
+            'user_id' =>
+            $request->user_id,
 
             'reviewed_by_user_id' =>
-            $request
-                ->reviewed_by_user_id,
+            $request->reviewed_by_user_id,
 
             'reviewed_at' =>
             $request->reviewed_at,
 
             'rejection_reason' =>
-            $request
-                ->rejection_reason,
+            $request->rejection_reason,
 
             'pending_marker' =>
-            $request
-                ->pending_marker,
+            $request->pending_marker,
         ];
     }
 
@@ -1010,8 +775,7 @@ class RegistrationApprovalService
             $person->center_id,
 
             'national_id_number' =>
-            $person
-                ->national_id_number,
+            $person->national_id_number,
 
             'full_name' =>
             $person->full_name,
@@ -1020,8 +784,7 @@ class RegistrationApprovalService
             $person->date_of_birth,
 
             'city_of_residence' =>
-            $person
-                ->city_of_residence,
+            $person->city_of_residence,
 
             'email' =>
             $person->email,
@@ -1030,8 +793,7 @@ class RegistrationApprovalService
             $person->phone_number,
 
             'personal_picture_path' =>
-            $person
-                ->personal_picture_path,
+            $person->personal_picture_path,
         ];
     }
 
@@ -1051,8 +813,7 @@ class RegistrationApprovalService
             );
         }
 
-        $key =
-            $model->getKey();
+        $key = $model->getKey();
 
         if (
             ! is_int($key)

@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\RegistrationPageController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
@@ -11,6 +12,13 @@ use App\Http\Controllers\Auth\ActiveSessionController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 
 Route::middleware('guest')->group(function () {
+    Route::get(
+        'centers/{center:code}/branches/{branch}/register',
+        RegistrationPageController::class
+    )
+        ->whereNumber('branch')
+        ->name('registration.create');
+        
     Route::get(
         'login',
         [AuthenticatedSessionController::class, 'create']
