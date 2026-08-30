@@ -327,7 +327,7 @@ class ActiveSessionManagementTest extends TestCase
 
         $response->assertRedirect(
             route(
-                'dashboard',
+                'login.success',
                 absolute: false
             )
         );
