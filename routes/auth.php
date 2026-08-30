@@ -8,8 +8,14 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\ActiveSessionController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 
 Route::middleware('guest')->group(function () {
+    Route::get(
+        'register',
+        [RegisteredUserController::class, 'create']
+    )->name('register');
+
     Route::get(
         'login',
         [AuthenticatedSessionController::class, 'create']
@@ -26,12 +32,12 @@ Route::middleware('auth')->group(function () {
      * These two operations must remain available while a user is
      * completing a forced password change.
      */
-Route::put(
-    'password',
-    [PasswordController::class, 'update']
-)
-    ->middleware('tenant.context')
-    ->name('password.update');
+    Route::put(
+        'password',
+        [PasswordController::class, 'update']
+    )
+        ->middleware('tenant.context')
+        ->name('password.update');
 
     Route::post(
         'logout',
