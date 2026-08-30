@@ -230,9 +230,12 @@ export default function Login({
                 {/* Register */}
                 <p className="mt-[11px] text-center text-[12px] text-[#adb2bd] lg:mt-[16px] lg:text-[18px]">
                   Don&apos;t have an account?{" "}
-                  <span className="font-semibold text-[#3842c9]">
+                  <Link
+                    href={route("register")}
+                    className="font-semibold text-[#3842c9] transition hover:text-[#252fac] hover:underline"
+                  >
                     Create one
-                  </span>
+                  </Link>
                 </p>
               </form>
             </>

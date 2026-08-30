@@ -12,52 +12,36 @@ use Inertia\Response;
 
 class RegistrationPageController extends Controller
 {
-    public function __invoke(
-        Center $center,
-        int $branch
-    ): Response {
-        abort_unless(
-            $center->status === CenterStatus::Active,
-            404
-        );
+    public function __invoke(): Response
+    {
+        $center = Center::query()
+            ->where(
+                'status',
+                CenterStatus::Active->value
+            )
+            ->firstOrFail();
 
-        $selectedBranch =
-            Branch::withoutGlobalScopes()
-                ->whereKey($branch)
-                ->where(
-                    'center_id',
-                    $center->id
-                )
-                ->where(
-                    'status',
-                    BranchStatus::Active->value
-                )
-                ->firstOrFail();
+        $branch = Branch::withoutGlobalScopes()
+            ->where('center_id', $center->id)
+            ->where(
+                'status',
+                BranchStatus::Active->value
+            )
+            ->firstOrFail();
 
-        return Inertia::render(
-            'Auth/Register',
-            [
-                'registrationContext' => [
-                    'center' => [
-                        'code' =>
-                            $center->code,
-
-                        'name' =>
-                            $center->name,
-                    ],
-
-                    'branch' => [
-                        'id' =>
-                            $selectedBranch->id,
-
-                        'code' =>
-                            $selectedBranch->code,
-
-                        'name' =>
-                            $selectedBranch->name,
-                    ],
+        return Inertia::render('Auth/Register', [
+            'registrationContext' => [
+                'center' => [
+                    'code' => $center->code,
+                    'name' => $center->name,
                 ],
-            ]
-        );
+
+                'branch' => [
+                    'id' => $branch->id,
+                    'code' => $branch->code,
+                    'name' => $branch->name,
+                ],
+            ],
+        ]);
     }
 }

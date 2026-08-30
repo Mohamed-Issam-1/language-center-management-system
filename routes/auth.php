@@ -12,13 +12,12 @@ use App\Http\Controllers\Auth\ActiveSessionController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 
 Route::middleware('guest')->group(function () {
+
     Route::get(
-        'centers/{center:code}/branches/{branch}/register',
+        'register',
         RegistrationPageController::class
-    )
-        ->whereNumber('branch')
-        ->name('registration.create');
-        
+    )->name('register');
+
     Route::get(
         'login',
         [AuthenticatedSessionController::class, 'create']
