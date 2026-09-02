@@ -72,32 +72,34 @@ export default function ResetPassword({
 
       <div>
         {/* Desktop logo */}
-        <div className="mb-[26px] hidden lg:block">
-          <ApplicationLogo variant="blue" className="h-auto w-[205px]" />
+        <div className="auth-recovery-logo mb-[26px] hidden lg:block">
+          <ApplicationLogo variant="blue" className="auth-recovery-logo-image h-auto w-[205px]" />
         </div>
 
         {/* Heading */}
         <div>
-          <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[36px]">
+          <h1 className="auth-recovery-title text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[36px]">
             Set New Password
           </h1>
 
-          <p className="mt-[8px] max-w-[440px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[16px] lg:leading-[24px]">
+          <p className="auth-recovery-subtitle mt-[8px] max-w-[440px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[16px] lg:leading-[24px]">
             Create a strong password to protect your account. All requirements
             must be met before saving.
           </p>
         </div>
 
-        <PasswordRecoverySteps
-          currentStep={3}
-          completedThrough={2}
-          finalComplete={showSuccess}
-        />
+        <div className="auth-recovery-steps">
+          <PasswordRecoverySteps
+                    currentStep={3}
+                    completedThrough={2}
+                    finalComplete={showSuccess}
+                  />
+        </div>
 
         {showSuccess ? (
           <PasswordChangedSuccess />
         ) : (
-          <form onSubmit={submit}>
+          <form onSubmit={submit} className="auth-recovery-reset-form">
             {/* New password */}
             <div>
               <InputLabel htmlFor="password" value="New Password" />
@@ -126,7 +128,7 @@ export default function ResetPassword({
             </div>
 
             {/* Confirm password */}
-            <div className="mt-[18px]">
+            <div className="auth-recovery-confirm mt-[18px]">
               <InputLabel
                 htmlFor="password_confirmation"
                 value="Confirm New Password"
@@ -168,7 +170,7 @@ export default function ResetPassword({
             </div>
 
             {/* Requirements */}
-            <div className="mt-[19px] rounded-[10px] border border-[#e0e4ec] px-[16px] py-[16px]">
+            <div className="auth-recovery-requirements mt-[19px] rounded-[10px] border border-[#e0e4ec] px-[16px] py-[16px]">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#747b87] lg:text-[12px]">
                 Password Requirements
               </h3>
@@ -214,7 +216,7 @@ export default function ResetPassword({
             )}
 
             {/* Save */}
-            <div className="mt-[20px]">
+            <div className="auth-recovery-submit mt-[20px]">
               <PrimaryButton
                 disabled={!formValid || processing}
                 className="
@@ -421,7 +423,7 @@ function BackToLogin() {
 
 function Footer() {
   return (
-    <footer className="mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
+    <footer className="auth-recovery-footer mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
       <span className="text-[10px] text-[#c2c6cf] lg:text-[12px]">
         © 2026 LCMS
       </span>
