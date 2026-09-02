@@ -57,7 +57,7 @@ class AuthenticationTest extends TestCase
                     )
                     ->where(
                         'canResetPassword',
-                        false
+                        true
                     )
             );
     }
