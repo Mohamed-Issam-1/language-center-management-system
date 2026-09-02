@@ -1,3 +1,261 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* LCMS short desktop auth viewport */
+@media (min-width: 1024px) and (max-height: 760px) {
+    .auth-guest-shell {
+        min-height: 100dvh;
+    }
+
+    .auth-guest-main {
+        min-height: 100dvh !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .auth-brand-panel {
+        height: 100dvh;
+        min-height: 0 !important;
+    }
+
+    .auth-brand-header {
+        padding-top: 20px !important;
+        padding-left: 40px !important;
+        padding-right: 40px !important;
+    }
+
+    .auth-brand-header img {
+        width: 150px !important;
+    }
+
+    .auth-brand-content {
+        padding-bottom: 8px !important;
+    }
+
+    .auth-brand-illustration {
+        width: 190px !important;
+        height: 118px !important;
+    }
+
+    .auth-brand-title {
+        font-size: 27px !important;
+        line-height: 1.15 !important;
+    }
+
+    .auth-brand-copy {
+        margin-top: 8px !important;
+        font-size: 14px !important;
+        line-height: 21px !important;
+    }
+
+    .auth-brand-features {
+        margin-top: 14px !important;
+        max-width: 330px !important;
+    }
+
+    .auth-brand-features>*+* {
+        margin-top: 8px !important;
+    }
+
+    .auth-brand-feature {
+        gap: 10px !important;
+    }
+
+    .auth-brand-feature-icon {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 8px !important;
+    }
+
+    .auth-brand-feature-text {
+        font-size: 14px !important;
+    }
+
+    .auth-login-logo {
+        margin-bottom: 12px !important;
+    }
+
+    .auth-login-logo-image {
+        width: 180px !important;
+    }
+
+    .auth-login-title {
+        margin-top: 0 !important;
+        font-size: 27px !important;
+    }
+
+    .auth-login-subtitle {
+        margin-top: 4px !important;
+        font-size: 13px !important;
+        line-height: 19px !important;
+    }
+
+    .auth-login-form {
+        margin-top: 16px !important;
+    }
+
+    .auth-login-password {
+        margin-top: 12px !important;
+    }
+
+    .auth-login-options {
+        margin-top: 8px !important;
+    }
+
+    .auth-login-submit {
+        margin-top: 14px !important;
+    }
+
+    .auth-login-register {
+        margin-top: 8px !important;
+        font-size: 14px !important;
+    }
+
+    .auth-login-footer {
+        display: none !important;
+    }
+}
+
+/* LCMS short desktop password recovery */
+@media (min-width: 1024px) and (max-height: 760px) {
+    .auth-recovery-logo {
+        margin-bottom: 8px !important;
+    }
+
+    .auth-recovery-logo-image {
+        width: 160px !important;
+    }
+
+    .auth-recovery-title {
+        margin-top: 0 !important;
+        font-size: 25px !important;
+        line-height: 1.1 !important;
+    }
+
+    .auth-recovery-subtitle {
+        margin-top: 4px !important;
+        font-size: 12px !important;
+        line-height: 17px !important;
+    }
+
+    .auth-recovery-steps > div {
+        margin-top: 10px !important;
+    }
+
+    .auth-recovery-form {
+        margin-top: 12px !important;
+    }
+
+    .auth-recovery-next {
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
+
+    .auth-recovery-next > div {
+        margin-top: 8px !important;
+    }
+
+    .auth-recovery-warning {
+        margin-top: 8px !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+    }
+
+    .auth-recovery-secondary-info {
+        margin-top: 6px !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+    }
+
+    .auth-recovery-submit {
+        margin-top: 10px !important;
+    }
+
+    .auth-recovery-resend {
+        margin-top: 6px !important;
+    }
+
+    .auth-recovery-confirm {
+        margin-top: 10px !important;
+    }
+
+    .auth-recovery-requirements {
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
+
+    .auth-recovery-requirements > div {
+        margin-top: 7px !important;
+    }
+
+    .auth-recovery-footer {
+        display: none !important;
+    }
+}
+
+/* LCMS short desktop registration */
+@media (min-width: 1024px) and (max-height: 760px) {
+    .auth-register-logo {
+        display: none !important;
+    }
+
+    .auth-register-title {
+        font-size: 24px !important;
+        line-height: 1.1 !important;
+    }
+
+    .auth-register-subtitle {
+        margin-top: 2px !important;
+        font-size: 11px !important;
+        line-height: 16px !important;
+    }
+
+    .auth-register-stepper {
+        margin-top: 4px !important;
+        margin-bottom: 5px !important;
+    }
+
+    .auth-register-fields {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 12px !important;
+        row-gap: 6px !important;
+        margin-top: 6px !important;
+    }
+
+    .auth-register-fields > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 0 !important;
+    }
+
+    .auth-register-fields > div:nth-child(3) {
+        grid-column: 1 / -1;
+    }
+
+    .auth-register-actions {
+        margin-top: 6px !important;
+    }
+
+    .auth-register-actions > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 4px !important;
+    }
+
+    .auth-register-fields input,
+    .auth-register-fields select {
+        height: 44px !important;
+    }
+
+    .auth-register-actions > button,
+    .auth-register-actions > a {
+        height: 44px !important;
+    }
+
+
+
+
+    .auth-register-footer {
+        display: none !important;
+    }
+}

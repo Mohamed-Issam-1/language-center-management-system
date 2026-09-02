@@ -213,29 +213,31 @@ export default function VerifyRecoveryCode({
 
       <div>
         {/* Desktop logo */}
-        <div className="mb-[26px] hidden lg:block">
+        <div className="auth-recovery-logo mb-[26px] hidden lg:block">
           <ApplicationLogo
             variant="blue"
-            className="h-auto w-[205px]"
+            className="auth-recovery-logo-image h-auto w-[205px]"
           />
         </div>
 
         {/* Heading */}
         <div>
-          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[32px]">
+          <h1 className="auth-recovery-title mt-4 text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[32px]">
             Enter Verification Code
           </h1>
 
-          <p className="mt-[8px] max-w-[440px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[14px] lg:leading-[22px]">
+          <p className="auth-recovery-subtitle mt-[8px] max-w-[440px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[14px] lg:leading-[22px]">
             A 5-digit code has been sent to the recovery email linked to your
             account.
           </p>
         </div>
 
-        <PasswordRecoverySteps
-          currentStep={2}
-          completedThrough={1}
-        />
+        <div className="auth-recovery-steps">
+          <PasswordRecoverySteps
+                    currentStep={2}
+                    completedThrough={1}
+                  />
+        </div>
 
         {/* Validation error */}
         {displayedError && (
@@ -276,7 +278,7 @@ export default function VerifyRecoveryCode({
 
         <form
           onSubmit={submit}
-          className="mt-[22px]"
+          className="auth-recovery-form mt-[22px]"
         >
           {/* Verification code */}
           <div>
@@ -327,7 +329,7 @@ export default function VerifyRecoveryCode({
           </div>
 
           {/* Expiration */}
-          <div className="mt-[20px] flex gap-[10px] rounded-[9px] border border-[#f1ce61] bg-[#fff4c9] px-[14px] py-[13px] text-[#b26b08]">
+          <div className="auth-recovery-warning mt-[20px] flex gap-[10px] rounded-[9px] border border-[#f1ce61] bg-[#fff4c9] px-[14px] py-[13px] text-[#b26b08]">
             <Clock3
               size={17}
               strokeWidth={1.8}
@@ -342,7 +344,7 @@ export default function VerifyRecoveryCode({
           </div>
 
           {/* Information */}
-          <div className="mt-[10px] flex gap-[10px] rounded-[9px] border border-[#b8c7f3] bg-[#edf2ff] px-[14px] py-[13px] text-[#354ac9]">
+          <div className="auth-recovery-secondary-info mt-[10px] flex gap-[10px] rounded-[9px] border border-[#b8c7f3] bg-[#edf2ff] px-[14px] py-[13px] text-[#354ac9]">
             <CircleAlert
               size={17}
               strokeWidth={1.8}
@@ -356,7 +358,7 @@ export default function VerifyRecoveryCode({
           </div>
 
           {/* Verify */}
-          <div className="mt-[18px]">
+          <div className="auth-recovery-submit mt-[18px]">
             <PrimaryButton disabled={processing}>
               {processing ? (
                 <>
@@ -378,7 +380,7 @@ export default function VerifyRecoveryCode({
           </div>
 
           {/* Resend */}
-          <div className="mt-[11px] text-center text-[11px] lg:text-[12px]">
+          <div className="auth-recovery-resend mt-[11px] text-center text-[11px] lg:text-[12px]">
             {resendSeconds > 0 ? (
               <span className="text-[#c1c5ce]">
                 Resend code in{" "}
@@ -423,7 +425,7 @@ export default function VerifyRecoveryCode({
 
 function Footer() {
   return (
-    <footer className="mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
+    <footer className="auth-recovery-footer mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
       <span className="text-[10px] text-[#c2c6cf] lg:text-[11px]">
         © 2026 LCMS
       </span>

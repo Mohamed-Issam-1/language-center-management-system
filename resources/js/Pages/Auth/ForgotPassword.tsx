@@ -77,28 +77,30 @@ export default function ForgotPassword() {
 
       <div>
         {/* Desktop logo */}
-        <div className="mb-[26px] hidden lg:block">
+        <div className="auth-recovery-logo mb-[26px] hidden lg:block">
           <ApplicationLogo
             variant="blue"
-            className="h-auto w-[205px]"
+            className="auth-recovery-logo-image h-auto w-[205px]"
           />
         </div>
 
         {/* Heading */}
         <div>
-          <h1 className="mt-4 text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[32px]">
+          <h1 className="auth-recovery-title mt-4 text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[32px]">
             Password Recovery
           </h1>
 
-          <p className="mt-[8px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[14px] lg:leading-[22px]">
+          <p className="auth-recovery-subtitle mt-[8px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[14px] lg:leading-[22px]">
             Enter your username to receive a
             verification code.
           </p>
         </div>
 
-        <PasswordRecoverySteps
-          currentStep={1}
-        />
+        <div className="auth-recovery-steps">
+          <PasswordRecoverySteps
+                    currentStep={1}
+                  />
+        </div>
 
         {displayedError && (
           <div
@@ -135,7 +137,7 @@ export default function ForgotPassword() {
 
         <form
           onSubmit={submit}
-          className="mt-[22px]"
+          className="auth-recovery-form mt-[22px]"
         >
           <InputLabel
             htmlFor="account_login_identifier"
@@ -171,7 +173,7 @@ export default function ForgotPassword() {
           </p>
 
           {/* What happens next */}
-          <div className="mt-[20px] rounded-[11px] border border-[#e1e4eb] bg-white px-[18px] py-[17px]">
+          <div className="auth-recovery-next mt-[20px] rounded-[11px] border border-[#e1e4eb] bg-white px-[18px] py-[17px]">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#737986] lg:text-[11px]">
               What happens next?
             </h3>
@@ -194,7 +196,7 @@ export default function ForgotPassword() {
             </div>
           </div>
 
-          <div className="mt-[19px]">
+          <div className="auth-recovery-submit mt-[19px]">
             <PrimaryButton
               disabled={processing}
             >
@@ -258,7 +260,7 @@ function NextStep({
 
 function Footer() {
   return (
-    <footer className="mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
+    <footer className="auth-recovery-footer mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
       <span className="text-[10px] text-[#c2c6cf] lg:text-[11px]">
         © 2026 LCMS
       </span>

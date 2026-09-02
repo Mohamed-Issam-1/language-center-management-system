@@ -9,7 +9,7 @@ import LanguageToggle from '@/Components/Auth/LanguageToggle';
 
 export default function AuthBrandPanel() {
     return (
-        <aside className="relative hidden min-h-screen overflow-hidden bg-[#2d3eb3] text-white lg:flex lg:flex-col">
+        <aside className="auth-brand-panel relative hidden min-h-screen overflow-hidden bg-[#2d3eb3] text-white lg:flex lg:flex-col">
             {/* Background decorations */}
             <div className="pointer-events-none absolute -right-[160px] -top-[135px] h-[425px] w-[425px] rounded-full bg-white/[0.075]" />
 
@@ -28,7 +28,7 @@ export default function AuthBrandPanel() {
             </div>
 
             {/* Header */}
-            <div className="relative z-20 flex items-center justify-between px-[58px] pt-[42px]">
+            <div className="auth-brand-header relative z-20 flex items-center justify-between px-[58px] pt-[42px]">
                 <ApplicationLogo
                     variant="white"
                     className="h-auto w-[175px]"
@@ -38,26 +38,26 @@ export default function AuthBrandPanel() {
             </div>
 
             {/* Main content */}
-            <div className="relative z-10 flex flex-1 flex-col items-center justify-center pb-[35px]">
+            <div className="auth-brand-content relative z-10 flex flex-1 flex-col items-center justify-center pb-[35px]">
                 <div>
                     <Illustration />
                 </div>
 
                 <div className="mt-[17px] text-center">
-                    <h1 className="text-[32px] lg:text-[35px] font-bold leading-[1.26] tracking-[-0.025em]">
+                    <h1 className="auth-brand-title text-[32px] lg:text-[35px] font-bold leading-[1.26] tracking-[-0.025em]">
                         Language Center
                         <br />
                         Management System
                     </h1>
 
-                    <p className="mx-auto mt-[19px] max-w-[390px] text-[18px] lg:text-[19px] leading-[29px] text-white/70">
+                    <p className="auth-brand-copy mx-auto mt-[19px] max-w-[390px] text-[18px] lg:text-[19px] leading-[29px] text-white/70">
                         A unified platform for managing academic,
                         <br />
                         administrative, and financial operations.
                     </p>
                 </div>
 
-                <div className="mt-[30px] w-full max-w-[385px] space-y-[15px]">
+                <div className="auth-brand-features mt-[30px] w-full max-w-[385px] space-y-[15px]">
                     <Feature
                         icon={
                             <Building2
@@ -101,12 +101,12 @@ function Feature({
     text: string;
 }) {
     return (
-        <div className="flex items-center gap-[14px]">
-            <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] bg-white/[0.14] text-white/90">
+        <div className="auth-brand-feature flex items-center gap-[14px]">
+            <div className="auth-brand-feature-icon flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] bg-white/[0.14] text-white/90">
                 {icon}
             </div>
 
-            <span className="text-[18px] lg:text-[19px] text-white/90">
+            <span className="auth-brand-feature-text text-[18px] lg:text-[19px] text-white/90">
                 {text}
             </span>
         </div>
@@ -115,7 +115,7 @@ function Feature({
 
 function Illustration() {
     return (
-        <div className="relative h-[190px] w-[280px] text-white/20">
+        <div className="auth-brand-illustration relative h-[190px] w-[280px] text-white/20">
             <svg
                 viewBox="0 0 280 190"
                 className="relative z-10 h-full w-full"
