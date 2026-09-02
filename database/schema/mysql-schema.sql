@@ -606,6 +606,26 @@ CREATE TABLE `migrations` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `password_recovery_challenges`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `password_recovery_challenges` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) unsigned NOT NULL,
+  `code_hash` varchar(64) NOT NULL,
+  `attempts` smallint(5) unsigned NOT NULL DEFAULT 0,
+  `max_attempts` smallint(5) unsigned NOT NULL DEFAULT 5,
+  `expires_at` datetime NOT NULL,
+  `verified_at` datetime DEFAULT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `password_recovery_challenges_user_id_created_at_index` (`user_id`,`created_at`),
+  KEY `password_recovery_challenges_user_id_expires_at_index` (`user_id`,`expires_at`),
+  CONSTRAINT `password_recovery_challenges_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `password_reset_tokens`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -835,3 +855,4 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (31,'2026_08_26_120
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (32,'2026_08_26_120200_add_occurrence_date_to_class_sessions_table',3);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (33,'2026_08_27_085844_create_attendance_statuses_table',4);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (35,'2026_08_27_085921_create_attendances_table',5);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (37,'2026_08_30_090000_create_password_recovery_challenges_table',6);

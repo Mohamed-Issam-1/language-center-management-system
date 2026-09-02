@@ -118,7 +118,7 @@ class AdminPanelAccessTest extends TestCase
                     )
                     ->where(
                         'canResetPassword',
-                        false
+                        true
                     )
             );
 

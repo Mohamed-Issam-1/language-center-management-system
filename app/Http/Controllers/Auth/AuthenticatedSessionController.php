@@ -17,10 +17,10 @@ class AuthenticatedSessionController extends Controller
     {
         return Inertia::render('Auth/Login', [
             /*
-             * Self-service password recovery is intentionally
-             * unavailable in the LCMS MVP.
-             */
-            'canResetPassword' => false,
+            * Self-service password recovery is available
+            * through the LCMS verification-code flow.
+            */
+            'canResetPassword' => true,
             'status' => session('status'),
         ]);
     }
@@ -92,7 +92,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         return Inertia::render('Auth/Login', [
-            'canResetPassword' => false,
+            'canResetPassword' => true,
             'status' => null,
             'showSuccessInitially' => true,
             'successRedirectTo' => $redirectTo,

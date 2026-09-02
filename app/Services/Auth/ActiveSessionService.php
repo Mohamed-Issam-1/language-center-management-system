@@ -78,6 +78,14 @@ class ActiveSessionService
             ->delete() === 1;
     }
 
+    public function terminateAll(
+        User $user
+    ): int {
+        return $this->sessionQuery()
+            ->where('user_id', $user->id)
+            ->delete();
+    }
+
     private function activeSessionsQuery(
         User $user
     ): Builder {
