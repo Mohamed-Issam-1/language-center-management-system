@@ -422,6 +422,39 @@ CREATE TABLE `courses` (
   CONSTRAINT `courses_language_center_foreign` FOREIGN KEY (`language_id`, `center_id`) REFERENCES `languages` (`id`, `center_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `enrollment_fees`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `enrollment_fees` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `branch_id` bigint(20) unsigned NOT NULL,
+  `enrollment_id` bigint(20) unsigned NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `currency_code` varchar(10) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'active',
+  `created_by_user_id` bigint(20) unsigned NOT NULL,
+  `voided_by_user_id` bigint(20) unsigned DEFAULT NULL,
+  `voided_at` timestamp NULL DEFAULT NULL,
+  `void_reason` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `enrollment_fees_center_enrollment_unique` (`center_id`,`enrollment_id`),
+  UNIQUE KEY `enrollment_fees_id_branch_center_unique` (`id`,`branch_id`,`center_id`),
+  KEY `enrollment_fees_branch_center_foreign` (`branch_id`,`center_id`),
+  KEY `enrollment_fees_enrollment_center_foreign` (`enrollment_id`,`center_id`),
+  KEY `enrollment_fees_creator_center_foreign` (`created_by_user_id`,`center_id`),
+  KEY `enrollment_fees_voider_center_foreign` (`voided_by_user_id`,`center_id`),
+  KEY `enrollment_fees_center_branch_status_index` (`center_id`,`branch_id`,`status`),
+  KEY `enrollment_fees_center_status_index` (`center_id`,`status`),
+  CONSTRAINT `enrollment_fees_branch_center_foreign` FOREIGN KEY (`branch_id`, `center_id`) REFERENCES `branches` (`id`, `center_id`),
+  CONSTRAINT `enrollment_fees_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`),
+  CONSTRAINT `enrollment_fees_creator_center_foreign` FOREIGN KEY (`created_by_user_id`, `center_id`) REFERENCES `users` (`id`, `center_id`),
+  CONSTRAINT `enrollment_fees_enrollment_center_foreign` FOREIGN KEY (`enrollment_id`, `center_id`) REFERENCES `enrollments` (`id`, `center_id`),
+  CONSTRAINT `enrollment_fees_voider_center_foreign` FOREIGN KEY (`voided_by_user_id`, `center_id`) REFERENCES `users` (`id`, `center_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `enrollment_histories`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -495,6 +528,31 @@ CREATE TABLE `failed_jobs` (
   `failed_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `fee_installments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `fee_installments` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `branch_id` bigint(20) unsigned NOT NULL,
+  `enrollment_fee_id` bigint(20) unsigned NOT NULL,
+  `sequence_number` smallint(5) unsigned NOT NULL,
+  `due_date` date NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `fee_installments_fee_sequence_unique` (`center_id`,`enrollment_fee_id`,`sequence_number`),
+  UNIQUE KEY `fee_installments_id_branch_center_unique` (`id`,`branch_id`,`center_id`),
+  KEY `fee_installments_branch_center_foreign` (`branch_id`,`center_id`),
+  KEY `fee_installments_fee_branch_center_foreign` (`enrollment_fee_id`,`branch_id`,`center_id`),
+  KEY `fee_installments_branch_due_index` (`center_id`,`branch_id`,`due_date`),
+  KEY `fee_installments_center_fee_index` (`center_id`,`enrollment_fee_id`),
+  CONSTRAINT `fee_installments_branch_center_foreign` FOREIGN KEY (`branch_id`, `center_id`) REFERENCES `branches` (`id`, `center_id`),
+  CONSTRAINT `fee_installments_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`),
+  CONSTRAINT `fee_installments_fee_branch_center_foreign` FOREIGN KEY (`enrollment_fee_id`, `branch_id`, `center_id`) REFERENCES `enrollment_fees` (`id`, `branch_id`, `center_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `finance_employee_assignments`;
@@ -634,6 +692,72 @@ CREATE TABLE `password_reset_tokens` (
   `token` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `payment_allocations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `payment_allocations` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `branch_id` bigint(20) unsigned NOT NULL,
+  `payment_id` bigint(20) unsigned NOT NULL,
+  `fee_installment_id` bigint(20) unsigned NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `payment_allocations_payment_installment_unique` (`center_id`,`payment_id`,`fee_installment_id`),
+  UNIQUE KEY `payment_allocations_id_branch_center_unique` (`id`,`branch_id`,`center_id`),
+  KEY `payment_allocations_branch_center_foreign` (`branch_id`,`center_id`),
+  KEY `payment_allocations_payment_branch_center_foreign` (`payment_id`,`branch_id`,`center_id`),
+  KEY `payment_allocations_installment_branch_center_foreign` (`fee_installment_id`,`branch_id`,`center_id`),
+  KEY `payment_allocations_installment_index` (`center_id`,`branch_id`,`fee_installment_id`),
+  KEY `payment_allocations_payment_index` (`center_id`,`payment_id`),
+  CONSTRAINT `payment_allocations_branch_center_foreign` FOREIGN KEY (`branch_id`, `center_id`) REFERENCES `branches` (`id`, `center_id`),
+  CONSTRAINT `payment_allocations_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`),
+  CONSTRAINT `payment_allocations_installment_branch_center_foreign` FOREIGN KEY (`fee_installment_id`, `branch_id`, `center_id`) REFERENCES `fee_installments` (`id`, `branch_id`, `center_id`),
+  CONSTRAINT `payment_allocations_payment_branch_center_foreign` FOREIGN KEY (`payment_id`, `branch_id`, `center_id`) REFERENCES `payments` (`id`, `branch_id`, `center_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `payments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `payments` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `center_id` bigint(20) unsigned NOT NULL,
+  `branch_id` bigint(20) unsigned NOT NULL,
+  `student_id` bigint(20) unsigned NOT NULL,
+  `receipt_number` varchar(50) NOT NULL,
+  `idempotency_key` varchar(100) NOT NULL,
+  `amount` decimal(12,2) NOT NULL,
+  `currency_code` varchar(10) NOT NULL,
+  `payment_method` varchar(50) NOT NULL,
+  `paid_at` datetime NOT NULL,
+  `received_by_user_id` bigint(20) unsigned NOT NULL,
+  `reference` varchar(100) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'posted',
+  `reversed_at` timestamp NULL DEFAULT NULL,
+  `reversed_by_user_id` bigint(20) unsigned DEFAULT NULL,
+  `reversal_reason` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `payments_center_receipt_unique` (`center_id`,`receipt_number`),
+  UNIQUE KEY `payments_center_idempotency_unique` (`center_id`,`idempotency_key`),
+  UNIQUE KEY `payments_id_branch_center_unique` (`id`,`branch_id`,`center_id`),
+  KEY `payments_branch_center_foreign` (`branch_id`,`center_id`),
+  KEY `payments_student_center_foreign` (`student_id`,`center_id`),
+  KEY `payments_receiver_center_foreign` (`received_by_user_id`,`center_id`),
+  KEY `payments_reverser_center_foreign` (`reversed_by_user_id`,`center_id`),
+  KEY `payments_branch_status_date_index` (`center_id`,`branch_id`,`status`,`paid_at`),
+  KEY `payments_student_status_index` (`center_id`,`student_id`,`status`),
+  CONSTRAINT `payments_branch_center_foreign` FOREIGN KEY (`branch_id`, `center_id`) REFERENCES `branches` (`id`, `center_id`),
+  CONSTRAINT `payments_center_foreign` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`),
+  CONSTRAINT `payments_receiver_center_foreign` FOREIGN KEY (`received_by_user_id`, `center_id`) REFERENCES `users` (`id`, `center_id`),
+  CONSTRAINT `payments_reverser_center_foreign` FOREIGN KEY (`reversed_by_user_id`, `center_id`) REFERENCES `users` (`id`, `center_id`),
+  CONSTRAINT `payments_student_center_foreign` FOREIGN KEY (`student_id`, `center_id`) REFERENCES `students` (`id`, `center_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `people`;
@@ -856,3 +980,7 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (32,'2026_08_26_120
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (33,'2026_08_27_085844_create_attendance_statuses_table',4);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (35,'2026_08_27_085921_create_attendances_table',5);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (37,'2026_08_30_090000_create_password_recovery_challenges_table',6);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (38,'2026_09_03_130000_create_enrollment_fees_table',7);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (39,'2026_09_03_130100_create_fee_installments_table',7);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (40,'2026_09_03_130200_create_payments_table',7);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (41,'2026_09_03_130300_create_payment_allocations_table',7);

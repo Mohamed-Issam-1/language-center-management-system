@@ -79,4 +79,11 @@ class Student extends Model
         return $this->status
             === StudentStatus::Archived;
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(
+            Payment::class
+        );
+    }
 }
