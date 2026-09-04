@@ -162,6 +162,52 @@ final class FinanceReadService
             ];
         }
 
+        $enrollmentsById =
+            Enrollment::query()
+            ->withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->whereIn(
+                'id',
+                $fees
+                    ->pluck(
+                        'enrollment_id'
+                    )
+            )
+            ->get([
+                'id',
+                'enrollment_number',
+            ])
+            ->keyBy(
+                'id'
+            );
+
+        $branchesById =
+            Branch::query()
+            ->withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->whereIn(
+                'id',
+                $installments
+                    ->pluck(
+                        'branch_id'
+                    )
+                    ->unique()
+                    ->values()
+            )
+            ->get([
+                'id',
+                'name',
+            ])
+            ->keyBy(
+                'id'
+            );
+
         $postedAmounts =
             DB::table(
                 'payment_allocations'
@@ -220,6 +266,30 @@ final class FinanceReadService
                 );
             }
 
+            $enrollment =
+                $enrollmentsById
+                ->get(
+                    $fee->enrollment_id
+                );
+
+            if ($enrollment === null) {
+                throw new LogicException(
+                    'Enrollment Fee is missing its Enrollment.'
+                );
+            }
+
+            $financialBranch =
+                $branchesById
+                ->get(
+                    $installment->branch_id
+                );
+
+            if ($financialBranch === null) {
+                throw new LogicException(
+                    'Fee Installment is missing its financial Branch.'
+                );
+            }
+
             if (
                 $installment->center_id
                 !== $fee->center_id
@@ -255,6 +325,25 @@ final class FinanceReadService
             $balanceCents =
                 $amountCents
                 - $paidCents;
+            $isOverdue =
+                $balanceCents > 0
+                && $installment
+                ->due_date
+                ->isBefore(
+                    today()
+                );
+
+            $installmentStatus =
+                match (true) {
+                    $balanceCents === 0 =>
+                    'paid',
+
+                    $isOverdue =>
+                    'overdue',
+
+                    default =>
+                    'outstanding',
+                };
 
             $currency =
                 strtoupper(
@@ -301,12 +390,19 @@ final class FinanceReadService
                 (int) $fee
                     ->enrollment_id,
 
+                'enrollment_number' =>
+                $enrollment
+                    ->enrollment_number,
+
                 'installment_id' =>
                 (int) $installment->id,
 
                 'branch_id' =>
                 (int) $installment
                     ->branch_id,
+
+                'branch_name' =>
+                $financialBranch->name,
 
                 'sequence_number' =>
                 (int) $installment
@@ -316,6 +412,12 @@ final class FinanceReadService
                 $installment
                     ->due_date
                     ->toDateString(),
+
+                'is_overdue' =>
+                $isOverdue,
+
+                'status' =>
+                $installmentStatus,
 
                 'currency_code' =>
                 $currency,

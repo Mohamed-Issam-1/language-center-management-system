@@ -542,6 +542,15 @@ class FinanceReadServiceTest extends TestCase
             $branchA->id,
             $result['installments'][0]['branch_id']
         );
+
+        $this->assertSame(
+            $branchA->name,
+            $result['installments'][0]['branch_name']
+        );
+
+        $this->assertNotEmpty(
+            $result['installments'][0]['enrollment_number']
+        );
     }
 
     public function test_finance_employee_balance_is_limited_to_assigned_branch(): void
@@ -772,6 +781,272 @@ class FinanceReadServiceTest extends TestCase
                 $ownerA,
                 $studentB
             );
+    }
+
+    public function test_past_due_installment_with_outstanding_balance_is_marked_overdue(): void
+    {
+        $center =
+            $this->center();
+
+        $branch =
+            $this->branch(
+                $center
+            );
+
+        $student =
+            $this->student(
+                $branch
+            );
+
+        [
+            $fee,
+            $installment,
+        ] = $this->obligation(
+            $branch,
+            $student,
+            '100.00'
+        );
+
+        $installment->forceFill([
+            'due_date' =>
+            today()
+                ->subDay()
+                ->toDateString(),
+        ])->save();
+
+        $owner =
+            $this->createUserForRole(
+                SystemRole::CenterOwner,
+                $center
+            );
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $result =
+            $this->service()
+            ->studentBalance(
+                $owner,
+                $student
+            );
+
+        $this->assertTrue(
+            $result['installments'][0]['is_overdue']
+        );
+
+        $this->assertSame(
+            'overdue',
+            $result['installments'][0]['status']
+        );
+
+        $this->assertSame(
+            '100.00',
+            $result['installments'][0]['balance']
+        );
+    }
+
+    public function test_fully_paid_past_due_installment_is_not_marked_overdue(): void
+    {
+        $center =
+            $this->center();
+
+        $branch =
+            $this->branch(
+                $center
+            );
+
+        $student =
+            $this->student(
+                $branch
+            );
+
+        [
+            $fee,
+            $installment,
+        ] = $this->obligation(
+            $branch,
+            $student,
+            '100.00'
+        );
+
+        $installment->forceFill([
+            'due_date' =>
+            today()
+                ->subDay()
+                ->toDateString(),
+        ])->save();
+
+        $this->payment(
+            $branch,
+            $student,
+            $installment,
+            '100.00',
+            PaymentStatus::Posted,
+            'RCT-OVERDUE-FULLY-PAID'
+        );
+
+        $owner =
+            $this->createUserForRole(
+                SystemRole::CenterOwner,
+                $center
+            );
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $result =
+            $this->service()
+            ->studentBalance(
+                $owner,
+                $student
+            );
+
+        $this->assertFalse(
+            $result['installments'][0]['is_overdue']
+        );
+
+        $this->assertSame(
+            'paid',
+            $result['installments'][0]['status']
+        );
+
+        $this->assertSame(
+            '0.00',
+            $result['installments'][0]['balance']
+        );
+    }
+
+    public function test_future_installment_with_outstanding_balance_is_not_marked_overdue(): void
+    {
+        $center =
+            $this->center();
+
+        $branch =
+            $this->branch(
+                $center
+            );
+
+        $student =
+            $this->student(
+                $branch
+            );
+
+        [
+            $fee,
+            $installment,
+        ] = $this->obligation(
+            $branch,
+            $student,
+            '100.00'
+        );
+
+        $dueDate =
+            today()
+            ->addDay()
+            ->toDateString();
+
+        $installment->forceFill([
+            'due_date' =>
+            $dueDate,
+        ])->save();
+
+        $owner =
+            $this->createUserForRole(
+                SystemRole::CenterOwner,
+                $center
+            );
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $result =
+            $this->service()
+            ->studentBalance(
+                $owner,
+                $student
+            );
+
+        $this->assertFalse(
+            $result['installments'][0]['is_overdue']
+        );
+
+        $this->assertSame(
+            'outstanding',
+            $result['installments'][0]['status']
+        );
+
+        $this->assertSame(
+            $dueDate,
+            $result['installments'][0]['due_date']
+        );
+    }
+
+    public function test_installment_due_today_with_outstanding_balance_is_not_marked_overdue(): void
+    {
+        $center =
+            $this->center();
+
+        $branch =
+            $this->branch(
+                $center
+            );
+
+        $student =
+            $this->student(
+                $branch
+            );
+
+        [
+            $fee,
+            $installment,
+        ] = $this->obligation(
+            $branch,
+            $student,
+            '100.00'
+        );
+
+        $dueDate =
+            today()
+            ->toDateString();
+
+        $installment->forceFill([
+            'due_date' =>
+            $dueDate,
+        ])->save();
+
+        $owner =
+            $this->createUserForRole(
+                SystemRole::CenterOwner,
+                $center
+            );
+
+        $this->establishCenterOwnerContext(
+            $center
+        );
+
+        $result =
+            $this->service()
+            ->studentBalance(
+                $owner,
+                $student
+            );
+
+        $this->assertFalse(
+            $result['installments'][0]['is_overdue']
+        );
+
+        $this->assertSame(
+            'outstanding',
+            $result['installments'][0]['status']
+        );
+
+        $this->assertSame(
+            $dueDate,
+            $result['installments'][0]['due_date']
+        );
     }
 
     public function test_posted_receipt_returns_payment_student_and_allocation_details(): void
