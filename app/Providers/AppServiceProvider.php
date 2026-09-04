@@ -16,6 +16,8 @@ use App\Models\ClassSchedule;
 use App\Models\ClassSession;
 use App\Models\Attendance;
 use App\Models\AttendanceStatus;
+use App\Models\EnrollmentFee;
+use App\Models\Payment;
 use App\Policies\AttendancePolicy;
 use App\Policies\AttendanceStatusPolicy;
 use App\Policies\BranchPolicy;
@@ -29,6 +31,8 @@ use App\Policies\CourseClassPolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\ClassSchedulePolicy;
 use App\Policies\ClassSessionPolicy;
+use App\Policies\EnrollmentFeePolicy;
+use App\Policies\PaymentPolicy;
 use App\Support\Enums\SystemPermission;
 use App\Support\Tenancy\BranchContext;
 use App\Support\Tenancy\TenantContext;
@@ -109,6 +113,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(
             Enrollment::class,
             EnrollmentPolicy::class
+        );
+
+        Gate::policy(
+            EnrollmentFee::class,
+            EnrollmentFeePolicy::class
+        );
+
+        Gate::policy(
+            Payment::class,
+            PaymentPolicy::class
         );
 
         Gate::policy(

@@ -143,4 +143,32 @@ class Center extends Model
             RegistrationRequest::class
         );
     }
+
+    public function enrollmentFees(): HasMany
+    {
+        return $this->hasMany(
+            EnrollmentFee::class
+        );
+    }
+
+    public function feeInstallments(): HasMany
+    {
+        return $this->hasMany(
+            FeeInstallment::class
+        );
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(
+            Payment::class
+        );
+    }
+
+    public function paymentAllocations(): HasMany
+    {
+        return $this->hasMany(
+            PaymentAllocation::class
+        );
+    }
 }
