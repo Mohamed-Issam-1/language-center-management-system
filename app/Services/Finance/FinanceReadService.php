@@ -807,6 +807,494 @@ final class FinanceReadService
         ];
     }
 
+    /**
+     * Return Center/Branch financial aggregates for operational
+     * reporting and dashboards.
+     *
+     * Student finance remains available through studentBalance().
+     * Platform Owner and Teacher do not receive tenant financial
+     * aggregates.
+     *
+     * @return array{
+     *     center_id: int,
+     *     branch_id: int|null,
+     *     currencies: array<string, array{
+     *         active_fee_count: int,
+     *         active_fee_amount: string,
+     *         installment_count: int,
+     *         installment_amount: string,
+     *         allocated_amount: string,
+     *         outstanding_amount: string,
+     *         posted_payment_count: int,
+     *         posted_payment_amount: string,
+     *         reversed_payment_count: int,
+     *         reversed_payment_amount: string
+     *     }>
+     * }
+     */
+    public function operationalSummary(
+        User $actor
+    ): array {
+        if (
+            ! in_array(
+                $actor->systemRole(),
+                [
+                    SystemRole::CenterOwner,
+                    SystemRole::BranchManager,
+                    SystemRole::FinanceEmployee,
+                ],
+                true
+            )
+        ) {
+            throw new AuthorizationException(
+                'The account cannot view operational financial reports.'
+            );
+        }
+
+        $centerId =
+            $this->authorizedCenterId(
+                $actor
+            );
+
+        $branch =
+            $this->summaryBranchForActor(
+                $actor,
+                $centerId
+            );
+
+        $branchId =
+            $branch === null
+            ? null
+            : (int) $branch->id;
+
+        $feeQuery =
+            DB::table(
+                'enrollment_fees'
+            )
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'status',
+                EnrollmentFeeStatus::Active->value
+            );
+
+        if ($branchId !== null) {
+            $feeQuery->where(
+                'branch_id',
+                $branchId
+            );
+        }
+
+        $feeRows =
+            $feeQuery
+            ->select(
+                'currency_code'
+            )
+            ->selectRaw(
+                'COUNT(*) as aggregate_count'
+            )
+            ->selectRaw(
+                'COALESCE(SUM(amount), 0) as aggregate_amount'
+            )
+            ->groupBy(
+                'currency_code'
+            )
+            ->get()
+            ->keyBy(
+                'currency_code'
+            );
+
+        $installmentQuery =
+            DB::table(
+                'fee_installments as fi'
+            )
+            ->join(
+                'enrollment_fees as ef',
+                function ($join): void {
+                    $join
+                        ->on(
+                            'ef.id',
+                            '=',
+                            'fi.enrollment_fee_id'
+                        )
+                        ->on(
+                            'ef.center_id',
+                            '=',
+                            'fi.center_id'
+                        )
+                        ->on(
+                            'ef.branch_id',
+                            '=',
+                            'fi.branch_id'
+                        );
+                }
+            )
+            ->where(
+                'ef.center_id',
+                $centerId
+            )
+            ->where(
+                'ef.status',
+                EnrollmentFeeStatus::Active->value
+            );
+
+        if ($branchId !== null) {
+            $installmentQuery->where(
+                'ef.branch_id',
+                $branchId
+            );
+        }
+
+        $installmentRows =
+            $installmentQuery
+            ->select(
+                'ef.currency_code'
+            )
+            ->selectRaw(
+                'COUNT(fi.id) as aggregate_count'
+            )
+            ->selectRaw(
+                'COALESCE(SUM(fi.amount), 0) as aggregate_amount'
+            )
+            ->groupBy(
+                'ef.currency_code'
+            )
+            ->get()
+            ->keyBy(
+                'currency_code'
+            );
+
+        $allocationQuery =
+            DB::table(
+                'payment_allocations as pa'
+            )
+            ->join(
+                'payments as p',
+                function ($join): void {
+                    $join
+                        ->on(
+                            'p.id',
+                            '=',
+                            'pa.payment_id'
+                        )
+                        ->on(
+                            'p.center_id',
+                            '=',
+                            'pa.center_id'
+                        )
+                        ->on(
+                            'p.branch_id',
+                            '=',
+                            'pa.branch_id'
+                        );
+                }
+            )
+            ->join(
+                'fee_installments as fi',
+                function ($join): void {
+                    $join
+                        ->on(
+                            'fi.id',
+                            '=',
+                            'pa.fee_installment_id'
+                        )
+                        ->on(
+                            'fi.center_id',
+                            '=',
+                            'pa.center_id'
+                        )
+                        ->on(
+                            'fi.branch_id',
+                            '=',
+                            'pa.branch_id'
+                        );
+                }
+            )
+            ->join(
+                'enrollment_fees as ef',
+                function ($join): void {
+                    $join
+                        ->on(
+                            'ef.id',
+                            '=',
+                            'fi.enrollment_fee_id'
+                        )
+                        ->on(
+                            'ef.center_id',
+                            '=',
+                            'fi.center_id'
+                        )
+                        ->on(
+                            'ef.branch_id',
+                            '=',
+                            'fi.branch_id'
+                        );
+                }
+            )
+            ->where(
+                'pa.center_id',
+                $centerId
+            )
+            ->where(
+                'p.status',
+                PaymentStatus::Posted->value
+            )
+            ->where(
+                'ef.status',
+                EnrollmentFeeStatus::Active->value
+            );
+
+        if ($branchId !== null) {
+            $allocationQuery->where(
+                'pa.branch_id',
+                $branchId
+            );
+        }
+
+        $allocationRows =
+            $allocationQuery
+            ->select(
+                'ef.currency_code'
+            )
+            ->selectRaw(
+                'COALESCE(SUM(pa.amount), 0) as aggregate_amount'
+            )
+            ->groupBy(
+                'ef.currency_code'
+            )
+            ->get()
+            ->keyBy(
+                'currency_code'
+            );
+
+        $postedPaymentQuery =
+            DB::table(
+                'payments'
+            )
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'status',
+                PaymentStatus::Posted->value
+            );
+
+        $reversedPaymentQuery =
+            DB::table(
+                'payments'
+            )
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'status',
+                PaymentStatus::Reversed->value
+            );
+
+        if ($branchId !== null) {
+            $postedPaymentQuery->where(
+                'branch_id',
+                $branchId
+            );
+
+            $reversedPaymentQuery->where(
+                'branch_id',
+                $branchId
+            );
+        }
+
+        $postedPaymentRows =
+            $postedPaymentQuery
+            ->select(
+                'currency_code'
+            )
+            ->selectRaw(
+                'COUNT(*) as aggregate_count'
+            )
+            ->selectRaw(
+                'COALESCE(SUM(amount), 0) as aggregate_amount'
+            )
+            ->groupBy(
+                'currency_code'
+            )
+            ->get()
+            ->keyBy(
+                'currency_code'
+            );
+
+        $reversedPaymentRows =
+            $reversedPaymentQuery
+            ->select(
+                'currency_code'
+            )
+            ->selectRaw(
+                'COUNT(*) as aggregate_count'
+            )
+            ->selectRaw(
+                'COALESCE(SUM(amount), 0) as aggregate_amount'
+            )
+            ->groupBy(
+                'currency_code'
+            )
+            ->get()
+            ->keyBy(
+                'currency_code'
+            );
+
+        $currencyCodes =
+            collect()
+            ->merge(
+                $feeRows->keys()
+            )
+            ->merge(
+                $installmentRows->keys()
+            )
+            ->merge(
+                $allocationRows->keys()
+            )
+            ->merge(
+                $postedPaymentRows->keys()
+            )
+            ->merge(
+                $reversedPaymentRows->keys()
+            )
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $currencies = [];
+
+        foreach ($currencyCodes as $currencyCode) {
+            $fee =
+                $feeRows->get(
+                    $currencyCode
+                );
+
+            $installments =
+                $installmentRows->get(
+                    $currencyCode
+                );
+
+            $allocations =
+                $allocationRows->get(
+                    $currencyCode
+                );
+
+            $postedPayments =
+                $postedPaymentRows->get(
+                    $currencyCode
+                );
+
+            $reversedPayments =
+                $reversedPaymentRows->get(
+                    $currencyCode
+                );
+
+            $installmentAmount =
+                (float) (
+                    $installments
+                    ?->aggregate_amount
+                    ?? 0
+                );
+
+            $allocatedAmount =
+                (float) (
+                    $allocations
+                    ?->aggregate_amount
+                    ?? 0
+                );
+
+            $outstandingAmount =
+                max(
+                    0,
+                    $installmentAmount
+                        - $allocatedAmount
+                );
+
+            $currencies[(string) $currencyCode] = [
+                'active_fee_count' =>
+                (int) (
+                    $fee
+                    ?->aggregate_count
+                    ?? 0
+                ),
+
+                'active_fee_amount' =>
+                $this->money(
+                    $fee
+                        ?->aggregate_amount
+                        ?? 0
+                ),
+
+                'installment_count' =>
+                (int) (
+                    $installments
+                    ?->aggregate_count
+                    ?? 0
+                ),
+
+                'installment_amount' =>
+                $this->money(
+                    $installmentAmount
+                ),
+
+                'allocated_amount' =>
+                $this->money(
+                    $allocatedAmount
+                ),
+
+                'outstanding_amount' =>
+                $this->money(
+                    $outstandingAmount
+                ),
+
+                'posted_payment_count' =>
+                (int) (
+                    $postedPayments
+                    ?->aggregate_count
+                    ?? 0
+                ),
+
+                'posted_payment_amount' =>
+                $this->money(
+                    $postedPayments
+                        ?->aggregate_amount
+                        ?? 0
+                ),
+
+                'reversed_payment_count' =>
+                (int) (
+                    $reversedPayments
+                    ?->aggregate_count
+                    ?? 0
+                ),
+
+                'reversed_payment_amount' =>
+                $this->money(
+                    $reversedPayments
+                        ?->aggregate_amount
+                        ?? 0
+                ),
+            ];
+        }
+
+        return [
+            'center_id' =>
+            $centerId,
+
+            'branch_id' =>
+            $branchId,
+
+            'currencies' =>
+            $currencies,
+        ];
+    }
+
     private function authorizedCenterId(
         User $actor
     ): int {
@@ -858,6 +1346,17 @@ final class FinanceReadService
         }
 
         return $persisted;
+    }
+
+    private function money(
+        int|float|string|null $amount
+    ): string {
+        return number_format(
+            (float) ($amount ?? 0),
+            2,
+            '.',
+            ''
+        );
     }
 
     private function summaryBranchForActor(

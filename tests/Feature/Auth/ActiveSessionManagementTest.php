@@ -162,7 +162,9 @@ class ActiveSessionManagementTest extends TestCase
             '/dashboard'
         );
 
-        $dashboardResponse->assertOk();
+        $dashboardResponse->assertRedirect(
+            '/admin'
+        );
     }
 
     public function test_terminated_session_payload_can_no_longer_be_reused(): void

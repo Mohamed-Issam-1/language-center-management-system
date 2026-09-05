@@ -360,7 +360,9 @@ class ForcedPasswordChangeTest extends TestCase
         $dashboardResponse =
             $this->get('/dashboard');
 
-        $dashboardResponse->assertOk();
+        $dashboardResponse->assertRedirect(
+            '/admin'
+        );
     }
 
     public function test_login_success_cannot_bypass_forced_password_change_destination(): void
