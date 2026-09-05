@@ -6,6 +6,9 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Services\Reports\DashboardReadService;
+use App\Support\Enums\SystemRole;
+use Illuminate\Http\Request;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -16,9 +19,47 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})
+Route::get(
+    '/dashboard',
+    function (
+        Request $request,
+        DashboardReadService $dashboards
+    ) {
+        $actor =
+            $request->user();
+
+        $role =
+            $actor->systemRole();
+
+        if (
+            in_array(
+                $role,
+                [
+                    SystemRole::PlatformOwner,
+                    SystemRole::CenterOwner,
+                    SystemRole::BranchManager,
+                    SystemRole::FinanceEmployee,
+                ],
+                true
+            )
+        ) {
+            return redirect(
+                '/admin'
+            );
+        }
+
+        return Inertia::render(
+            'Dashboard',
+            [
+                'dashboard' =>
+                $dashboards
+                    ->forUser(
+                        $actor
+                    ),
+            ]
+        );
+    }
+)
     ->middleware([
         'auth',
         'tenant.context',
