@@ -16,6 +16,7 @@ use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
+use App\Models\Attendance;
 use Throwable;
 
 final class StudentDashboardReadService
@@ -858,6 +859,797 @@ final class StudentDashboardReadService
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function courseDetailsForUser(
+        User $actor,
+        int $enrollmentId,
+    ): array {
+        if (
+            $actor->systemRole()
+            !== SystemRole::Student
+        ) {
+            throw new AuthorizationException(
+                'Only a Student account may view Student course details.'
+            );
+        }
+
+        $reportDashboard =
+            $this->dashboardReports
+            ->forUser($actor);
+
+        $scope =
+            $reportDashboard['scope'];
+
+        if (
+            ($scope['scope_type'] ?? null) !== 'student'
+            || ($scope['center_id'] ?? null) === null
+            || ($scope['subject_id'] ?? null) === null
+        ) {
+            throw new AuthorizationException(
+                'Course details require Student reporting scope.'
+            );
+        }
+
+        $centerId =
+            (int) $scope['center_id'];
+
+        $studentId =
+            (int) $scope['subject_id'];
+
+        $student =
+            Student::query()
+            ->withoutGlobalScopes()
+            ->whereKey($studentId)
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'user_id',
+                $actor->id
+            )
+            ->with([
+                'center',
+
+                'branch' =>
+                fn($query) =>
+                $query
+                    ->withoutGlobalScopes(),
+
+                'person' =>
+                fn($query) =>
+                $query
+                    ->withoutGlobalScopes(),
+            ])
+            ->first();
+
+        if ($student === null) {
+            throw new AuthorizationException(
+                'The Student record could not be resolved.'
+            );
+        }
+
+        /*
+     * Important:
+     * the URL identifier is the Enrollment ID.
+     *
+     * This guarantees that a Student cannot open
+     * another Student's course by changing the URL.
+     */
+        $enrollment =
+            Enrollment::query()
+            ->withoutGlobalScopes()
+            ->whereKey($enrollmentId)
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'student_id',
+                $student->id
+            )
+            ->with([
+                'courseClass' =>
+                function ($query): void {
+                    $query
+                        ->withoutGlobalScopes()
+                        ->with([
+                            'branch' =>
+                            fn($branchQuery) =>
+                            $branchQuery
+                                ->withoutGlobalScopes(),
+
+                            'assignedClassroom' =>
+                            fn($classroomQuery) =>
+                            $classroomQuery
+                                ->withoutGlobalScopes(),
+
+                            'assignedTeacher' =>
+                            fn($teacherQuery) =>
+                            $teacherQuery
+                                ->withoutGlobalScopes(),
+
+                            'classSchedules' =>
+                            fn($scheduleQuery) =>
+                            $scheduleQuery
+                                ->withoutGlobalScopes()
+                                ->orderBy(
+                                    'day_of_week'
+                                )
+                                ->orderBy(
+                                    'start_time'
+                                ),
+
+                            'classSessions' =>
+                            fn($sessionQuery) =>
+                            $sessionQuery
+                                ->withoutGlobalScopes()
+                                ->with([
+                                    'classroom' =>
+                                    fn($classroomQuery) =>
+                                    $classroomQuery
+                                        ->withoutGlobalScopes(),
+                                ])
+                                ->orderBy(
+                                    'occurrence_date'
+                                )
+                                ->orderBy(
+                                    'session_date'
+                                )
+                                ->orderBy(
+                                    'start_time'
+                                ),
+
+                            'course' =>
+                            function (
+                                $courseQuery
+                            ): void {
+                                $courseQuery
+                                    ->withoutGlobalScopes()
+                                    ->with([
+                                        'language' =>
+                                        fn($languageQuery) =>
+                                        $languageQuery
+                                            ->withoutGlobalScopes(),
+
+                                        'academicLevel' =>
+                                        fn($levelQuery) =>
+                                        $levelQuery
+                                            ->withoutGlobalScopes(),
+                                    ]);
+                            },
+                        ]);
+                },
+            ])
+            ->first();
+
+        if ($enrollment === null) {
+            throw new AuthorizationException(
+                'The requested Enrollment is not available to this Student.'
+            );
+        }
+
+        $courseClass =
+            $enrollment->courseClass;
+
+        $course =
+            $courseClass?->course;
+
+        if (
+            $courseClass === null
+            || $course === null
+        ) {
+            throw new AuthorizationException(
+                'The Enrollment does not have valid Course information.'
+            );
+        }
+
+        /*
+     * --------------------
+     * Attendance
+     * --------------------
+     */
+
+        $attendanceSummary =
+            $this->attendance
+            ->forEnrollment(
+                $actor,
+                $enrollment
+            );
+
+        $attendanceRecords =
+            Attendance::query()
+            ->withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'enrollment_id',
+                $enrollment->id
+            )
+            ->with([
+                'attendanceStatus' =>
+                fn($query) =>
+                $query
+                    ->withoutGlobalScopes(),
+
+                'session' =>
+                fn($query) =>
+                $query
+                    ->withoutGlobalScopes(),
+            ])
+            ->orderByDesc(
+                'recorded_at'
+            )
+            ->get();
+
+        $attendanceLog = [];
+
+        $present = 0;
+        $absent = 0;
+        $late = 0;
+
+        foreach (
+            $attendanceRecords as $record
+        ) {
+            $statusValue =
+                strtolower(
+                    trim(
+                        (string) (
+                            $record
+                            ->attendanceStatus
+                            ?->code
+                            ?: $record
+                            ->attendanceStatus
+                            ?->name
+                            ?: ''
+                        )
+                    )
+                );
+
+            $status =
+                match (true) {
+                    str_contains(
+                        $statusValue,
+                        'present'
+                    ) => 'Present',
+
+                    str_contains(
+                        $statusValue,
+                        'absent'
+                    ) => 'Absent',
+
+                    str_contains(
+                        $statusValue,
+                        'late'
+                    ) => 'Late',
+
+                    default => null,
+                };
+
+            /*
+         * The approved Student UI currently visualizes
+         * Present / Absent / Late.
+         */
+            if ($status === null) {
+                continue;
+            }
+
+            match ($status) {
+                'Present' => $present++,
+                'Absent' => $absent++,
+                'Late' => $late++,
+            };
+
+            $sessionDate =
+                $record
+                ->session
+                ?->occurrence_date
+                ?? $record
+                ->session
+                ?->session_date;
+
+            $date =
+                $sessionDate
+                ? $sessionDate->format(
+                    'M j, Y'
+                )
+                : $record
+                ->recorded_at
+                ?->format(
+                    'M j, Y'
+                )
+                ?? 'Date unavailable';
+
+            $note =
+                trim(
+                    (string) (
+                        $record->excuse
+                        ?: $record->notes
+                        ?: ''
+                    )
+                );
+
+            $attendanceLog[] = [
+                'id' =>
+                (int) $record->id,
+
+                'date' =>
+                $date,
+
+                'status' =>
+                $status,
+
+                'note' =>
+                $note !== ''
+                    ? $note
+                    : null,
+            ];
+        }
+
+        $rate =
+            $attendanceSummary['attendance_percentage'] ?? null;
+
+        $rate =
+            $rate === null
+            ? 0
+            : (int) round(
+                (float) $rate
+            );
+
+        /*
+     * --------------------
+     * Sessions
+     * --------------------
+     */
+
+        $sessions = [];
+
+        foreach (
+            $courseClass->classSessions
+            as $session
+        ) {
+            $sessionDate =
+                $session->occurrence_date
+                ?? $session->session_date;
+
+            if ($sessionDate === null) {
+                continue;
+            }
+
+            $status =
+                match ($session
+                    ->session_status
+                    ->value) {
+                    'scheduled' =>
+                    'Upcoming',
+
+                    'completed' =>
+                    'Completed',
+
+                    'cancelled' =>
+                    'Cancelled',
+
+                    default =>
+                    null,
+                };
+
+            if ($status === null) {
+                continue;
+            }
+
+            $sessions[] = [
+                'id' =>
+                (int) $session->id,
+
+                'date' =>
+                $sessionDate
+                    ->format(
+                        'M j, Y'
+                    ),
+
+                'day' =>
+                $sessionDate
+                    ->format('D'),
+
+                'time' =>
+                $this->formatTime(
+                    (string)
+                    $session->start_time
+                )
+                    . ' – '
+                    . $this->formatTime(
+                        (string)
+                        $session->end_time
+                    ),
+
+                'room' =>
+                $session
+                    ->classroom
+                    ?->name
+                    ?: $courseClass
+                    ->assignedClassroom
+                    ?->name
+                    ?: 'Room not assigned',
+
+                'status' =>
+                $status,
+            ];
+        }
+
+        /*
+     * --------------------
+     * Finance
+     * --------------------
+     */
+
+        $financeData =
+            $reportDashboard['finance']['data']
+            ?? [];
+
+        $financialRows =
+            collect(
+                $financeData['installments'] ?? []
+            )
+            ->filter(
+                fn($row): bool =>
+                (int) (
+                    $row['enrollment_id'] ?? 0
+                )
+                    === (int)
+                    $enrollment->id
+            )
+            ->values();
+
+        $currency =
+            strtoupper(
+                (string) (
+                    $financialRows
+                        ->first()['currency_code']
+                    ?? $student
+                    ->center
+                    ?->operating_currency_code
+                    ?? 'USD'
+                )
+            );
+
+        $totalFees =
+            $financialRows
+            ->sum(
+                fn($row): float =>
+                (float) (
+                    $row['amount']
+                    ?? 0
+                )
+            );
+
+        $paid =
+            $financialRows
+            ->sum(
+                fn($row): float =>
+                (float) (
+                    $row['paid']
+                    ?? 0
+                )
+            );
+
+        $remaining =
+            $financialRows
+            ->sum(
+                fn($row): float =>
+                (float) (
+                    $row['balance']
+                    ?? 0
+                )
+            );
+
+        $installments =
+            $financialRows
+            ->map(
+                function (
+                    array $row
+                ) use (
+                    $currency
+                ): array {
+                    $status =
+                        match ($row['status']
+                            ?? '') {
+                            'paid' =>
+                            'Paid',
+
+                            'overdue' =>
+                            'Overdue',
+
+                            default =>
+                            'Upcoming',
+                        };
+
+                    return [
+                        'id' =>
+                        (int) (
+                            $row['installment_id'] ?? 0
+                        ),
+
+                        'currency' =>
+                        $currency,
+
+                        'amount' =>
+                        (float) (
+                            $row['amount'] ?? 0
+                        ),
+
+                        'dueDate' =>
+                        isset(
+                            $row['due_date']
+                        )
+                            ? CarbonImmutable::parse(
+                                $row['due_date']
+                            )->format(
+                                'M j, Y'
+                            )
+                            : 'Date unavailable',
+
+                        'status' =>
+                        $status,
+                    ];
+                }
+            )
+            ->all();
+
+        /*
+     * There is currently no explicit persisted
+     * "discount" field in the financial model.
+     * We therefore do not invent one.
+     */
+        $discount = 0;
+
+        /*
+     * --------------------
+     * Information
+     * --------------------
+     */
+
+        $levelName =
+            trim(
+                implode(
+                    ' ',
+                    array_filter([
+                        $course
+                            ->academicLevel
+                            ?->code,
+
+                        $course
+                            ->academicLevel
+                            ?->name,
+                    ])
+                )
+            );
+
+        $duration =
+            $courseClass->start_date
+            && $courseClass->end_date
+            ? $courseClass
+            ->start_date
+            ->format(
+                'M j, Y'
+            )
+            . ' – '
+            . $courseClass
+            ->end_date
+            ->format(
+                'M j, Y'
+            )
+            : 'Dates not available';
+
+        $totalHours =
+            $course->total_hours !== null
+            ? rtrim(
+                rtrim(
+                    number_format(
+                        (float)
+                        $course
+                            ->total_hours,
+                        2,
+                        '.',
+                        ''
+                    ),
+                    '0'
+                ),
+                '.'
+            )
+            . ' hrs'
+            : 'Not specified';
+
+        $courseTitle =
+            $course->name
+            ?: $courseClass->name;
+
+        return [
+            'student' => [
+                'name' =>
+                $student
+                    ->person
+                    ?->full_name
+                    ?: $actor->name,
+
+                'studentId' =>
+                $actor
+                    ->account_login_identifier
+                    ?: (string)
+                    $student->id,
+            ],
+
+            'center' => [
+                'name' =>
+                $student
+                    ->center
+                    ?->name
+                    ?: 'Language Center',
+
+                'branch' =>
+                $student
+                    ->branch
+                    ?->name
+                    ?: 'Branch',
+            ],
+
+            'course' => [
+                'id' =>
+                (int) $enrollment->id,
+
+                'title' =>
+                $courseTitle,
+
+                'status' =>
+                $enrollment
+                    ->enrollment_status
+                    ->name,
+
+                'information' => [
+                    [
+                        'label' =>
+                        'Course Name',
+
+                        'value' =>
+                        $courseTitle,
+                    ],
+                    [
+                        'label' =>
+                        'Level',
+
+                        'value' =>
+                        $levelName !== ''
+                            ? $levelName
+                            : 'Not specified',
+                    ],
+                    [
+                        'label' =>
+                        'Section',
+
+                        'value' =>
+                        $courseClass
+                            ->class_code,
+                    ],
+                    [
+                        'label' =>
+                        'Teacher',
+
+                        'value' =>
+                        $this->teacherName(
+                            $courseClass
+                                ->assignedTeacher
+                        )
+                            ?: 'Teacher not assigned',
+                    ],
+                    [
+                        'label' =>
+                        'Branch',
+
+                        'value' =>
+                        $courseClass
+                            ->branch
+                            ?->name
+                            ?: $student
+                            ->branch
+                            ?->name
+                            ?: 'Branch not available',
+                    ],
+                    [
+                        'label' =>
+                        'Room',
+
+                        'value' =>
+                        $courseClass
+                            ->assignedClassroom
+                            ?->name
+                            ?: 'Room not assigned',
+                    ],
+                    [
+                        'label' =>
+                        'Total Hours',
+
+                        'value' =>
+                        $totalHours,
+                    ],
+                    [
+                        'label' =>
+                        'Duration',
+
+                        'value' =>
+                        $duration,
+                    ],
+                    [
+                        'label' =>
+                        'Schedule',
+
+                        'value' =>
+                        $this->formatSchedule(
+                            $courseClass
+                                ->classSchedules
+                        )
+                            ?: 'Schedule not available',
+                    ],
+                    [
+                        'label' =>
+                        'Language',
+
+                        'value' =>
+                        $course
+                            ->language
+                            ?->name
+                            ?: 'Not specified',
+                    ],
+                ],
+
+                'attendance' => [
+                    'present' =>
+                    $present,
+
+                    'absent' =>
+                    $absent,
+
+                    'late' =>
+                    $late,
+
+                    'rate' =>
+                    $rate,
+                ],
+
+                'attendanceLog' =>
+                $attendanceLog,
+
+                'payment' => [
+                    'currency' =>
+                    $currency,
+
+                    'totalFees' =>
+                    (float)
+                    $totalFees,
+
+                    'discount' =>
+                    $discount,
+
+                    'paid' =>
+                    (float)
+                    $paid,
+
+                    'remaining' =>
+                    (float)
+                    $remaining,
+                ],
+
+                'installments' =>
+                $installments,
+
+                'sessions' =>
+                $sessions,
+            ],
+        ];
+    }
+
+    /**
      * @param Collection<int, mixed> $classIds
      *
      * @return Collection<int, ClassSession>
@@ -1168,7 +1960,7 @@ final class StudentDashboardReadService
                                 $schedule
                             ): string =>
                             self::DAY_NAMES[(int) $schedule
-                                    ->day_of_week]
+                                ->day_of_week]
                                 ?? '?'
                         )
                         ->implode(', ');
@@ -1370,8 +2162,8 @@ final class StudentDashboardReadService
             $next !== null
                 ? (
                     $courseNamesByEnrollment[(int) (
-                            $next['enrollment_id'] ?? 0
-                        )]
+                        $next['enrollment_id'] ?? 0
+                    )]
                     ?? (
                         $next['enrollment_number'] ?? null
                     )

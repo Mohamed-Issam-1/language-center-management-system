@@ -124,28 +124,47 @@ Route::middleware([
     'verified',
 ])->group(function () {
     Route::get(
-    '/my-courses',
-    function (
-        Request $request,
-        StudentDashboardReadService $studentDashboard
-    ) {
-        return Inertia::render(
-            'Student/MyCourses',
-            [
-                'studentCourses' =>
+        '/my-courses',
+        function (
+            Request $request,
+            StudentDashboardReadService $studentDashboard
+        ) {
+            return Inertia::render(
+                'Student/MyCourses',
+                [
+                    'studentCourses' =>
                     $studentDashboard
                         ->coursesForUser(
                             $request->user()
                         ),
-            ]
-        );
-    }
-)->name('student.courses.index');
+                ]
+            );
+        }
+    )->name('student.courses.index');
 
-    Route::get('/my-courses/{course}', function () {
-        return Inertia::render('Student/CourseDetails');
-    })->name('student.courses.show');
-
+    Route::get(
+        '/my-courses/{course}',
+        function (
+            Request $request,
+            StudentDashboardReadService $studentDashboard,
+            string $course
+        ) {
+            return Inertia::render(
+                'Student/CourseDetails',
+                [
+                    'courseDetails' =>
+                    $studentDashboard
+                        ->courseDetailsForUser(
+                            $request->user(),
+                            (int) $course
+                        ),
+                ]
+            );
+        }
+    )
+        ->whereNumber('course')
+        ->name('student.courses.show');
+        
     Route::get('/my-schedule', function () {
         return Inertia::render('Student/MySchedule');
     })->name('student.schedule');

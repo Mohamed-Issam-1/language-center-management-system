@@ -7,9 +7,13 @@ import CourseTabs, {
 import PaymentsTab from '@/Features/Student/CourseDetails/PaymentsTab';
 import ScheduleTab from '@/Features/Student/CourseDetails/ScheduleTab';
 import StudentLayout from '@/Layouts/StudentLayout';
-import type { StudentCourseDetails } from '@/types/student-course-details';
 import { Head, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import type { PageProps } from '@/types';
+import type {
+    StudentCourseDetails,
+    StudentCourseDetailsPageData,
+} from '@/types/student-course-details';
 
 const courses: Record<number, StudentCourseDetails> = {
     1: {
@@ -207,14 +211,6 @@ const courses: Record<number, StudentCourseDetails> = {
     },
 };
 
-type OptionalAuthProps = {
-    auth?: {
-        user?: {
-            name?: string;
-        } | null;
-    };
-};
-
 function readCourseId(url: string) {
     const path = url.split('?')[0];
     const match = path.match(/\/courses\/(\d+)$/);
@@ -236,74 +232,179 @@ function readInitialTab(url: string): CourseDetailsTab {
 
     return 'overview';
 }
+type CourseDetailsPageProps = PageProps & {
+    courseDetails?: StudentCourseDetailsPageData;
+};
 
 export default function CourseDetails() {
-    const page = usePage();
-    const props = page.props as OptionalAuthProps;
-    const studentName = props.auth?.user?.name || 'Mohammad Znaid';
-    const demoMode = page.url.startsWith('/demo');
-    const backHref = demoMode ? '/demo/courses' : '/my-courses';
+    const page =
+        usePage<CourseDetailsPageProps>();
 
-    const courseId = useMemo(() => readCourseId(page.url), [page.url]);
-    const course = courses[courseId] ?? courses[1];
+    const demoMode =
+        page.url.startsWith('/demo');
 
-    const [activeTab, setActiveTab] = useState<CourseDetailsTab>(() =>
-        readInitialTab(page.url),
-    );
+    const backHref =
+        demoMode
+            ? '/demo/courses'
+            : '/my-courses';
 
-    const changeTab = (tab: CourseDetailsTab) => {
+    const courseId =
+        useMemo(
+            () =>
+                readCourseId(
+                    page.url
+                ),
+            [page.url],
+        );
+
+    const demoCourse =
+        courses[courseId]
+        ?? courses[1];
+
+    const pageData:
+        StudentCourseDetailsPageData =
+        demoMode
+            ? {
+                  student: {
+                      name:
+                          'Mohammad Znaid',
+                      studentId:
+                          'STU-2024-0842',
+                  },
+
+                  center: {
+                      name:
+                          'Al-Hilal Language Center',
+                      branch:
+                          'Gaza – Palestine',
+                  },
+
+                  course:
+                      demoCourse,
+              }
+            : page.props
+                  .courseDetails!;
+
+    const course =
+        pageData.course;
+
+    const [
+        activeTab,
+        setActiveTab,
+    ] =
+        useState<CourseDetailsTab>(
+            () =>
+                readInitialTab(
+                    page.url
+                )
+        );
+
+    const changeTab = (
+        tab: CourseDetailsTab
+    ) => {
         setActiveTab(tab);
 
-        const base = page.url.split('?')[0];
-        const nextUrl =
-            tab === 'overview' ? base : `${base}?tab=${tab}`;
+        const base =
+            page.url.split('?')[0];
 
-        window.history.replaceState({}, '', nextUrl);
+        const nextUrl =
+            tab === 'overview'
+                ? base
+                : `${base}?tab=${tab}`;
+
+        window.history.replaceState(
+            {},
+            '',
+            nextUrl
+        );
     };
 
     return (
         <StudentLayout
-            studentName={studentName}
-            studentId="STU-2024-0842"
-            centerName="Al-Hilal Language Center"
-            branchName="Riyadh – Main Branch"
+            studentName={
+                pageData.student.name
+            }
+            studentId={
+                pageData.student
+                    .studentId
+            }
+            centerName={
+                pageData.center.name
+            }
+            branchName={
+                pageData.center.branch
+            }
             pageTitle="Course Details"
             activeNav="courses"
-            mobileBackHref={backHref}
+            mobileBackHref={
+                backHref
+            }
         >
-            <Head title={`${course.title} - Course Details`} />
+            <Head
+                title={`${course.title} - Course Details`}
+            />
 
             <div className="space-y-5">
                 <CourseDetailsHeader
-                    title={course.title}
-                    status={course.status}
-                    backHref={backHref}
+                    title={
+                        course.title
+                    }
+                    status={
+                        course.status
+                    }
+                    backHref={
+                        backHref
+                    }
                 />
 
                 <CourseTabs
-                    activeTab={activeTab}
-                    onTabChange={changeTab}
+                    activeTab={
+                        activeTab
+                    }
+                    onTabChange={
+                        changeTab
+                    }
                 />
 
-                {activeTab === 'overview' && (
-                    <CourseOverview course={course} />
-                )}
-
-                {activeTab === 'schedule' && (
-                    <ScheduleTab sessions={course.sessions} />
-                )}
-
-                {activeTab === 'attendance' && (
-                    <AttendanceTab
-                        summary={course.attendance}
-                        log={course.attendanceLog}
+                {activeTab ===
+                    'overview' && (
+                    <CourseOverview
+                        course={
+                            course
+                        }
                     />
                 )}
 
-                {activeTab === 'payments' && (
+                {activeTab ===
+                    'schedule' && (
+                    <ScheduleTab
+                        sessions={
+                            course.sessions
+                        }
+                    />
+                )}
+
+                {activeTab ===
+                    'attendance' && (
+                    <AttendanceTab
+                        summary={
+                            course.attendance
+                        }
+                        log={
+                            course.attendanceLog
+                        }
+                    />
+                )}
+
+                {activeTab ===
+                    'payments' && (
                     <PaymentsTab
-                        summary={course.payment}
-                        installments={course.installments}
+                        summary={
+                            course.payment
+                        }
+                        installments={
+                            course.installments
+                        }
                     />
                 )}
             </div>
