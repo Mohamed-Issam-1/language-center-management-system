@@ -15,7 +15,7 @@ export default function GuestLayout({
     mobileSubtitle = 'Sign in to access your dashboard.',
 }: GuestLayoutProps) {
     return (
-        <div className="min-h-screen bg-[#f2f4fc] lg:grid lg:grid-cols-[42%_58%]">
+        <div className="auth-guest-shell min-h-screen bg-[#f2f4fc] lg:grid lg:grid-cols-[42%_58%]">
             {/* Mobile header */}
             <header className="relative h-[171px] overflow-hidden bg-[#2d3eb3] px-5 pt-6 text-white lg:hidden">
                 {/* Decorations */}
@@ -49,8 +49,8 @@ export default function GuestLayout({
             <AuthBrandPanel />
 
             {/* Right authentication content */}
-            <main className="flex min-h-[calc(100vh-171px)] items-start justify-center px-3 lg:min-h-screen lg:items-center lg:px-16 lg:py-10">
-                <div className="flex w-full max-w-[500px] flex-col rounded-b-[18px] bg-white px-[18px] pb-6 shadow-[0_8px_25px_rgba(39,54,130,0.08)] lg:rounded-none lg:bg-transparent lg:px-0 lg:pb-0 lg:shadow-none">
+            <main className="auth-guest-main flex min-h-[calc(100vh-171px)] items-start justify-center px-3 lg:min-h-screen lg:items-center lg:px-16 lg:py-10">
+                <div className="flex w-full max-w-[460px] flex-col rounded-b-[18px] bg-white px-[18px] pb-6 shadow-[0_8px_25px_rgba(39,54,130,0.08)] lg:rounded-none lg:bg-transparent lg:px-0 lg:pb-0 lg:shadow-none">
                     {children}
                 </div>
             </main>

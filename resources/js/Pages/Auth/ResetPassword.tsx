@@ -1,4 +1,4 @@
-import { FormEventHandler, useMemo, useState } from "react";
+import { FormEventHandler, useMemo } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,27 +18,16 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import GuestLayout from "@/Layouts/GuestLayout";
 
 export default function ResetPassword({
-  token,
-  email,
+  passwordResetSuccessful = false,
 }: {
-  token: string;
-  email: string;
+  passwordResetSuccessful?: boolean;
 }) {
-  const {
-    data,
-    setData,
-    post,
-    processing,
-    errors,
-    clearErrors,
-  } = useForm({
-    token,
-    email,
+  const { data, setData, post, processing, errors, clearErrors } = useForm({
     password: "",
     password_confirmation: "",
   });
 
-  const [showSuccess, setShowSuccess] = useState(false);
+  const showSuccess = passwordResetSuccessful;
 
   const requirements = useMemo(
     () => ({
@@ -51,23 +40,17 @@ export default function ResetPassword({
     [data.password],
   );
 
-  const passedCount =
-    Object.values(requirements).filter(Boolean).length;
+  const passedCount = Object.values(requirements).filter(Boolean).length;
 
-  const allRequirementsMet =
-    passedCount === 5;
+  const allRequirementsMet = passedCount === 5;
 
   const passwordsMatch =
     Boolean(data.password_confirmation) &&
     data.password === data.password_confirmation;
 
-  const formValid =
-    allRequirementsMet && passwordsMatch;
+  const formValid = allRequirementsMet && passwordsMatch;
 
-  const strength = getPasswordStrength(
-    passedCount,
-    data.password.length,
-  );
+  const strength = getPasswordStrength(passedCount, data.password.length);
 
   const submit: FormEventHandler = (e) => {
     e.preventDefault();
@@ -78,12 +61,8 @@ export default function ResetPassword({
 
     clearErrors();
 
-    post(route("password.store"), {
+    post(route("password.recovery.reset.store"), {
       preserveScroll: true,
-
-      onSuccess: () => {
-        setShowSuccess(true);
-      },
     });
   };
 
@@ -93,41 +72,37 @@ export default function ResetPassword({
 
       <div>
         {/* Desktop logo */}
-        <div className="mb-[26px] hidden lg:block">
-          <ApplicationLogo
-            variant="blue"
-            className="h-auto w-[205px]"
-          />
+        <div className="auth-recovery-logo mb-[26px] hidden lg:block">
+          <ApplicationLogo variant="blue" className="auth-recovery-logo-image h-auto w-[205px]" />
         </div>
 
         {/* Heading */}
         <div>
-          <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[36px]">
+          <h1 className="auth-recovery-title text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#252832] lg:text-[36px]">
             Set New Password
           </h1>
 
-          <p className="mt-[8px] max-w-[440px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[16px] lg:leading-[24px]">
+          <p className="auth-recovery-subtitle mt-[8px] max-w-[440px] text-[12px] leading-[19px] text-[#adb2be] lg:text-[16px] lg:leading-[24px]">
             Create a strong password to protect your account. All requirements
             must be met before saving.
           </p>
         </div>
 
-        <PasswordRecoverySteps
-          currentStep={3}
-          completedThrough={2}
-          finalComplete={showSuccess}
-        />
+        <div className="auth-recovery-steps">
+          <PasswordRecoverySteps
+                    currentStep={3}
+                    completedThrough={2}
+                    finalComplete={showSuccess}
+                  />
+        </div>
 
         {showSuccess ? (
           <PasswordChangedSuccess />
         ) : (
-          <form onSubmit={submit}>
+          <form onSubmit={submit} className="auth-recovery-reset-form">
             {/* New password */}
             <div>
-              <InputLabel
-                htmlFor="password"
-                value="New Password"
-              />
+              <InputLabel htmlFor="password" value="New Password" />
 
               <PasswordInput
                 id="password"
@@ -153,7 +128,7 @@ export default function ResetPassword({
             </div>
 
             {/* Confirm password */}
-            <div className="mt-[18px]">
+            <div className="auth-recovery-confirm mt-[18px]">
               <InputLabel
                 htmlFor="password_confirmation"
                 value="Confirm New Password"
@@ -168,10 +143,7 @@ export default function ResetPassword({
                 hasError={Boolean(errors.password_confirmation)}
                 aria-invalid={Boolean(errors.password_confirmation)}
                 onChange={(e) => {
-                  setData(
-                    "password_confirmation",
-                    e.target.value,
-                  );
+                  setData("password_confirmation", e.target.value);
 
                   clearErrors("password_confirmation");
                 }}
@@ -181,21 +153,13 @@ export default function ResetPassword({
                 <div
                   className={[
                     "mt-[7px] flex items-center gap-[5px] text-[10px] font-medium lg:text-[12px]",
-                    passwordsMatch
-                      ? "text-[#16a357]"
-                      : "text-[#ef3e45]",
+                    passwordsMatch ? "text-[#16a357]" : "text-[#ef3e45]",
                   ].join(" ")}
                 >
                   {passwordsMatch ? (
-                    <Check
-                      size={13}
-                      strokeWidth={2.2}
-                    />
+                    <Check size={13} strokeWidth={2.2} />
                   ) : (
-                    <X
-                      size={13}
-                      strokeWidth={2.2}
-                    />
+                    <X size={13} strokeWidth={2.2} />
                   )}
 
                   {passwordsMatch
@@ -206,7 +170,7 @@ export default function ResetPassword({
             </div>
 
             {/* Requirements */}
-            <div className="mt-[19px] rounded-[10px] border border-[#e0e4ec] px-[16px] py-[16px]">
+            <div className="auth-recovery-requirements mt-[19px] rounded-[10px] border border-[#e0e4ec] px-[16px] py-[16px]">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#747b87] lg:text-[12px]">
                 Password Requirements
               </h3>
@@ -245,18 +209,14 @@ export default function ResetPassword({
             </div>
 
             {/* Server error */}
-            {(errors.password ||
-              errors.password_confirmation ||
-              errors.email) && (
+            {(errors.password || errors.password_confirmation) && (
               <div className="mt-[12px] text-[11px] text-[#ef3e45] lg:text-[13px]">
-                {errors.password ||
-                  errors.password_confirmation ||
-                  errors.email}
+                {errors.password || errors.password_confirmation}
               </div>
             )}
 
             {/* Save */}
-            <div className="mt-[20px]">
+            <div className="auth-recovery-submit mt-[20px]">
               <PrimaryButton
                 disabled={!formValid || processing}
                 className="
@@ -273,12 +233,7 @@ export default function ResetPassword({
                 ) : (
                   <>
                     Save New Password
-
-                    <ArrowRight
-                      size={18}
-                      strokeWidth={2}
-                      className="ml-2"
-                    />
+                    <ArrowRight size={18} strokeWidth={2} className="ml-2" />
                   </>
                 )}
               </PrimaryButton>
@@ -306,14 +261,9 @@ function Requirement({
   if (!active) {
     return (
       <div className="flex items-center gap-[9px] text-[#bec3cc]">
-        <Circle
-          size={14}
-          strokeWidth={1.5}
-        />
+        <Circle size={14} strokeWidth={1.5} />
 
-        <span className="text-[11px] lg:text-[13px]">
-          {label}
-        </span>
+        <span className="text-[11px] lg:text-[13px]">{label}</span>
       </div>
     );
   }
@@ -322,9 +272,7 @@ function Requirement({
     <div
       className={[
         "flex items-center gap-[9px]",
-        passed
-          ? "text-[#16a357]"
-          : "text-[#ef3e45]",
+        passed ? "text-[#16a357]" : "text-[#ef3e45]",
       ].join(" ")}
     >
       <span
@@ -336,21 +284,13 @@ function Requirement({
         ].join(" ")}
       >
         {passed ? (
-          <Check
-            size={10}
-            strokeWidth={2.6}
-          />
+          <Check size={10} strokeWidth={2.6} />
         ) : (
-          <X
-            size={9}
-            strokeWidth={2}
-          />
+          <X size={9} strokeWidth={2} />
         )}
       </span>
 
-      <span className="text-[11px] lg:text-[13px]">
-        {label}
-      </span>
+      <span className="text-[11px] lg:text-[13px]">{label}</span>
     </div>
   );
 }
@@ -381,13 +321,9 @@ function PasswordStrength({
   return (
     <div className="mt-[7px]">
       <div className="flex items-center justify-between text-[9px] lg:text-[11px]">
-        <span className="text-[#b2b7c0]">
-          Password strength
-        </span>
+        <span className="text-[#b2b7c0]">Password strength</span>
 
-        <span className={`font-semibold ${textClass}`}>
-          {label}
-        </span>
+        <span className={`font-semibold ${textClass}`}>{label}</span>
       </div>
 
       <div className="mt-[4px] h-[4px] overflow-hidden rounded-full bg-[#e4e7ec]">
@@ -436,11 +372,7 @@ function PasswordChangedSuccess() {
     <div>
       <div className="rounded-[12px] border border-[#79dfa0] bg-[#dcfbe7] px-[22px] py-[26px] text-center">
         <div className="mx-auto flex h-[58px] w-[58px] items-center justify-center rounded-full bg-white shadow-[0_6px_14px_rgba(44,166,95,0.14)]">
-          <LockKeyhole
-            size={27}
-            strokeWidth={2}
-            className="text-[#16a357]"
-          />
+          <LockKeyhole size={27} strokeWidth={2} className="text-[#16a357]" />
         </div>
 
         <h2 className="mt-[16px] text-[18px] font-bold text-[#169847] lg:text-[21px]">
@@ -471,12 +403,7 @@ function PasswordChangedSuccess() {
         className="mt-[18px] flex h-[42px] w-full items-center justify-center rounded-[9px] bg-[#3f46d3] text-[12px] font-semibold text-white transition hover:bg-[#353cc3] lg:h-[50px] lg:text-[14px]"
       >
         Go to Login
-
-        <ArrowRight
-          size={17}
-          strokeWidth={2}
-          className="ml-2"
-        />
+        <ArrowRight size={17} strokeWidth={2} className="ml-2" />
       </Link>
     </div>
   );
@@ -488,12 +415,7 @@ function BackToLogin() {
       href={route("login")}
       className="mt-[12px] flex h-[40px] w-full items-center justify-center rounded-[9px] border border-[#dce1ea] text-[12px] font-medium text-[#6f7682] transition hover:bg-white lg:h-[48px] lg:text-[14px]"
     >
-      <ArrowLeft
-        size={15}
-        strokeWidth={1.8}
-        className="mr-2"
-      />
-
+      <ArrowLeft size={15} strokeWidth={1.8} className="mr-2" />
       Back to Login
     </Link>
   );
@@ -501,7 +423,7 @@ function BackToLogin() {
 
 function Footer() {
   return (
-    <footer className="mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
+    <footer className="auth-recovery-footer mt-[27px] border-t border-[#e5e8ef] pt-[20px]">
       <span className="text-[10px] text-[#c2c6cf] lg:text-[12px]">
         © 2026 LCMS
       </span>

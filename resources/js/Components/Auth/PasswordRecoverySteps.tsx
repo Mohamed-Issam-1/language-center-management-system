@@ -11,11 +11,11 @@ interface PasswordRecoveryStepsProps {
 const steps = [
   {
     number: 1 as Step,
-    label: "Enter Email",
+    label: "Enter Username",
   },
   {
     number: 2 as Step,
-    label: "Check Email",
+    label: "Verify Code",
   },
   {
     number: 3 as Step,

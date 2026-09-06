@@ -1,294 +1,557 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
-import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
-import PasswordInput from '@/Components/Auth/PasswordInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
+    AlertTriangle,
     ArrowLeft,
     ArrowRight,
+    Camera,
     Check,
     CircleCheckBig,
+    UserRound,
 } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
-
-type Branch = {
-    id: string;
-    name: string;
-};
+import {
+    ChangeEvent,
+    FormEvent,
+    ReactNode,
+    SelectHTMLAttributes,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
 
 type Center = {
-    id: string;
+    code: string;
     name: string;
-    branches: Branch[];
 };
 
 type RegisterProps = {
     centers?: Center[];
 };
 
-/*
-|--------------------------------------------------------------------------
-| Temporary frontend data
-|--------------------------------------------------------------------------
-|
-| Remove this fallback when the backend starts providing centers and
-| branches to the Inertia page.
-|
-*/
-const demoCenters: Center[] = [
-    {
-        id: '1',
-        name: 'Al-Hilal Language Center',
-        branches: [
-            {
-                id: '1',
-                name: 'Main Branch',
-            },
-            {
-                id: '2',
-                name: 'North Branch',
-            },
-        ],
-    },
-    {
-        id: '2',
-        name: 'Taqat Language Center',
-        branches: [
-            {
-                id: '3',
-                name: 'Gaza Branch',
-            },
-            {
-                id: '4',
-                name: 'South Branch',
-            },
-        ],
-    },
+type Step = 1 | 2;
+
+type FormDataState = {
+    center_code: string;
+    full_name: string;
+    national_id_number: string;
+    birth_day: string;
+    birth_month: string;
+    birth_year: string;
+    city_of_residence: string;
+    email: string;
+    country_code: string;
+    local_phone_number: string;
+    personal_picture: File | null;
+};
+
+type FormErrors = Partial<
+    Record<
+        | 'center_code'
+        | 'full_name'
+        | 'national_id_number'
+        | 'date_of_birth'
+        | 'city_of_residence'
+        | 'email'
+        | 'phone_number'
+        | 'personal_picture'
+        | 'general',
+        string
+    >
+>;
+
+type ApiValidationErrors = Record<string, string[]>;
+
+const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
 ];
 
-type LocalErrors = {
-    name?: string;
-    national_id?: string;
-    email?: string;
-    center_id?: string;
-    branch_id?: string;
-    password?: string;
-    password_confirmation?: string;
-    terms?: string;
+const countryCodes = [
+    { code: '+970', label: 'PS +970' },
+    { code: '+962', label: 'JO +962' },
+    { code: '+966', label: 'SA +966' },
+    { code: '+971', label: 'AE +971' },
+    { code: '+20', label: 'EG +20' },
+    { code: '+1', label: 'US +1' },
+];
+
+const initialFormData: FormDataState = {
+    center_code: '',
+    full_name: '',
+    national_id_number: '',
+    birth_day: '',
+    birth_month: '',
+    birth_year: '',
+    city_of_residence: '',
+    email: '',
+    country_code: '+970',
+    local_phone_number: '',
+    personal_picture: null,
 };
 
 export default function Register({
     centers = [],
 }: RegisterProps) {
-    const availableCenters =
-        centers.length > 0 ? centers : demoCenters;
-
-    const [step, setStep] = useState<1 | 2>(1);
+    const [step, setStep] = useState<Step>(1);
+    const [data, setData] = useState<FormDataState>(initialFormData);
+    const [errors, setErrors] = useState<FormErrors>({});
+    const [processing, setProcessing] = useState(false);
     const [submitted, setSubmitted] = useState(false);
-    const [localErrors, setLocalErrors] =
-        useState<LocalErrors>({});
+    const [picturePreview, setPicturePreview] = useState<string | null>(
+        null,
+    );
 
-    const {
-        data,
-        setData,
-        processing,
-    } = useForm({
-        name: '',
-        national_id: '',
-        email: '',
-        center_id: '',
-        branch_id: '',
-        role: 'Student',
-        password: '',
-        password_confirmation: '',
-        terms: false,
-    });
+    const currentYear = new Date().getFullYear();
+
+    const years = useMemo(
+        () =>
+            Array.from(
+                { length: currentYear - 1899 },
+                (_, index) => currentYear - index,
+            ),
+        [currentYear],
+    );
 
     const selectedCenter = useMemo(
         () =>
-            availableCenters.find(
-                (center) => center.id === data.center_id,
+            centers.find(
+                (center) =>
+                    center.code === data.center_code,
             ),
-        [availableCenters, data.center_id],
+        [centers, data.center_code],
     );
 
-    const passwordChecks = {
-        length: data.password.length >= 8,
-        uppercase: /[A-Z]/.test(data.password),
-        number: /[0-9]/.test(data.password),
-    };
+    useEffect(() => {
+        if (!data.personal_picture) {
+            setPicturePreview(null);
 
-    const passwordsMatch =
-        data.password.length > 0 &&
-        data.password === data.password_confirmation;
-
-    const validateStepOne = () => {
-        const nextErrors: LocalErrors = {};
-
-        if (!data.name.trim()) {
-            nextErrors.name = 'Full name is required.';
+            return;
         }
 
-        if (!data.national_id.trim()) {
-            nextErrors.national_id =
-                'National ID Number is required.';
+        const previewUrl = URL.createObjectURL(data.personal_picture);
+
+        setPicturePreview(previewUrl);
+
+        return () => {
+            URL.revokeObjectURL(previewUrl);
+        };
+    }, [data.personal_picture]);
+
+
+    const phoneNumber =
+        data.country_code + data.local_phone_number;
+
+    const dateOfBirth =
+        data.birth_year &&
+        data.birth_month &&
+        data.birth_day
+            ? `${data.birth_year}-${data.birth_month.padStart(
+                  2,
+                  '0',
+              )}-${data.birth_day.padStart(2, '0')}`
+            : '';
+
+    const clearError = (field: keyof FormErrors) => {
+        setErrors((current) => ({
+            ...current,
+            [field]: undefined,
+            general: undefined,
+        }));
+    };
+
+    const setValidationErrors = (
+        nextErrors: FormErrors,
+        firstError?: string,
+    ) => {
+        setErrors({
+            ...nextErrors,
+            general: firstError,
+        });
+    };
+
+    const validateDate = () => {
+        if (!dateOfBirth) {
+            return false;
+        }
+
+        const year = Number(data.birth_year);
+        const month = Number(data.birth_month);
+        const day = Number(data.birth_day);
+
+        const date = new Date(
+            Date.UTC(year, month - 1, day),
+        );
+
+        return (
+            date.getUTCFullYear() === year &&
+            date.getUTCMonth() === month - 1 &&
+            date.getUTCDate() === day &&
+            date <= new Date()
+        );
+    };
+
+    const validateStepOne = () => {
+        const nextErrors: FormErrors = {};
+
+        if (!data.full_name.trim()) {
+            nextErrors.full_name =
+                'Please enter your full name.';
+        }
+
+        if (!data.national_id_number.trim()) {
+            nextErrors.national_id_number =
+                'Please enter your national ID number.';
+        } else if (data.national_id_number.trim().length > 50) {
+            nextErrors.national_id_number =
+                'National ID must not exceed 50 characters.';
+        }
+
+        if (!validateDate()) {
+            nextErrors.date_of_birth =
+                'Please enter a valid date of birth.';
+        }
+
+        if (!data.city_of_residence.trim()) {
+            nextErrors.city_of_residence =
+                'Please enter your city of residence.';
         }
 
         if (!data.email.trim()) {
-            nextErrors.email = 'Email address is required.';
+            nextErrors.email =
+                'Please enter your email address.';
         } else if (
             !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
         ) {
             nextErrors.email =
-                'Enter a valid email address.';
+                'Please enter a valid email address.';
         }
 
-        if (!data.center_id) {
-            nextErrors.center_id =
+        if (!/^\d{7,12}$/.test(data.local_phone_number)) {
+            nextErrors.phone_number =
+                'Please enter a valid phone number.';
+        }
+
+        if (!data.center_code) {
+            nextErrors.center_code =
                 'Please select a language center.';
         }
 
-        if (!data.branch_id) {
-            nextErrors.branch_id =
-                'Please select a branch.';
+        if (data.personal_picture) {
+            const allowedTypes = [
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+            ];
+
+            if (
+                !allowedTypes.includes(
+                    data.personal_picture.type,
+                )
+            ) {
+                nextErrors.personal_picture =
+                    'Photo must be JPG, PNG, or WEBP.';
+            } else if (
+                data.personal_picture.size >
+                5 * 1024 * 1024
+            ) {
+                nextErrors.personal_picture =
+                    'Photo may not be larger than 5 MB.';
+            }
         }
 
-        setLocalErrors(nextErrors);
+        const firstError =
+            nextErrors.full_name ||
+            nextErrors.national_id_number ||
+            nextErrors.date_of_birth ||
+            nextErrors.city_of_residence ||
+            nextErrors.email ||
+            nextErrors.phone_number ||
+            nextErrors.center_code ||
+            nextErrors.personal_picture;
 
-        return Object.keys(nextErrors).length === 0;
+        setValidationErrors(nextErrors, firstError);
+
+        return !firstError;
     };
 
-    const validateStepTwo = () => {
-        const nextErrors: LocalErrors = {};
-
-        if (!data.password) {
-            nextErrors.password = 'Password is required.';
-        } else if (
-            !passwordChecks.length ||
-            !passwordChecks.uppercase ||
-            !passwordChecks.number
-        ) {
-            nextErrors.password =
-                'Password does not meet all requirements.';
-        }
-
-        if (!data.password_confirmation) {
-            nextErrors.password_confirmation =
-                'Please confirm your password.';
-        } else if (!passwordsMatch) {
-            nextErrors.password_confirmation =
-                'Passwords do not match.';
-        }
-
-        if (!data.terms) {
-            nextErrors.terms =
-                'You must agree to the Terms & Conditions and Privacy Policy.';
-        }
-
-        setLocalErrors(nextErrors);
-
-        return Object.keys(nextErrors).length === 0;
-    };
-
-    const continueToPassword = (
-        e: FormEvent<HTMLFormElement>,
+    const continueToReview = (
+        event: FormEvent<HTMLFormElement>,
     ) => {
-        e.preventDefault();
+        event.preventDefault();
 
         if (!validateStepOne()) {
             return;
         }
 
-        setLocalErrors({});
+        setErrors({});
         setStep(2);
+
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+        });
     };
 
-    const submit = (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const handlePictureChange = (
+        event: ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file = event.target.files?.[0] ?? null;
 
-        if (!validateStepTwo()) {
+        setData((current) => ({
+            ...current,
+            personal_picture: file,
+        }));
+
+        clearError('personal_picture');
+    };
+
+    const mapApiErrors = (
+        apiErrors: ApiValidationErrors,
+    ): FormErrors => ({
+        full_name: apiErrors.full_name?.[0],
+        national_id_number:
+            apiErrors.national_id_number?.[0],
+        date_of_birth:
+            apiErrors.date_of_birth?.[0],
+        city_of_residence:
+            apiErrors.city_of_residence?.[0],
+        email: apiErrors.email?.[0],
+        phone_number:
+            apiErrors.phone_number?.[0],
+        personal_picture:
+            apiErrors.personal_picture?.[0],
+    });
+
+    const submit = async (
+        event: FormEvent<HTMLFormElement>,
+    ) => {
+        event.preventDefault();
+
+        if (!validateStepOne()) {
+            setStep(1);
+
             return;
         }
 
-        setLocalErrors({});
+        setProcessing(true);
+        setErrors({});
 
-        /*
-        |--------------------------------------------------------------------------
-        | BACKEND INTEGRATION LATER
-        |--------------------------------------------------------------------------
-        |
-        | Replace setSubmitted(true) with your final Inertia POST:
-        |
-        | post(route('register'), {
-        |     onSuccess: () => setSubmitted(true),
-        | });
-        |
-        */
+        const payload = new FormData();
 
-        setSubmitted(true);
+        payload.append(
+            'full_name',
+            data.full_name.trim(),
+        );
+
+        payload.append(
+            'national_id_number',
+            data.national_id_number,
+        );
+
+        payload.append(
+            'date_of_birth',
+            dateOfBirth,
+        );
+
+        payload.append(
+            'city_of_residence',
+            data.city_of_residence.trim(),
+        );
+
+        payload.append(
+            'email',
+            data.email.trim().toLowerCase(),
+        );
+
+        payload.append(
+            'phone_number',
+            phoneNumber,
+        );
+
+
+        if (data.personal_picture) {
+            payload.append(
+                'personal_picture',
+                data.personal_picture,
+            );
+        }
+
+        try {
+            const response = await fetch(
+                `/api/v1/centers/${encodeURIComponent(
+                    data.center_code,
+                )}/registration-requests`,
+                {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                    body: payload,
+                },
+            );
+
+            const result = await response
+                .json()
+                .catch(() => ({}));
+
+            if (!response.ok) {
+                if (
+                    response.status === 422 &&
+                    result.errors
+                ) {
+                    const mappedErrors =
+                        mapApiErrors(result.errors);
+
+                    const stepOneError =
+                        mappedErrors.full_name ||
+                        mappedErrors.national_id_number ||
+                        mappedErrors.date_of_birth ||
+                        mappedErrors.city_of_residence ||
+                        mappedErrors.email ||
+                        mappedErrors.phone_number ||
+                        mappedErrors.personal_picture;
+
+                    if (stepOneError) {
+                        setStep(1);
+                    }
+
+                    setErrors({
+                        ...mappedErrors,
+                        general:
+                            stepOneError ||
+                            result.message ||
+                            'Please review the form and try again.',
+                    });
+
+                    return;
+                }
+
+                setErrors({
+                    general:
+                        result.message ||
+                        'Registration could not be submitted. Please try again.',
+                });
+
+                return;
+            }
+
+            setSubmitted(true);
+
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth',
+            });
+        } catch {
+            setErrors({
+                general:
+                    'Unable to connect to the server. Please try again.',
+            });
+        } finally {
+            setProcessing(false);
+        }
     };
 
     if (submitted) {
         return (
             <GuestLayout
-                mobileTitle="Account Requested"
+                mobileTitle="Registration Submitted"
                 mobileSubtitle=""
             >
-                <Head title="Account Requested" />
+                <Head title="Registration Submitted" />
 
-                <section className="flex flex-col items-center text-center">
-                    {/* Desktop logo */}
+                <section className="w-full">
                     <ApplicationLogo
-                        className="mb-10 hidden h-auto w-[185px] lg:block"
+                        variant="blue"
+                        className="mb-8 hidden h-auto w-[185px] lg:block"
                     />
 
-                    {/* Desktop title */}
                     <h1 className="hidden text-[30px] font-bold tracking-[-0.025em] text-[#252832] lg:block">
-                        Account Requested
+                        Registration Submitted
                     </h1>
 
-                    <div className="mt-4 flex h-[82px] w-[82px] items-center justify-center rounded-full border-2 border-[#16b95a] bg-[#ecfff3] text-[#16b95a] lg:mt-8">
-                        <CircleCheckBig
-                            size={42}
-                            strokeWidth={1.8}
-                        />
+                    <div className="flex flex-col items-center text-center">
+                        <div className="mt-7 flex h-[80px] w-[80px] items-center justify-center rounded-full border-[3px] border-[#16a34a] bg-[#ebfff1] text-[#16a34a]">
+                            <CircleCheckBig
+                                size={39}
+                                strokeWidth={2}
+                            />
+                        </div>
+
+                        <h2 className="mt-6 text-[21px] font-bold text-[#10a84f]">
+                            Request Submitted!
+                        </h2>
+
+                        <p className="mt-4 max-w-[420px] text-[14px] leading-[25px] text-[#a4a9b4]">
+                            Your registration request has been
+                            submitted. You will be notified once
+                            your account is approved and activated
+                            by the center administrator.
+                        </p>
+
+                        <div className="mt-5 w-full rounded-[12px] border border-[#e1e4ed] px-5 py-5 text-left">
+                            <SummaryRow
+                                label="NAME"
+                                value={data.full_name}
+                            />
+
+                            <SummaryRow
+                                label="CENTER"
+                                value={
+                                    selectedCenter?.name ??
+                                    data.center_code
+                                }
+                            />
+
+                            <SummaryRow
+                                label="EMAIL"
+                                value={data.email}
+                            />
+
+                            <SummaryRow
+                                label="PHONE"
+                                value={phoneNumber}
+                            />
+
+                            <SummaryRow
+                                label="CITY"
+                                value={
+                                    data.city_of_residence
+                                }
+                                last
+                            />
+                        </div>
+
+                        <Link
+                            href={route('login')}
+                            className="mt-6 flex h-[48px] w-full items-center justify-center gap-2 rounded-[11px] bg-[#3f46d3] px-5 text-[14px] font-semibold text-white transition hover:bg-[#353cc3] focus:outline-none focus:ring-4 focus:ring-[#3f46d3]/15"
+                        >
+                            Back to Login
+
+                            <ArrowRight
+                                size={17}
+                                strokeWidth={2}
+                            />
+                        </Link>
                     </div>
 
-                    <h2 className="mt-5 text-[17px] font-bold text-[#12a84e] lg:text-[21px]">
-                        Request Submitted!
-                    </h2>
-
-                    <p className="mt-4 max-w-[400px] text-[12px] leading-[20px] text-[#a4a9b4] lg:text-[16px] lg:leading-[26px]">
-                        Your registration request has been sent
-                        to the center administrator. You will be
-                        notified once your account is approved
-                        and activated.
-                    </p>
-
-                    <p className="mt-3 text-[11px] text-[#b1b5bd] lg:text-[14px]">
-                        Request for:{' '}
-                        <span className="font-semibold text-[#464b56]">
-                            {data.name}
-                        </span>{' '}
-                        · {data.email}
-                    </p>
-
-                    <Link
-                        href={route('login')}
-                        className="mt-8 flex h-[40px] w-full items-center justify-center gap-2 rounded-[11px] bg-[#3f46d3] px-5 text-[13px] font-semibold text-white transition hover:bg-[#353cc3] focus:outline-none focus:ring-4 focus:ring-[#3f46d3]/15 lg:h-[56px] lg:text-[19px]"
-                    >
-                        Back to Login
-                        <ArrowRight
-                            size={17}
-                            strokeWidth={2}
-                        />
-                    </Link>
+                    <Footer />
                 </section>
             </GuestLayout>
         );
@@ -297,101 +560,334 @@ export default function Register({
     return (
         <GuestLayout
             mobileTitle="Create Account"
-            mobileSubtitle="Register to request access to the LCMS platform. Your administrator will approve your account."
+            mobileSubtitle="Complete the form to request access to the LCMS platform."
         >
             <Head title="Create Account" />
 
-            {/* Desktop header */}
-            <div className="hidden lg:block">
-                <ApplicationLogo
-                    className="mb-8 h-auto w-[185px]"
-                />
+            <ApplicationLogo
+                variant="blue"
+                className="auth-register-logo mb-7 hidden h-auto w-[185px] lg:block"
+            />
 
-                <h1 className="text-[30px] font-bold tracking-[-0.025em] text-[#252832]">
+            <div className="hidden lg:block">
+                <h1 className="auth-register-title text-[30px] font-bold tracking-[-0.025em] text-[#252832]">
                     Create Account
                 </h1>
 
-                <p className="mt-2 text-[15px] leading-[24px] text-[#adb1ba]">
-                    Register to request access to the LCMS
-                    platform. Your administrator will approve
-                    your account.
+                <p className="auth-register-subtitle mt-1 text-[14px] leading-[24px] text-[#adb1ba]">
+                    Complete the form to request access to the
+                    LCMS platform.
                 </p>
             </div>
 
             <RegistrationStepper step={step} />
 
+            {errors.general && (
+                <RegistrationAlert>
+                    {errors.general}
+                </RegistrationAlert>
+            )}
+
             {step === 1 ? (
                 <form
-                    onSubmit={continueToPassword}
+                    onSubmit={continueToReview}
                     noValidate
+                    className="auth-register-form"
                 >
-                    <div className="space-y-[15px] lg:space-y-[20px]">
+                    <PersonalPictureField
+                        preview={picturePreview}
+                        error={
+                            errors.personal_picture
+                        }
+                        onChange={
+                            handlePictureChange
+                        }
+                    />
+
+                    <div className="auth-register-fields mt-5 space-y-[14px]">
                         <div>
                             <InputLabel
-                                htmlFor="name"
+                                htmlFor="full_name"
                                 value="Full Name"
                             />
 
                             <TextInput
-                                id="name"
-                                name="name"
-                                value={data.name}
-                                placeholder="e.g. Mohammad Znaid"
+                                id="full_name"
+                                name="full_name"
+                                value={data.full_name}
+                                placeholder="e.g. Mohammad Ahmad Znaid"
                                 autoComplete="name"
-                                isFocused
+                                maxLength={255}
                                 hasError={Boolean(
-                                    localErrors.name,
+                                    errors.full_name,
                                 )}
-                                onChange={(e) => {
+                                onChange={(event) => {
                                     setData(
-                                        'name',
-                                        e.target.value,
+                                        (current) => ({
+                                            ...current,
+                                            full_name:
+                                                event
+                                                    .target
+                                                    .value,
+                                        }),
                                     );
 
-                                    setLocalErrors((current) => ({
-                                        ...current,
-                                        name: undefined,
-                                    }));
-                                }}
-                            />
-
-                            <InputError
-                                message={localErrors.name}
-                            />
-                        </div>
-
-                        <div>
-                            <InputLabel
-                                htmlFor="national_id"
-                                value="National ID Number"
-                            />
-
-                            <TextInput
-                                id="national_id"
-                                name="national_id"
-                                value={data.national_id}
-                                placeholder="Enter your National ID Number"
-                                inputMode="numeric"
-                                autoComplete="off"
-                                hasError={Boolean(
-                                    localErrors.national_id,
-                                )}
-                                onChange={(e) => {
-                                    setData(
-                                        'national_id',
-                                        e.target.value,
+                                    clearError(
+                                        'full_name',
                                     );
-
-                                    setLocalErrors((current) => ({
-                                        ...current,
-                                        national_id: undefined,
-                                    }));
                                 }}
                             />
 
                             <InputError
                                 message={
-                                    localErrors.national_id
+                                    errors.full_name
+                                }
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel
+                                htmlFor="national_id_number"
+                                value="National ID"
+                            />
+
+                            <TextInput
+                                id="national_id_number"
+                                name="national_id_number"
+                                value={
+                                    data.national_id_number
+                                }
+                                placeholder="e.g. 1234567890"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                maxLength={12}
+                                hasError={Boolean(
+                                    errors.national_id_number,
+                                )}
+                                onChange={(event) => {
+                                    const value =
+                                        event.target.value
+                                            .replace(
+                                                /\D/g,
+                                                '',
+                                            )
+                                            .slice(
+                                                0,
+                                                12,
+                                            );
+
+                                    setData(
+                                        (current) => ({
+                                            ...current,
+                                            national_id_number:
+                                                value,
+                                        }),
+                                    );
+
+                                    clearError(
+                                        'national_id_number',
+                                    );
+                                }}
+                            />
+
+                            <p className="mt-1 text-[10px] text-[#c2c6ce]">
+                                Required, maximum 50 characters
+                            </p>
+
+                            <InputError
+                                message={
+                                    errors.national_id_number
+                                }
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel value="Date of Birth" />
+
+                            <div className="grid grid-cols-[72px_1fr_90px] gap-2">
+                                <SelectInput
+                                    aria-label="Birth day"
+                                    value={data.birth_day}
+                                    hasError={Boolean(
+                                        errors.date_of_birth,
+                                    )}
+                                    onChange={(event) => {
+                                        setData(
+                                            (current) => ({
+                                                ...current,
+                                                birth_day:
+                                                    event
+                                                        .target
+                                                        .value,
+                                            }),
+                                        );
+
+                                        clearError(
+                                            'date_of_birth',
+                                        );
+                                    }}
+                                >
+                                    <option value="">
+                                        Day
+                                    </option>
+
+                                    {Array.from(
+                                        { length: 31 },
+                                        (_, index) => (
+                                            <option
+                                                key={
+                                                    index +
+                                                    1
+                                                }
+                                                value={
+                                                    index +
+                                                    1
+                                                }
+                                            >
+                                                {String(
+                                                    index +
+                                                        1,
+                                                ).padStart(
+                                                    2,
+                                                    '0',
+                                                )}
+                                            </option>
+                                        ),
+                                    )}
+                                </SelectInput>
+
+                                <SelectInput
+                                    aria-label="Birth month"
+                                    value={
+                                        data.birth_month
+                                    }
+                                    hasError={Boolean(
+                                        errors.date_of_birth,
+                                    )}
+                                    onChange={(event) => {
+                                        setData(
+                                            (current) => ({
+                                                ...current,
+                                                birth_month:
+                                                    event
+                                                        .target
+                                                        .value,
+                                            }),
+                                        );
+
+                                        clearError(
+                                            'date_of_birth',
+                                        );
+                                    }}
+                                >
+                                    <option value="">
+                                        Month
+                                    </option>
+
+                                    {months.map(
+                                        (
+                                            month,
+                                            index,
+                                        ) => (
+                                            <option
+                                                key={
+                                                    month
+                                                }
+                                                value={
+                                                    index +
+                                                    1
+                                                }
+                                            >
+                                                {
+                                                    month
+                                                }
+                                            </option>
+                                        ),
+                                    )}
+                                </SelectInput>
+
+                                <SelectInput
+                                    aria-label="Birth year"
+                                    value={data.birth_year}
+                                    hasError={Boolean(
+                                        errors.date_of_birth,
+                                    )}
+                                    onChange={(event) => {
+                                        setData(
+                                            (current) => ({
+                                                ...current,
+                                                birth_year:
+                                                    event
+                                                        .target
+                                                        .value,
+                                            }),
+                                        );
+
+                                        clearError(
+                                            'date_of_birth',
+                                        );
+                                    }}
+                                >
+                                    <option value="">
+                                        Year
+                                    </option>
+
+                                    {years.map((year) => (
+                                        <option
+                                            key={year}
+                                            value={year}
+                                        >
+                                            {year}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                            </div>
+
+                            <InputError
+                                message={
+                                    errors.date_of_birth
+                                }
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel
+                                htmlFor="city_of_residence"
+                                value="City of Residence"
+                            />
+
+                            <TextInput
+                                id="city_of_residence"
+                                name="city_of_residence"
+                                value={
+                                    data.city_of_residence
+                                }
+                                placeholder="e.g. Riyadh"
+                                autoComplete="address-level2"
+                                maxLength={150}
+                                hasError={Boolean(
+                                    errors.city_of_residence,
+                                )}
+                                onChange={(event) => {
+                                    setData(
+                                        (current) => ({
+                                            ...current,
+                                            city_of_residence:
+                                                event
+                                                    .target
+                                                    .value,
+                                        }),
+                                    );
+
+                                    clearError(
+                                        'city_of_residence',
+                                    );
+                                }}
+                            />
+
+                            <InputError
+                                message={
+                                    errors.city_of_residence
                                 }
                             />
                         </div>
@@ -407,155 +903,186 @@ export default function Register({
                                 type="email"
                                 name="email"
                                 value={data.email}
-                                placeholder="name@center.com"
+                                placeholder="name@example.com"
                                 autoComplete="email"
+                                maxLength={255}
                                 hasError={Boolean(
-                                    localErrors.email,
+                                    errors.email,
                                 )}
-                                onChange={(e) => {
+                                onChange={(event) => {
                                     setData(
-                                        'email',
-                                        e.target.value,
+                                        (current) => ({
+                                            ...current,
+                                            email:
+                                                event
+                                                    .target
+                                                    .value,
+                                        }),
                                     );
 
-                                    setLocalErrors((current) => ({
-                                        ...current,
-                                        email: undefined,
-                                    }));
+                                    clearError('email');
                                 }}
                             />
 
                             <InputError
-                                message={localErrors.email}
+                                message={errors.email}
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel value="Phone Number" />
+
+                            <div className="grid grid-cols-[100px_1fr] gap-2">
+                                <SelectInput
+                                    aria-label="Country code"
+                                    value={
+                                        data.country_code
+                                    }
+                                    hasError={Boolean(
+                                        errors.phone_number,
+                                    )}
+                                    onChange={(event) => {
+                                        setData(
+                                            (current) => ({
+                                                ...current,
+                                                country_code:
+                                                    event
+                                                        .target
+                                                        .value,
+                                            }),
+                                        );
+
+                                        clearError(
+                                            'phone_number',
+                                        );
+                                    }}
+                                >
+                                    {countryCodes.map(
+                                        (country) => (
+                                            <option
+                                                key={
+                                                    country.code
+                                                }
+                                                value={
+                                                    country.code
+                                                }
+                                            >
+                                                {
+                                                    country.label
+                                                }
+                                            </option>
+                                        ),
+                                    )}
+                                </SelectInput>
+
+                                <TextInput
+                                    name="local_phone_number"
+                                    value={
+                                        data.local_phone_number
+                                    }
+                                    placeholder="5xxxxxxxx"
+                                    inputMode="numeric"
+                                    autoComplete="tel-national"
+                                    maxLength={12}
+                                    hasError={Boolean(
+                                        errors.phone_number,
+                                    )}
+                                    onChange={(event) => {
+                                        const value =
+                                            event.target.value
+                                                .replace(
+                                                    /\D/g,
+                                                    '',
+                                                )
+                                                .slice(
+                                                    0,
+                                                    12,
+                                                );
+
+                                        setData(
+                                            (current) => ({
+                                                ...current,
+                                                local_phone_number:
+                                                    value,
+                                            }),
+                                        );
+
+                                        clearError(
+                                            'phone_number',
+                                        );
+                                    }}
+                                />
+                            </div>
+
+                            <InputError
+                                message={
+                                    errors.phone_number
+                                }
                             />
                         </div>
 
                         <div>
                             <InputLabel
-                                htmlFor="center_id"
+                                htmlFor="center_code"
                                 value="Language Center"
                             />
 
-                            <select
-                                id="center_id"
-                                value={data.center_id}
-                                onChange={(e) => {
+                            <SelectInput
+                                id="center_code"
+                                name="center_code"
+                                value={data.center_code}
+                                disabled={centers.length === 0}
+                                hasError={Boolean(
+                                    errors.center_code,
+                                )}
+                                onChange={(event) => {
                                     setData(
-                                        'center_id',
-                                        e.target.value,
+                                        (current) => ({
+                                            ...current,
+                                            center_code:
+                                                event
+                                                    .target
+                                                    .value,
+                                        }),
                                     );
-                                    setData('branch_id', '');
 
-                                    setLocalErrors((current) => ({
-                                        ...current,
-                                        center_id: undefined,
-                                        branch_id: undefined,
-                                    }));
+                                    clearError(
+                                        'center_code',
+                                    );
                                 }}
-                                className={
-                                    `h-[40px] w-full rounded-[11px] border bg-white px-[16px] ` +
-                                    `text-[13px] outline-none transition duration-200 ` +
-                                    `focus:border-[#4a53d4] focus:ring-2 focus:ring-[#4a53d4]/10 ` +
-                                    `lg:h-[56px] lg:px-[21px] lg:text-[19px] ` +
-                                    (localErrors.center_id
-                                        ? 'border-[#ff5656] bg-[#fffafa]'
-                                        : 'border-[#dce0e8]')
-                                }
                             >
                                 <option value="">
-                                    Select your language center
+                                    {centers.length > 0
+                                        ? 'Select your language center'
+                                        : 'No language centers are available'}
                                 </option>
 
-                                {availableCenters.map(
-                                    (center) => (
-                                        <option
-                                            key={center.id}
-                                            value={center.id}
-                                        >
-                                            {center.name}
-                                        </option>
-                                    ),
-                                )}
-                            </select>
+                                {centers.map((center) => (
+                                    <option
+                                        key={center.code}
+                                        value={center.code}
+                                    >
+                                        {center.name}
+                                    </option>
+                                ))}
+                            </SelectInput>
 
                             <InputError
                                 message={
-                                    localErrors.center_id
+                                    errors.center_code
                                 }
                             />
-                        </div>
-
-                        <div>
-                            <InputLabel
-                                htmlFor="branch_id"
-                                value="Branch"
-                            />
-
-                            <select
-                                id="branch_id"
-                                value={data.branch_id}
-                                disabled={!selectedCenter}
-                                onChange={(e) => {
-                                    setData(
-                                        'branch_id',
-                                        e.target.value,
-                                    );
-
-                                    setLocalErrors((current) => ({
-                                        ...current,
-                                        branch_id: undefined,
-                                    }));
-                                }}
-                                className={
-                                    `h-[40px] w-full rounded-[11px] border bg-white px-[16px] ` +
-                                    `text-[13px] outline-none transition duration-200 ` +
-                                    `focus:border-[#4a53d4] focus:ring-2 focus:ring-[#4a53d4]/10 ` +
-                                    `disabled:cursor-not-allowed disabled:bg-[#f3f4f7] disabled:text-[#a9adb6] ` +
-                                    `lg:h-[56px] lg:px-[21px] lg:text-[19px] ` +
-                                    (localErrors.branch_id
-                                        ? 'border-[#ff5656] bg-[#fffafa]'
-                                        : 'border-[#dce0e8]')
-                                }
-                            >
-                                <option value="">
-                                    {selectedCenter
-                                        ? 'Select your branch'
-                                        : 'Select a center first'}
-                                </option>
-
-                                {selectedCenter?.branches.map(
-                                    (branch) => (
-                                        <option
-                                            key={branch.id}
-                                            value={branch.id}
-                                        >
-                                            {branch.name}
-                                        </option>
-                                    ),
-                                )}
-                            </select>
-
-                            <InputError
-                                message={
-                                    localErrors.branch_id
-                                }
-                            />
-                        </div>
-
-                        <div>
-                            <InputLabel value="Role" />
-
-                            <div className="flex h-[40px] w-full items-center rounded-[11px] border border-[#dce0e8] bg-[#f7f8fb] px-[16px] text-[13px] text-[#555b68] lg:h-[56px] lg:px-[21px] lg:text-[19px]">
-                                Student
-                            </div>
                         </div>
                     </div>
 
-                    <div className="mt-6 space-y-3 lg:mt-8">
-                        <PrimaryButton type="submit">
-                            Continue
+                    <div className="auth-register-actions mt-5 space-y-3">
+                        <PrimaryButton
+                            type="submit"
+                            className="gap-2"
+                        >
+                            Review Application
+
                             <ArrowRight
-                                className="ml-2"
                                 size={17}
                                 strokeWidth={2}
                             />
@@ -563,208 +1090,123 @@ export default function Register({
 
                         <Link
                             href={route('login')}
-                            className="flex h-[40px] w-full items-center justify-center gap-2 rounded-[11px] border border-[#dce0e8] bg-transparent text-[12px] font-medium text-[#6f7581] transition hover:bg-white lg:h-[56px] lg:text-[17px]"
+                            className="flex h-[40px] w-full items-center justify-center gap-2 rounded-[11px] border border-[#dce0e8] text-[12px] font-medium text-[#6f7581] transition hover:bg-white lg:h-[48px] lg:text-[15px]"
                         >
                             <ArrowLeft
                                 size={16}
                                 strokeWidth={1.8}
                             />
+
                             Back to Login
                         </Link>
                     </div>
                 </form>
             ) : (
                 <form onSubmit={submit} noValidate>
-                    <div>
-                        <InputLabel
-                            htmlFor="password"
-                            value="Password"
-                        />
+                    <ApplicantSummary
+                        name={data.full_name}
+                        email={data.email}
+                    />
 
-                        <PasswordInput
-                            id="password"
-                            name="password"
-                            value={data.password}
-                            placeholder="Create a strong password"
-                            autoComplete="new-password"
-                            hasError={Boolean(
-                                localErrors.password,
-                            )}
-                            onChange={(e) => {
-                                setData(
-                                    'password',
-                                    e.target.value,
-                                );
-
-                                setLocalErrors((current) => ({
-                                    ...current,
-                                    password: undefined,
-                                }));
-                            }}
-                        />
-
-                        <InputError
-                            message={localErrors.password}
-                        />
-
-                        {data.password && (
-                            <div className="mt-3 space-y-2">
-                                <PasswordRequirement
-                                    valid={
-                                        passwordChecks.length
-                                    }
-                                >
-                                    At least 8 characters
-                                </PasswordRequirement>
-
-                                <PasswordRequirement
-                                    valid={
-                                        passwordChecks.uppercase
-                                    }
-                                >
-                                    One uppercase letter
-                                </PasswordRequirement>
-
-                                <PasswordRequirement
-                                    valid={
-                                        passwordChecks.number
-                                    }
-                                >
-                                    One number
-                                </PasswordRequirement>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-[18px] lg:mt-[24px]">
-                        <InputLabel
-                            htmlFor="password_confirmation"
-                            value="Confirm Password"
-                        />
-
-                        <PasswordInput
-                            id="password_confirmation"
-                            name="password_confirmation"
+                    <div className="mt-5 rounded-[12px] border border-[#e1e4ed] px-5 py-5 text-left">
+                        <SummaryRow
+                            label="CENTER"
                             value={
-                                data.password_confirmation
-                            }
-                            placeholder="Re-enter your password"
-                            autoComplete="new-password"
-                            hasError={Boolean(
-                                localErrors.password_confirmation,
-                            )}
-                            onChange={(e) => {
-                                setData(
-                                    'password_confirmation',
-                                    e.target.value,
-                                );
-
-                                setLocalErrors((current) => ({
-                                    ...current,
-                                    password_confirmation:
-                                        undefined,
-                                }));
-                            }}
-                        />
-
-                        <InputError
-                            message={
-                                localErrors.password_confirmation
+                                selectedCenter?.name ??
+                                data.center_code
                             }
                         />
 
-                        {data.password_confirmation &&
-                            passwordsMatch && (
-                                <div className="mt-2">
-                                    <PasswordRequirement valid>
-                                        Passwords match
-                                    </PasswordRequirement>
-                                </div>
-                            )}
-                    </div>
+                        <SummaryRow
+                            label="ID"
+                            value={
+                                data.national_id_number
+                            }
+                        />
 
-                    <div className="mt-5">
-                        <label className="flex cursor-pointer items-start gap-3">
-                            <Checkbox
-                                checked={data.terms}
-                                onChange={(e) => {
-                                    setData(
-                                        'terms',
-                                        e.target.checked,
-                                    );
+                        <SummaryRow
+                            label="DOB"
+                            value={dateOfBirth}
+                        />
 
-                                    setLocalErrors((current) => ({
-                                        ...current,
-                                        terms: undefined,
-                                    }));
-                                }}
-                                className="mt-[2px] h-[16px] w-[16px] shrink-0"
-                            />
+                        <SummaryRow
+                            label="CITY"
+                            value={
+                                data.city_of_residence
+                            }
+                        />
 
-                            <span className="text-[11px] leading-[18px] text-[#858b97] lg:text-[14px] lg:leading-[22px]">
-                                I agree to the{' '}
-                                <button
-                                    type="button"
-                                    className="font-semibold text-[#3947cf] hover:underline"
-                                    onClick={(e) =>
-                                        e.preventDefault()
-                                    }
-                                >
-                                    Terms & Conditions
-                                </button>{' '}
-                                and{' '}
-                                <button
-                                    type="button"
-                                    className="font-semibold text-[#3947cf] hover:underline"
-                                    onClick={(e) =>
-                                        e.preventDefault()
-                                    }
-                                >
-                                    Privacy Policy
-                                </button>{' '}
-                                of LCMS.
-                            </span>
-                        </label>
+                        <SummaryRow
+                            label="EMAIL"
+                            value={data.email}
+                        />
 
-                        <InputError
-                            message={localErrors.terms}
+                        <SummaryRow
+                            label="PHONE"
+                            value={phoneNumber}
+                            last
                         />
                     </div>
 
-                    <div className="mt-6 space-y-3 lg:mt-8">
+                    <div className="mt-5 rounded-[10px] border border-[#cfd8ff] bg-[#eef3ff] px-[14px] py-[12px]">
+                        <p className="text-[11px] leading-[18px] text-[#5263c9]">
+                            This submission creates a pending
+                            registration request only. Your account
+                            and sign-in credentials are created
+                            after administrative approval.
+                        </p>
+                    </div>
+
+                    <div className="auth-register-actions mt-5 space-y-3">
                         <PrimaryButton
                             type="submit"
                             disabled={processing}
+                            className="gap-2"
                         >
-                            Create Account
-                            <ArrowRight
-                                className="ml-2"
-                                size={17}
-                                strokeWidth={2}
-                            />
+                            {processing ? (
+                                <>
+                                    <Spinner />
+                                    Submitting...
+                                </>
+                            ) : (
+                                <>
+                                    Submit Registration
+
+                                    <ArrowRight
+                                        size={17}
+                                        strokeWidth={2}
+                                    />
+                                </>
+                            )}
                         </PrimaryButton>
 
                         <SecondaryButton
                             type="button"
+                            disabled={processing}
                             onClick={() => {
-                                setLocalErrors({});
+                                setErrors({});
                                 setStep(1);
+
+                                window.scrollTo({
+                                    top: 0,
+                                    behavior:
+                                        'smooth',
+                                });
                             }}
+                            className="gap-2 !h-[40px] !text-[12px] lg:!h-[48px] lg:!text-[15px]"
                         >
                             <ArrowLeft
-                                className="mr-2"
                                 size={16}
                                 strokeWidth={1.8}
                             />
+
                             Back
                         </SecondaryButton>
                     </div>
                 </form>
             )}
 
-            <p className="mt-8 hidden text-[12px] text-[#c3c7cf] lg:block">
-                © 2026 LCMS
-            </p>
+            <Footer />
         </GuestLayout>
     );
 }
@@ -772,112 +1214,255 @@ export default function Register({
 function RegistrationStepper({
     step,
 }: {
-    step: 1 | 2;
+    step: Step;
 }) {
     return (
-        <div className="mb-6 mt-3 lg:mb-8 lg:mt-7">
-            <div className="flex items-center">
-                <div className="relative flex flex-col items-center">
-                    <div
-                        className={
-                            `flex h-[28px] w-[28px] items-center justify-center rounded-full text-[11px] font-bold lg:h-[32px] lg:w-[32px] lg:text-[13px] ` +
-                            (step === 2
-                                ? 'bg-[#18ad55] text-white'
-                                : 'bg-[#3947cf] text-white')
-                        }
-                    >
-                        {step === 2 ? (
-                            <Check
-                                size={16}
-                                strokeWidth={2.5}
-                            />
-                        ) : (
-                            '1'
-                        )}
-                    </div>
-                </div>
-
-                <div
-                    className={
-                        `mx-3 h-[2px] flex-1 lg:mx-4 ` +
-                        (step === 2
-                            ? 'bg-[#3947cf]'
-                            : 'bg-[#dfe2eb]')
-                    }
+        <div className="auth-register-stepper mb-5 mt-6">
+            <div className="grid grid-cols-[auto_1fr_auto] items-start">
+                <StepperItem
+                    number={1}
+                    label="Personal Info"
+                    completed={step === 2}
+                    active={step === 1}
                 />
 
-                <div className="relative flex flex-col items-center">
-                    <div
-                        className={
-                            `flex h-[28px] w-[28px] items-center justify-center rounded-full text-[11px] font-bold lg:h-[32px] lg:w-[32px] lg:text-[13px] ` +
-                            (step === 2
-                                ? 'bg-[#3947cf] text-white'
-                                : 'bg-[#eef0f5] text-[#b9bec8]')
-                        }
-                    >
-                        2
-                    </div>
-                </div>
-            </div>
-
-            <div className="mt-2 flex justify-between text-[9px] font-semibold lg:text-[11px]">
-                <span
-                    className={
-                        step >= 1
-                            ? 'text-[#3947cf]'
-                            : 'text-[#b9bec8]'
-                    }
-                >
-                    Account Info
-                </span>
-
-                <span
-                    className={
+                <div
+                    className={`mt-[14px] h-[2px] ${
                         step === 2
-                            ? 'text-[#3947cf]'
-                            : 'text-[#b9bec8]'
-                    }
-                >
-                    Set Password
-                </span>
+                            ? 'bg-[#3947cf]'
+                            : 'bg-[#e1e4eb]'
+                    }`}
+                />
+
+                <StepperItem
+                    number={2}
+                    label="Review & Submit"
+                    active={step === 2}
+                />
             </div>
         </div>
     );
 }
 
-function PasswordRequirement({
-    valid,
+function StepperItem({
+    number,
+    label,
+    active = false,
+    completed = false,
+}: {
+    number: number;
+    label: string;
+    active?: boolean;
+    completed?: boolean;
+}) {
+    return (
+        <div className="flex min-w-[70px] flex-col items-center">
+            <div
+                className={`flex h-[29px] w-[29px] items-center justify-center rounded-full text-[11px] font-bold ${
+                    completed
+                        ? 'bg-[#16a34a] text-white'
+                        : active
+                          ? 'bg-[#3947cf] text-white'
+                          : 'border border-[#dde1e8] bg-[#eef0f4] text-[#c0c5ce]'
+                }`}
+            >
+                {completed ? (
+                    <Check
+                        size={15}
+                        strokeWidth={2.5}
+                    />
+                ) : (
+                    number
+                )}
+            </div>
+
+            <span
+                className={`mt-1 text-[9px] font-semibold ${
+                    completed || active
+                        ? 'text-[#3947cf]'
+                        : 'text-[#c4c8d0]'
+                }`}
+            >
+                {label}
+            </span>
+        </div>
+    );
+}
+
+function RegistrationAlert({
     children,
 }: {
-    valid: boolean;
-    children: React.ReactNode;
+    children: ReactNode;
 }) {
     return (
         <div
+            role="alert"
+            className="mb-4 flex min-h-[46px] items-center gap-[10px] rounded-[10px] border border-[#ff9393] bg-[#fff0f0] px-[14px] text-[13px] text-[#ef3434]"
+        >
+            <AlertTriangle
+                size={18}
+                strokeWidth={1.8}
+                className="shrink-0"
+            />
+
+            <span>{children}</span>
+        </div>
+    );
+}
+
+function PersonalPictureField({
+    preview,
+    error,
+    onChange,
+}: {
+    preview: string | null;
+    error?: string;
+    onChange: (
+        event: ChangeEvent<HTMLInputElement>,
+    ) => void;
+}) {
+    return (
+        <div>
+            <div className="flex items-center gap-4">
+                <div className="flex h-[65px] w-[65px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-[#d7dbe3] text-[#cbd0d8]">
+                    {preview ? (
+                        <img
+                            src={preview}
+                            alt="Personal photo preview"
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        <UserRound
+                            size={24}
+                            strokeWidth={1.7}
+                        />
+                    )}
+                </div>
+
+                <div>
+                    <label className="inline-flex h-[34px] cursor-pointer items-center justify-center gap-2 rounded-[7px] border border-[#3947cf] px-4 text-[11px] font-bold text-[#3947cf] transition hover:bg-[#3947cf]/5">
+                        <Camera
+                            size={14}
+                            strokeWidth={2}
+                        />
+
+                        UPLOAD PHOTO
+
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={onChange}
+                        />
+                    </label>
+
+                    <p className="mt-1.5 text-[9px] text-[#c4c8d0]">
+                        Optional • JPG, PNG or WEBP up to 5 MB
+                    </p>
+                </div>
+            </div>
+
+            <InputError message={error} />
+        </div>
+    );
+}
+
+function ApplicantSummary({
+    name,
+    email,
+}: {
+    name: string;
+    email: string;
+}) {
+    return (
+        <div className="flex min-h-[61px] items-center gap-3 rounded-[10px] border border-[#cfd8ff] bg-[#eef3ff] px-3.5 py-2.5">
+            <div className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-full bg-[#d9e3ff] text-[#3947cf]">
+                <UserRound
+                    size={18}
+                    strokeWidth={1.8}
+                />
+            </div>
+
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-[12px] font-semibold text-[#3947cf]">
+                    {name}
+                </p>
+
+                <p className="mt-0.5 truncate text-[9px] text-[#6979d7]">
+                    {email}
+                </p>
+            </div>
+
+            <span className="max-w-[135px] rounded-full bg-[#d9fbe2] px-2.5 py-1 text-center text-[9px] font-semibold leading-[13px] text-[#16a34a]">
+                Personal info complete — final step!
+            </span>
+        </div>
+    );
+}
+
+function SelectInput({
+    hasError = false,
+    className = '',
+    children,
+    ...props
+}: SelectHTMLAttributes<HTMLSelectElement> & {
+    hasError?: boolean;
+}) {
+    return (
+        <select
+            {...props}
             className={
-                `flex items-center gap-2 text-[11px] lg:text-[13px] ` +
-                (valid
-                    ? 'text-[#16a34a]'
-                    : 'text-[#9aa0ab]')
+                `h-[40px] w-full rounded-[11px] border px-[12px] ` +
+                `text-[13px] text-[#252832] outline-none transition duration-200 ` +
+                `focus:border-[#4a53d4] focus:ring-2 focus:ring-[#4a53d4]/10 ` +
+                `lg:h-[48px] lg:px-[16px] lg:text-[15px] ` +
+                (hasError
+                    ? 'border-[#ff5656] bg-[#fffafa] '
+                    : 'border-[#dce0e8] bg-white ') +
+                className
             }
         >
-            <span
-                className={
-                    `flex h-[15px] w-[15px] items-center justify-center rounded-full ` +
-                    (valid
-                        ? 'bg-[#19ad55] text-white'
-                        : 'border border-[#cdd1d9]')
-                }
-            >
-                {valid && (
-                    <Check
-                        size={10}
-                        strokeWidth={3}
-                    />
-                )}
+            {children}
+        </select>
+    );
+}
+
+function SummaryRow({
+    label,
+    value,
+    last = false,
+}: {
+    label: string;
+    value: string;
+    last?: boolean;
+}) {
+    return (
+        <div
+            className={`grid grid-cols-[58px_1fr] items-start gap-2 text-[11px] ${
+                last ? '' : 'mb-3'
+            }`}
+        >
+            <span className="font-semibold tracking-[0.04em] text-[#a6abb5]">
+                {label}
             </span>
 
-            {children}
+            <span className="break-all text-[#252832]">
+                {value}
+            </span>
         </div>
+    );
+}
+
+function Spinner() {
+    return (
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+    );
+}
+
+function Footer() {
+    return (
+        <p className="auth-register-footer mt-8 hidden border-t border-[#e6e8ee] pt-6 text-[10px] text-[#c5c9d1] lg:block">
+            © 2026 LCMS
+        </p>
     );
 }
