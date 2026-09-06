@@ -7,6 +7,20 @@ export type StudentCourseStatus =
 
 export type StudentCourseAccent = 'indigo' | 'violet';
 
+export type StudentCoursesPageData = {
+    student: {
+        name: string;
+        studentId: string;
+    };
+
+    center: {
+        name: string;
+        branch: string;
+    };
+
+    courses: StudentCourse[];
+};
+
 export type StudentCourse = {
     id: number;
     code: string;

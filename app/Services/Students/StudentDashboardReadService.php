@@ -33,8 +33,7 @@ final class StudentDashboardReadService
     public function __construct(
         private readonly DashboardReadService $dashboardReports,
         private readonly AttendanceCalculationService $attendance,
-    ) {
-    }
+    ) {}
 
     /**
      * Build the Student dashboard payload consumed by the
@@ -87,10 +86,10 @@ final class StudentDashboardReadService
 
         $student->load([
             'center',
-            'branch' => fn ($query) =>
-                $query->withoutGlobalScopes(),
-            'person' => fn ($query) =>
-                $query->withoutGlobalScopes(),
+            'branch' => fn($query) =>
+            $query->withoutGlobalScopes(),
+            'person' => fn($query) =>
+            $query->withoutGlobalScopes(),
         ]);
 
         $center = $student->center;
@@ -121,7 +120,7 @@ final class StudentDashboardReadService
 
         $classIds = $activeEnrollments
             ->pluck('class_id')
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->unique()
             ->values();
 
@@ -135,25 +134,25 @@ final class StudentDashboardReadService
                         ->withoutGlobalScopes()
                         ->with([
                             'academicLevel' =>
-                                fn ($levelQuery) =>
-                                $levelQuery->withoutGlobalScopes(),
+                            fn($levelQuery) =>
+                            $levelQuery->withoutGlobalScopes(),
                         ]);
                 },
 
                 'assignedClassroom' =>
-                    fn ($query) =>
-                    $query->withoutGlobalScopes(),
+                fn($query) =>
+                $query->withoutGlobalScopes(),
 
                 'assignedTeacher' =>
-                    fn ($query) =>
-                    $query->withoutGlobalScopes(),
+                fn($query) =>
+                $query->withoutGlobalScopes(),
 
                 'classSchedules' =>
-                    fn ($query) =>
-                    $query
-                        ->withoutGlobalScopes()
-                        ->orderBy('day_of_week')
-                        ->orderBy('start_time'),
+                fn($query) =>
+                $query
+                    ->withoutGlobalScopes()
+                    ->orderBy('day_of_week')
+                    ->orderBy('start_time'),
             ])
             ->get()
             ->keyBy('id');
@@ -188,7 +187,7 @@ final class StudentDashboardReadService
 
             $attendancePercentage =
                 $attendanceSummary['attendance_percentage']
-                    ?? null;
+                ?? null;
 
             $attendancePercentage = $attendancePercentage === null
                 ? 0
@@ -217,56 +216,46 @@ final class StudentDashboardReadService
                 'code' => $code,
                 'title' => $title,
                 'teacher' =>
-                    $teacherName
+                $teacherName
                     ?: 'Teacher not assigned',
                 'schedule' =>
-                    $schedule
+                $schedule
                     ?: 'Schedule not available',
                 'attendance' =>
-                    $attendancePercentage,
+                $attendancePercentage,
                 'accent' =>
-                    $index % 2 === 0
-                        ? 'indigo'
-                        : 'violet',
+                $index % 2 === 0
+                    ? 'indigo'
+                    : 'violet',
             ];
 
             $attendanceRows[] = [
                 'title' => $title,
                 'percentage' =>
-                    $attendancePercentage,
+                $attendancePercentage,
                 'minimum' =>
-                    isset(
-                        $attendanceSummary[
-                            'minimum_attendance'
-                        ]
-                    )
-                        ? (float) $attendanceSummary[
-                            'minimum_attendance'
-                        ]
-                        : null,
+                isset(
+                    $attendanceSummary['minimum_attendance']
+                )
+                    ? (float) $attendanceSummary['minimum_attendance']
+                    : null,
                 'meetsMinimum' =>
-                    $attendanceSummary[
-                        'meets_minimum_attendance'
-                    ] ?? null,
+                $attendanceSummary['meets_minimum_attendance'] ?? null,
             ];
 
-            $classPresentation[
-                (int) $courseClass->id
-            ] = [
+            $classPresentation[(int) $courseClass->id] = [
                 'title' => $title,
                 'teacher' =>
-                    $teacherName
+                $teacherName
                     ?: 'Teacher not assigned',
                 'room' =>
-                    $courseClass
-                        ->assignedClassroom
-                        ?->name
+                $courseClass
+                    ->assignedClassroom
+                    ?->name
                     ?: 'Room not assigned',
             ];
 
-            $courseNamesByEnrollment[
-                (int) $enrollment->id
-            ] = $title;
+            $courseNamesByEnrollment[(int) $enrollment->id] = $title;
         }
 
         $scheduledSessions =
@@ -297,7 +286,7 @@ final class StudentDashboardReadService
                 }
             )
             ->sortBy(
-                fn (
+                fn(
                     ClassSession $session
                 ): int =>
                 $this
@@ -306,7 +295,7 @@ final class StudentDashboardReadService
                         $timezone
                     )
                     ?->getTimestamp()
-                ?? PHP_INT_MAX
+                    ?? PHP_INT_MAX
             )
             ->values();
 
@@ -315,15 +304,14 @@ final class StudentDashboardReadService
 
         $nextSession =
             $nextSessionModel instanceof ClassSession
-                ? $this->sessionPayload(
-                    session: $nextSessionModel,
-                    classPresentation:
-                        $classPresentation,
-                    timezone: $timezone,
-                    includeDate: true,
-                    now: $now,
-                )
-                : null;
+            ? $this->sessionPayload(
+                session: $nextSessionModel,
+                classPresentation: $classPresentation,
+                timezone: $timezone,
+                includeDate: true,
+                now: $now,
+            )
+            : null;
 
         $todaySessions = $scheduledSessions
             ->filter(
@@ -346,19 +334,18 @@ final class StudentDashboardReadService
                 }
             )
             ->sortBy(
-                fn (
+                fn(
                     ClassSession $session
                 ): string =>
                 (string) $session->start_time
             )
             ->map(
-                fn (
+                fn(
                     ClassSession $session
                 ): array =>
                 $this->sessionPayload(
                     session: $session,
-                    classPresentation:
-                        $classPresentation,
+                    classPresentation: $classPresentation,
                     timezone: $timezone,
                     includeDate: false,
                     now: $now,
@@ -372,23 +359,19 @@ final class StudentDashboardReadService
             ?? [];
 
         $averageAttendance =
-            $attendanceReport[
-                'attendance_percentage'
-            ] ?? null;
+            $attendanceReport['attendance_percentage'] ?? null;
 
         $averageAttendance =
             $averageAttendance === null
-                ? 0
-                : (int) round(
-                    (float) $averageAttendance
-                );
+            ? 0
+            : (int) round(
+                (float) $averageAttendance
+            );
 
         $totalAbsent =
             (int) round(
                 (float) (
-                    $attendanceReport[
-                        'absence_equivalent'
-                    ] ?? 0
+                    $attendanceReport['absence_equivalent'] ?? 0
                 )
             );
 
@@ -399,14 +382,11 @@ final class StudentDashboardReadService
 
         $finance =
             $this->financialPayload(
-                financeReport:
-                    $reportDashboard['finance']
+                financeReport: $reportDashboard['finance']
                     ?? [],
-                operatingCurrency:
-                    $center
-                        ->operating_currency_code,
-                courseNamesByEnrollment:
-                    $courseNamesByEnrollment,
+                operatingCurrency: $center
+                    ->operating_currency_code,
+                courseNamesByEnrollment: $courseNamesByEnrollment,
                 today: $today,
             );
 
@@ -426,138 +406,130 @@ final class StudentDashboardReadService
         $greetingPeriod =
             match (true) {
                 $now->hour < 12 =>
-                    'morning',
+                'morning',
 
                 $now->hour < 17 =>
-                    'afternoon',
+                'afternoon',
 
                 default =>
-                    'evening',
+                'evening',
             };
 
         return [
             'student' => [
                 'name' =>
-                    $studentName,
+                $studentName,
 
                 'studentId' =>
-                    $actor
-                        ->account_login_identifier
+                $actor
+                    ->account_login_identifier
                     ?: (string) $student->id,
             ],
 
             'center' => [
                 'name' =>
-                    $center->name,
+                $center->name,
 
                 'branch' =>
-                    $branch->name,
+                $branch->name,
             ],
 
             'greeting' => [
                 'dateLabel' =>
-                    $now->format(
-                        'l, F j, Y'
-                    ),
+                $now->format(
+                    'l, F j, Y'
+                ),
 
                 'title' =>
-                    "Good {$greetingPeriod}, {$firstName}!",
+                "Good {$greetingPeriod}, {$firstName}!",
             ],
 
             'stats' => [
                 [
                     'label' =>
-                        'Active Courses',
+                    'Active Courses',
 
                     'value' =>
-                        (string) count(
-                            $courseRows
-                        ),
+                    (string) count(
+                        $courseRows
+                    ),
 
                     'tone' =>
-                        'blue',
+                    'blue',
 
                     'icon' =>
-                        'courses',
+                    'courses',
                 ],
                 [
                     'label' =>
-                        'Avg Attendance',
+                    'Avg Attendance',
 
                     'value' =>
-                        "{$averageAttendance}%",
+                    "{$averageAttendance}%",
 
                     'tone' =>
-                        'cyan',
+                    'cyan',
 
                     'icon' =>
-                        'attendance',
+                    'attendance',
                 ],
                 [
                     'label' =>
-                        'Total Paid',
+                    'Total Paid',
 
                     'value' =>
-                        $this->moneyLabel(
-                            $finance[
-                                'currency'
-                            ],
-                            $finance[
-                                'totalPaid'
-                            ]
-                        ),
+                    $this->moneyLabel(
+                        $finance['currency'],
+                        $finance['totalPaid']
+                    ),
 
                     'tone' =>
-                        'cyan',
+                    'cyan',
 
                     'icon' =>
-                        'paid',
+                    'paid',
                 ],
                 [
                     'label' =>
-                        'Outstanding',
+                    'Outstanding',
 
                     'value' =>
-                        $this->moneyLabel(
-                            $finance[
-                                'currency'
-                            ],
-                            $finance[
-                                'remaining'
-                            ]
-                        ),
+                    $this->moneyLabel(
+                        $finance['currency'],
+                        $finance['remaining']
+                    ),
 
                     'tone' =>
-                        'red',
+                    'red',
 
                     'icon' =>
-                        'outstanding',
+                    'outstanding',
                 ],
             ],
 
             'courses' =>
-                $courseRows,
+            $courseRows,
 
             'nextSession' =>
-                $nextSession,
+            $nextSession,
 
             'todaySchedule' =>
-                $todaySessions,
+            $todaySessions,
 
             'todayScheduleLabel' =>
-                $now->format(
-                    'D, M j'
-                ),
+            $now->format(
+                'D, M j'
+            ),
 
             'attendance' => [
                 'average' =>
-                    $averageAttendance,
+                $averageAttendance,
 
                 'totalAbsent' =>
-                    $totalAbsent,
+                $totalAbsent,
 
                 'warningText' =>
-                    $warningText,
+                $warningText,
 
                 /*
                  * The backend currently defines minimum
@@ -565,11 +537,323 @@ final class StudentDashboardReadService
                  * single global maximum-absence count.
                  */
                 'maximumAllowedAbsences' =>
-                    null,
+                null,
             ],
 
             'financial' =>
-                $finance,
+            $finance,
+        ];
+    }
+
+    /**
+     * Return all courses/enrollments visible to the
+     * authenticated Student.
+     *
+     * @return array<string, mixed>
+     */
+    public function coursesForUser(
+        User $actor
+    ): array {
+        if (
+            $actor->systemRole()
+            !== SystemRole::Student
+        ) {
+            throw new AuthorizationException(
+                'Only a Student account may view Student courses.'
+            );
+        }
+
+        $reportDashboard =
+            $this->dashboardReports
+            ->forUser($actor);
+
+        $scope =
+            $reportDashboard['scope'];
+
+        if (
+            ($scope['scope_type'] ?? null)
+            !== 'student'
+            || ($scope['center_id'] ?? null)
+            === null
+            || ($scope['subject_id'] ?? null)
+            === null
+        ) {
+            throw new AuthorizationException(
+                'Student course data requires Student reporting scope.'
+            );
+        }
+
+        $centerId =
+            (int) $scope['center_id'];
+
+        $studentId =
+            (int) $scope['subject_id'];
+
+        $student =
+            Student::query()
+            ->withoutGlobalScopes()
+            ->whereKey($studentId)
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'user_id',
+                $actor->id
+            )
+            ->with([
+                'center',
+                'branch' =>
+                fn($query) =>
+                $query
+                    ->withoutGlobalScopes(),
+
+                'person' =>
+                fn($query) =>
+                $query
+                    ->withoutGlobalScopes(),
+            ])
+            ->first();
+
+        if ($student === null) {
+            throw new AuthorizationException(
+                'The Student record could not be resolved.'
+            );
+        }
+
+        $enrollments =
+            Enrollment::query()
+            ->withoutGlobalScopes()
+            ->where(
+                'center_id',
+                $centerId
+            )
+            ->where(
+                'student_id',
+                $student->id
+            )
+            ->with([
+                'courseClass' =>
+                function ($query): void {
+                    $query
+                        ->withoutGlobalScopes()
+                        ->with([
+                            'branch' =>
+                            fn($branchQuery) =>
+                            $branchQuery
+                                ->withoutGlobalScopes(),
+
+                            'course' =>
+                            function (
+                                $courseQuery
+                            ): void {
+                                $courseQuery
+                                    ->withoutGlobalScopes()
+                                    ->with([
+                                        'academicLevel' =>
+                                        fn($levelQuery) =>
+                                        $levelQuery
+                                            ->withoutGlobalScopes(),
+                                    ]);
+                            },
+
+                            'assignedTeacher' =>
+                            fn($teacherQuery) =>
+                            $teacherQuery
+                                ->withoutGlobalScopes(),
+
+                            'classSchedules' =>
+                            fn($scheduleQuery) =>
+                            $scheduleQuery
+                                ->withoutGlobalScopes()
+                                ->orderBy(
+                                    'day_of_week'
+                                )
+                                ->orderBy(
+                                    'start_time'
+                                ),
+                        ]);
+                },
+            ])
+            ->orderByDesc(
+                'enrollment_date'
+            )
+            ->orderByDesc('id')
+            ->get();
+
+        $courses = [];
+
+        foreach (
+            $enrollments as $index =>
+            $enrollment
+        ) {
+            $courseClass =
+                $enrollment->courseClass;
+
+            if ($courseClass === null) {
+                continue;
+            }
+
+            $course =
+                $courseClass->course;
+
+            if ($course === null) {
+                continue;
+            }
+
+            $attendance =
+                $this->attendance
+                ->forEnrollment(
+                    $actor,
+                    $enrollment
+                );
+
+            $attendancePercentage =
+                $attendance['attendance_percentage'] ?? null;
+
+            $level =
+                $course->academicLevel;
+
+            $levelName =
+                trim(
+                    implode(
+                        ' ',
+                        array_filter([
+                            $level?->code,
+                            $level?->name,
+                        ])
+                    )
+                );
+
+            $duration =
+                $courseClass->start_date
+                && $courseClass->end_date
+                ? $courseClass
+                ->start_date
+                ->format('M j, Y')
+                . ' – '
+                . $courseClass
+                ->end_date
+                ->format('M j, Y')
+                : 'Dates not available';
+
+            $status =
+                $enrollment
+                ->enrollment_status
+                ->name;
+
+            $courses[] = [
+                'id' =>
+                (int) $enrollment->id,
+
+                'code' =>
+                $level?->code
+                    ?: $course->code
+                    ?: $courseClass
+                    ->class_code,
+
+                'title' =>
+                $course->name
+                    ?: $courseClass->name,
+
+                'levelName' =>
+                $levelName !== ''
+                    ? $levelName
+                    : 'Level not specified',
+
+                'classCode' =>
+                $courseClass
+                    ->class_code,
+
+                'teacher' =>
+                $this->teacherName(
+                    $courseClass
+                        ->assignedTeacher
+                )
+                    ?: 'Teacher not assigned',
+
+                'branch' =>
+                $courseClass
+                    ->branch
+                    ?->name
+                    ?: $student
+                    ->branch
+                    ?->name
+                    ?: 'Branch not available',
+
+                'schedule' =>
+                $this->formatSchedule(
+                    $courseClass
+                        ->classSchedules
+                )
+                    ?: 'Schedule not available',
+
+                'duration' =>
+                $duration,
+
+                'attendance' =>
+                $attendancePercentage
+                    === null
+                    ? 0
+                    : (int) round(
+                        (float)
+                        $attendancePercentage
+                    ),
+
+                'status' =>
+                $status,
+
+                'accent' =>
+                $index % 2 === 0
+                    ? 'indigo'
+                    : 'violet',
+
+                /*
+             * Enrollment ID is used because the
+             * details screen is Student-specific.
+             */
+                'detailsHref' =>
+                route(
+                    'student.courses.show',
+                    [
+                        'course' =>
+                        $enrollment->id,
+                    ]
+                ),
+            ];
+        }
+
+        return [
+            'student' => [
+                'name' =>
+                $student
+                    ->person
+                    ?->full_name
+                    ?: $actor->name,
+
+                'studentId' =>
+                $actor
+                    ->account_login_identifier
+                    ?: (string)
+                    $student->id,
+            ],
+
+            'center' => [
+                'name' =>
+                $student
+                    ->center
+                    ?->name
+                    ?: 'Language Center',
+
+                'branch' =>
+                $student
+                    ->branch
+                    ?->name
+                    ?: 'Branch',
+            ],
+
+            'courses' =>
+            $courses,
         ];
     }
 
@@ -637,12 +921,12 @@ final class StudentDashboardReadService
             )
             ->with([
                 'classroom' =>
-                    fn ($query) =>
-                    $query->withoutGlobalScopes(),
+                fn($query) =>
+                $query->withoutGlobalScopes(),
 
                 'teacher' =>
-                    fn ($query) =>
-                    $query->withoutGlobalScopes(),
+                fn($query) =>
+                $query->withoutGlobalScopes(),
             ])
             ->get();
     }
@@ -660,9 +944,7 @@ final class StudentDashboardReadService
         CarbonImmutable $now,
     ): array {
         $class =
-            $classPresentation[
-                (int) $session->class_id
-            ] ?? [];
+            $classPresentation[(int) $session->class_id] ?? [];
 
         $teacher =
             $this->teacherName(
@@ -707,10 +989,10 @@ final class StudentDashboardReadService
                     $date->isSameDay(
                         $now
                     )
-                        ? 'Today'
-                        : $date->format(
-                            'D, M j'
-                        );
+                    ? 'Today'
+                    : $date->format(
+                        'D, M j'
+                    );
 
                 $range =
                     "{$dateLabel} · {$range}";
@@ -719,16 +1001,16 @@ final class StudentDashboardReadService
 
         return [
             'course' =>
-                $course,
+            $course,
 
             'teacher' =>
-                $teacher,
+            $teacher,
 
             'room' =>
-                $room,
+            $room,
 
             'time' =>
-                $range,
+            $range,
         ];
     }
 
@@ -746,8 +1028,8 @@ final class StudentDashboardReadService
 
         $date =
             $value instanceof DateTimeInterface
-                ? $value->format('Y-m-d')
-                : (string) $value;
+            ? $value->format('Y-m-d')
+            : (string) $value;
 
         return CarbonImmutable::parse(
             $date,
@@ -771,8 +1053,8 @@ final class StudentDashboardReadService
 
         return CarbonImmutable::parse(
             $date->format('Y-m-d')
-            . ' '
-            . (string) $session->start_time,
+                . ' '
+                . (string) $session->start_time,
             $timezone
         );
     }
@@ -792,8 +1074,8 @@ final class StudentDashboardReadService
         ) {
             $teacher->loadMissing([
                 'person' =>
-                    fn ($query) =>
-                    $query->withoutGlobalScopes(),
+                fn($query) =>
+                $query->withoutGlobalScopes(),
             ]);
 
             $name =
@@ -815,8 +1097,8 @@ final class StudentDashboardReadService
         ) {
             $teacher->loadMissing([
                 'user' =>
-                    fn ($query) =>
-                    $query->withoutGlobalScopes(),
+                fn($query) =>
+                $query->withoutGlobalScopes(),
             ]);
 
             $name =
@@ -848,16 +1130,16 @@ final class StudentDashboardReadService
 
         $active =
             $schedules
-                ->filter(
-                    fn ($schedule): bool =>
-                    method_exists(
-                        $schedule,
-                        'isActive'
-                    )
-                        ? $schedule
-                            ->isActive()
-                        : true
-                );
+            ->filter(
+                fn($schedule): bool =>
+                method_exists(
+                    $schedule,
+                    'isActive'
+                )
+                    ? $schedule
+                    ->isActive()
+                    : true
+            );
 
         if ($active->isEmpty()) {
             return '';
@@ -865,12 +1147,12 @@ final class StudentDashboardReadService
 
         return $active
             ->groupBy(
-                fn ($schedule): string =>
+                fn($schedule): string =>
                 (string) $schedule
                     ->start_time
-                . '|'
-                . (string) $schedule
-                    ->end_time
+                    . '|'
+                    . (string) $schedule
+                        ->end_time
             )
             ->map(
                 function (
@@ -881,17 +1163,15 @@ final class StudentDashboardReadService
 
                     $days =
                         $group
-                            ->map(
-                                fn (
-                                    $schedule
-                                ): string =>
-                                self::DAY_NAMES[
-                                    (int) $schedule
-                                        ->day_of_week
-                                ]
+                        ->map(
+                            fn(
+                                $schedule
+                            ): string =>
+                            self::DAY_NAMES[(int) $schedule
+                                    ->day_of_week]
                                 ?? '?'
-                            )
-                            ->implode(', ');
+                        )
+                        ->implode(', ');
 
                     return $days
                         . ' · '
@@ -982,10 +1262,10 @@ final class StudentDashboardReadService
         $totals =
             is_array(
                 $data['totals']
-                ?? null
+                    ?? null
             )
-                ? $data['totals']
-                : [];
+            ? $data['totals']
+            : [];
 
         $currency =
             strtoupper(
@@ -1011,117 +1291,101 @@ final class StudentDashboardReadService
         $installments =
             collect(
                 $data['installments']
-                ?? []
+                    ?? []
             )
             ->filter(
-                fn ($row): bool =>
+                fn($row): bool =>
                 strtoupper(
                     (string) (
-                        $row[
-                            'currency_code'
-                        ] ?? ''
+                        $row['currency_code'] ?? ''
                     )
                 ) === $currency
             );
 
         $overdue =
             $installments
-                ->filter(
-                    fn ($row): bool =>
-                    (bool) (
-                        $row[
-                            'is_overdue'
-                        ] ?? false
-                    )
+            ->filter(
+                fn($row): bool =>
+                (bool) (
+                    $row['is_overdue'] ?? false
                 )
-                ->sum(
-                    fn ($row): float =>
-                    (float) (
-                        $row['balance']
-                        ?? 0
-                    )
-                );
+            )
+            ->sum(
+                fn($row): float =>
+                (float) (
+                    $row['balance']
+                    ?? 0
+                )
+            );
 
         $next =
             $installments
-                ->filter(
-                    fn ($row): bool =>
-                    (float) (
-                        $row['balance']
-                        ?? 0
-                    ) > 0
+            ->filter(
+                fn($row): bool =>
+                (float) (
+                    $row['balance']
+                    ?? 0
+                ) > 0
                     && isset(
                         $row['due_date']
                     )
                     && $row['due_date']
-                        >= $today
-                            ->toDateString()
-                )
-                ->sortBy('due_date')
-                ->first();
+                    >= $today
+                    ->toDateString()
+            )
+            ->sortBy('due_date')
+            ->first();
 
         return [
             'currency' =>
-                $currency,
+            $currency,
 
             'totalFees' =>
-                (float) (
-                    $currencyTotals[
-                        'obligation'
-                    ] ?? 0
-                ),
+            (float) (
+                $currencyTotals['obligation'] ?? 0
+            ),
 
             'totalPaid' =>
-                (float) (
-                    $currencyTotals[
-                        'paid'
-                    ] ?? 0
-                ),
+            (float) (
+                $currencyTotals['paid'] ?? 0
+            ),
 
             'remaining' =>
-                (float) (
-                    $currencyTotals[
-                        'balance'
-                    ] ?? 0
-                ),
+            (float) (
+                $currencyTotals['balance'] ?? 0
+            ),
 
             'overdue' =>
-                (float) $overdue,
+            (float) $overdue,
 
             'nextInstallment' =>
-                $next !== null
-                    ? (float) (
-                        $next['balance']
-                        ?? 0
-                    )
-                    : null,
+            $next !== null
+                ? (float) (
+                    $next['balance']
+                    ?? 0
+                )
+                : null,
 
             'nextInstallmentCourse' =>
-                $next !== null
-                    ? (
-                        $courseNamesByEnrollment[
-                            (int) (
-                                $next[
-                                    'enrollment_id'
-                                ] ?? 0
-                            )
-                        ]
-                        ?? (
-                            $next[
-                                'enrollment_number'
-                            ] ?? null
-                        )
+            $next !== null
+                ? (
+                    $courseNamesByEnrollment[(int) (
+                            $next['enrollment_id'] ?? 0
+                        )]
+                    ?? (
+                        $next['enrollment_number'] ?? null
                     )
-                    : null,
+                )
+                : null,
 
             'nextInstallmentDue' =>
-                $next !== null
-                    ? CarbonImmutable::parse(
-                        $next['due_date']
-                    )->format(
-                        'M j, Y'
-                    )
-                    : null,
+            $next !== null
+                ? CarbonImmutable::parse(
+                    $next['due_date']
+                )->format(
+                    'M j, Y'
+                )
+                : null,
         ];
     }
 

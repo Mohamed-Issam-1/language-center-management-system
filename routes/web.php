@@ -123,9 +123,24 @@ Route::middleware([
     'password.change.completed',
     'verified',
 ])->group(function () {
-    Route::get('/my-courses', function () {
-        return Inertia::render('Student/MyCourses');
-    })->name('student.courses.index');
+    Route::get(
+    '/my-courses',
+    function (
+        Request $request,
+        StudentDashboardReadService $studentDashboard
+    ) {
+        return Inertia::render(
+            'Student/MyCourses',
+            [
+                'studentCourses' =>
+                    $studentDashboard
+                        ->coursesForUser(
+                            $request->user()
+                        ),
+            ]
+        );
+    }
+)->name('student.courses.index');
 
     Route::get('/my-courses/{course}', function () {
         return Inertia::render('Student/CourseDetails');

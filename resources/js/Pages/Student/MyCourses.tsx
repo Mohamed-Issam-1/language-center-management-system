@@ -3,7 +3,11 @@ import CourseFilters, {
 } from '@/Features/Student/Courses/CourseFilters';
 import CourseGrid from '@/Features/Student/Courses/CourseGrid';
 import StudentLayout from '@/Layouts/StudentLayout';
-import type { StudentCourse } from '@/types/student-courses';
+import type { PageProps } from '@/types';
+import type {
+    StudentCourse,
+    StudentCoursesPageData,
+} from '@/types/student-courses';
 import { Head, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
@@ -40,67 +44,135 @@ const demoCourses: StudentCourse[] = [
     },
 ];
 
-type OptionalAuthProps = {
-    auth?: {
-        user?: {
-            name?: string;
-        } | null;
-    };
+type MyCoursesPageProps = PageProps & {
+    studentCourses?: StudentCoursesPageData;
 };
 
 export default function MyCourses() {
-    const page = usePage();
-    const auth = page.props as OptionalAuthProps;
-    const studentName = auth.auth?.user?.name || 'Mohammad Znaid';
+    const page =
+        usePage<MyCoursesPageProps>();
 
-    const [filters, setFilters] = useState<CourseFilterState>({
-        search: '',
-        status: 'All',
-        branch: 'All',
-    });
+    const demoMode =
+        page.url.startsWith('/demo');
+
+    const pageData: StudentCoursesPageData =
+        demoMode
+            ? {
+                  student: {
+                      name: 'Mohammad Znaid',
+                      studentId:
+                          'STU-2024-0842',
+                  },
+
+                  center: {
+                      name:
+                          'Al-Hilal Language Center',
+                      branch:
+                          'Riyadh – Main Branch',
+                  },
+
+                  courses:
+                      demoCourses,
+              }
+            : page.props.studentCourses!;
+
+    const courses =
+        pageData?.courses ?? [];
+
+    const [filters, setFilters] =
+        useState<CourseFilterState>({
+            search: '',
+            status: 'All',
+            branch: 'All',
+        });
 
     const statuses = useMemo(
-        () => Array.from(new Set(demoCourses.map((course) => course.status))),
-        [],
+        () =>
+            Array.from(
+                new Set(
+                    courses.map(
+                        (course) =>
+                            course.status,
+                    )
+                )
+            ),
+        [courses],
     );
 
     const branches = useMemo(
-        () => Array.from(new Set(demoCourses.map((course) => course.branch))),
-        [],
+        () =>
+            Array.from(
+                new Set(
+                    courses.map(
+                        (course) =>
+                            course.branch,
+                    )
+                )
+            ),
+        [courses],
     );
 
-    const filteredCourses = useMemo(() => {
-        const query = filters.search.trim().toLowerCase();
+    const filteredCourses =
+        useMemo(() => {
+            const query =
+                filters.search
+                    .trim()
+                    .toLowerCase();
 
-        return demoCourses.filter((course) => {
-            const matchesSearch =
-                query.length === 0 ||
-                [
-                    course.title,
-                    course.teacher,
-                    course.code,
-                    course.levelName,
-                    course.classCode,
-                ].some((value) => value.toLowerCase().includes(query));
+            return courses.filter(
+                (course) => {
+                    const matchesSearch =
+                        query.length === 0 ||
+                        [
+                            course.title,
+                            course.teacher,
+                            course.code,
+                            course.levelName,
+                            course.classCode,
+                        ].some((value) =>
+                            value
+                                .toLowerCase()
+                                .includes(
+                                    query,
+                                )
+                        );
 
-            const matchesStatus =
-                filters.status === 'All' ||
-                course.status === filters.status;
+                    const matchesStatus =
+                        filters.status ===
+                            'All' ||
+                        course.status ===
+                            filters.status;
 
-            const matchesBranch =
-                filters.branch === 'All' ||
-                course.branch === filters.branch;
+                    const matchesBranch =
+                        filters.branch ===
+                            'All' ||
+                        course.branch ===
+                            filters.branch;
 
-            return matchesSearch && matchesStatus && matchesBranch;
-        });
-    }, [filters]);
+                    return (
+                        matchesSearch &&
+                        matchesStatus &&
+                        matchesBranch
+                    );
+                }
+            );
+        }, [courses, filters]);
 
     return (
         <StudentLayout
-            studentName={studentName}
-            studentId="STU-2024-0842"
-            centerName="Al-Hilal Language Center"
-            branchName="Riyadh – Main Branch"
+            studentName={
+                pageData.student.name
+            }
+            studentId={
+                pageData.student
+                    .studentId
+            }
+            centerName={
+                pageData.center.name
+            }
+            branchName={
+                pageData.center.branch
+            }
             pageTitle="My Courses"
             activeNav="courses"
         >
@@ -111,10 +183,16 @@ export default function MyCourses() {
                     value={filters}
                     statuses={statuses}
                     branches={branches}
-                    onChange={setFilters}
+                    onChange={
+                        setFilters
+                    }
                 />
 
-                <CourseGrid courses={filteredCourses} />
+                <CourseGrid
+                    courses={
+                        filteredCourses
+                    }
+                />
             </div>
         </StudentLayout>
     );
