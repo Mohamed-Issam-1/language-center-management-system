@@ -27,9 +27,10 @@ export type FinancialSummaryData = {
     totalPaid: number;
     remaining: number;
     overdue: number;
-    nextInstallment: number;
-    nextInstallmentCourse: string;
-    nextInstallmentDue: string;
+
+    nextInstallment: number | null;
+    nextInstallmentCourse: string | null;
+    nextInstallmentDue: string | null;
 };
 
 export type StudentDashboardData = {
@@ -37,23 +38,33 @@ export type StudentDashboardData = {
         name: string;
         studentId: string;
     };
+
     center: {
         name: string;
         branch: string;
     };
+
     greeting: {
         dateLabel: string;
         title: string;
     };
+
     stats: DashboardStat[];
+
     courses: DashboardCourse[];
+
     nextSession: DashboardSession | null;
+
     todaySchedule: DashboardSession[];
+
+    todayScheduleLabel: string;
+
     attendance: {
         average: number;
         totalAbsent: number;
-        warningText: string;
-        maximumAllowedAbsences: number;
+        warningText: string | null;
+        maximumAllowedAbsences: number | null;
     };
+
     financial: FinancialSummaryData;
 };
