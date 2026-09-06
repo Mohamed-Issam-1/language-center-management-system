@@ -28,6 +28,68 @@ Route::get(
         $actor =
             $request->user();
 
+Route::get('/demo/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->name('demo.dashboard');
+Route::get('/demo/courses', function () {
+    return Inertia::render('Student/MyCourses');
+})->name('demo.courses');
+Route::get('/my-courses/{course}', function () {
+    return Inertia::render('Student/CourseDetails');
+})->middleware(['auth', 'verified'])->name('student.courses.show');
+
+Route::get('/demo/courses/{course}', function () {
+    return Inertia::render('Student/CourseDetails');
+})->name('demo.courses.show');
+
+
+Route::get('/my-schedule', function () {
+    return Inertia::render('Student/MySchedule');
+})->middleware(['auth', 'verified'])->name('student.schedule');
+
+
+Route::get('/demo/schedule', function () {
+    return Inertia::render('Student/MySchedule');
+})->name('demo.schedule');
+
+
+Route::get('/my-attendance', function () {
+    return Inertia::render('Student/MyAttendance');
+})->middleware(['auth', 'verified'])->name('student.attendance');
+
+Route::get('/demo/attendance', function () {
+    return Inertia::render('Student/MyAttendance');
+})->name('demo.attendance');
+
+Route::get('/payments', function () {
+    return Inertia::render('Student/Payments');
+})->middleware(['auth', 'verified'])->name('student.payments');
+
+Route::get('/demo/payments', function () {
+    return Inertia::render('Student/Payments');
+})->name('demo.payments');
+
+
+Route::get('/student/profile', function () {
+    return Inertia::render('Student/Profile');
+})->middleware(['auth', 'verified'])->name('student.profile');
+
+Route::get('/student/profile/edit', function () {
+    return Inertia::render('Student/EditProfile');
+})->middleware(['auth', 'verified'])->name('student.profile.edit');
+
+Route::get('/demo/profile', function () {
+    return Inertia::render('Student/Profile');
+})->name('demo.profile');
+
+Route::get('/demo/profile/edit', function () {
+    return Inertia::render('Student/EditProfile');
+})->name('demo.profile.edit');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
         $role =
             $actor->systemRole();
 

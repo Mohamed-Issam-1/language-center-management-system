@@ -1,349 +1,159 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import ActiveCoursesCard from "@/Features/Student/Dashboard/ActiveCoursesCard";
+import AttendanceOverview from "@/Features/Student/Dashboard/AttendanceOverview";
+import AttendanceWarning from "@/Features/Student/Dashboard/AttendanceWarning";
+import DashboardStats from "@/Features/Student/Dashboard/DashboardStats";
+import FinancialSummary from "@/Features/Student/Dashboard/FinancialSummary";
+import NextSessionCard from "@/Features/Student/Dashboard/NextSessionCard";
+import TodayScheduleCard from "@/Features/Student/Dashboard/TodayScheduleCard";
+import WelcomeBanner from "@/Features/Student/Dashboard/WelcomeBanner";
+import StudentLayout from "@/Layouts/StudentLayout";
+import type { PageProps } from "@/types";
+import type { StudentDashboardData } from "@/types/student-dashboard";
+import { Head, usePage } from "@inertiajs/react";
 
-type StatusCounts = Record<string, number>;
+const dashboardData: StudentDashboardData = {
+  student: {
+    name: "Mohammad Znaid",
+    studentId: "STU-2024-0842",
+  },
+  center: {
+    name: "Al-Hilal Language Center",
+    branch: "Riyadh – Main Branch",
+  },
+  greeting: {
+    dateLabel: "Monday, November 18, 2024",
+    title: "Good evening, Mohammad!",
+  },
+  stats: [
+    {
+      label: "Active Courses",
+      value: "2",
+      tone: "blue",
+      icon: "courses",
+    },
+    {
+      label: "Avg Attendance",
+      value: "92%",
+      tone: "cyan",
+      icon: "attendance",
+    },
+    {
+      label: "Total Paid",
+      value: "SAR 2,000",
+      tone: "cyan",
+      icon: "paid",
+    },
+    {
+      label: "Outstanding",
+      value: "SAR 900",
+      tone: "red",
+      icon: "outstanding",
+    },
+  ],
+  courses: [
+    {
+      code: "B2",
+      title: "English – Intermediate",
+      teacher: "Mr. Hussam Al-Attar",
+      schedule: "Mon, Wed · 5:00 – 7:00 PM",
+      attendance: 88,
+      accent: "indigo",
+    },
+    {
+      code: "A1",
+      title: "French – Beginner",
+      teacher: "Ms. Leila Mansouri",
+      schedule: "Tue, Thu · 6:00 – 8:00 PM",
+      attendance: 95,
+      accent: "violet",
+    },
+  ],
+  nextSession: {
+    course: "English – Intermediate",
+    teacher: "Mr. Hussam Al-Attar",
+    room: "Room 204",
+    time: "Today · 5:00 PM – 7:00 PM",
+  },
+  todaySchedule: [
+    {
+      course: "English – Intermediate",
+      teacher: "Mr. Hussam Al-Attar",
+      room: "Room 204",
+      time: "5:00 PM – 7:00 PM",
+    },
+  ],
+  attendance: {
+    average: 92,
+    totalAbsent: 4,
+    maximumAllowedAbsences: 6,
+    warningText:
+      "You have 4 absences across all courses. The maximum allowed is 6. Exceeding the limit may affect your enrollment status.",
+  },
+  financial: {
+    currency: "SAR",
+    totalFees: 2900,
+    totalPaid: 2000,
+    remaining: 900,
+    overdue: 600,
+    nextInstallment: 400,
+    nextInstallmentCourse: "French – Beginner",
+    nextInstallmentDue: "Dec 1, 2024",
+  },
+};
 
-interface EnrollmentSummary {
-    total: number;
-    by_status: StatusCounts;
-}
+export default function Dashboard() {
+  const { auth } = usePage<PageProps>().props;
+  const studentName = auth.user?.name || dashboardData.student.name;
 
-interface ClassSummary {
-    total: number;
-    by_status: StatusCounts;
-}
+  return (
+    <StudentLayout
+      studentName={studentName}
+      studentId={dashboardData.student.studentId}
+      centerName={dashboardData.center.name}
+      branchName={dashboardData.center.branch}
+      pageTitle="Dashboard"
+      activeNav="dashboard"
+    >
+      <Head title="Dashboard" />
 
-interface AttendanceSummary {
-    breakdown_count: number;
-    recorded_sessions: number;
-    attendance_equivalent: string;
-    absence_equivalent: string;
-    attendance_percentage: string | null;
-    absence_percentage: string | null;
-}
+      <div className="space-y-4 lg:space-y-5">
+        <WelcomeBanner
+          dateLabel={dashboardData.greeting.dateLabel}
+          title={
+            studentName === dashboardData.student.name
+              ? dashboardData.greeting.title
+              : `Good evening, ${studentName.split(" ")[0]}!`
+          }
+          centerName={dashboardData.center.name}
+          branchName={dashboardData.center.branch}
+        />
 
-interface StudentBalanceCurrency {
-    obligation: string;
-    paid: string;
-    balance: string;
-}
+        <DashboardStats stats={dashboardData.stats} />
 
-interface StudentBalanceData {
-    center_id: number;
-    student_id: number;
-    totals: Record<string, StudentBalanceCurrency>;
-    installments: Array<Record<string, unknown>>;
-}
+        <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-5">
+          <div className="space-y-4 lg:space-y-5">
+            <ActiveCoursesCard courses={dashboardData.courses} />
 
-interface FinanceSummary {
-    report_type: 'student_balance' | 'operational';
-    data: StudentBalanceData | Record<string, unknown>;
-}
+            <NextSessionCard session={dashboardData.nextSession} />
 
-interface DashboardScope {
-    actor_id: number;
-    role: string;
-    scope_type: string;
-    center_id: number | null;
-    branch_id: number | null;
-    subject_id: number | null;
-}
+            <TodayScheduleCard sessions={dashboardData.todaySchedule} />
+          </div>
 
-interface DashboardPayload {
-    scope: DashboardScope;
-    enrollments: EnrollmentSummary | null;
-    classes: ClassSummary | null;
-    attendance: AttendanceSummary | null;
-    finance: FinanceSummary | null;
-}
+          <div className="space-y-4 lg:space-y-5">
+            <AttendanceWarning
+              warningText={dashboardData.attendance.warningText}
+            />
 
-interface DashboardProps {
-    dashboard: DashboardPayload;
-}
+            <AttendanceOverview
+              average={dashboardData.attendance.average}
+              totalAbsent={dashboardData.attendance.totalAbsent}
+              courses={dashboardData.courses}
+            />
 
-interface StatCardProps {
-    title: string;
-    value: string | number;
-    description?: string;
-}
-
-function StatCard({
-    title,
-    value,
-    description,
-}: StatCardProps) {
-    return (
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <p className="text-sm font-medium text-gray-500">
-                {title}
-            </p>
-
-            <p className="mt-2 text-3xl font-semibold tracking-tight text-gray-900">
-                {value}
-            </p>
-
-            {description && (
-                <p className="mt-2 text-sm text-gray-500">
-                    {description}
-                </p>
-            )}
+            <FinancialSummary data={dashboardData.financial} />
+          </div>
         </div>
-    );
-}
-
-function roleLabel(role: string): string {
-    if (role === 'teacher') {
-        return 'Teacher';
-    }
-
-    if (role === 'student') {
-        return 'Student';
-    }
-
-    return role;
-}
-
-export default function Dashboard({
-    dashboard,
-}: DashboardProps) {
-    const {
-        scope,
-        enrollments,
-        classes,
-        attendance,
-        finance,
-    } = dashboard;
-
-    const studentFinance =
-        finance?.report_type === 'student_balance'
-            ? (finance.data as StudentBalanceData)
-            : null;
-
-    const financialTotals =
-        studentFinance?.totals ?? {};
-
-    return (
-        <AuthenticatedLayout
-            header={
-                <div>
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                        Dashboard
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                        {roleLabel(scope.role)} overview
-                    </p>
-                </div>
-            }
-        >
-            <Head title="Dashboard" />
-
-            <div className="py-8 sm:py-12">
-                <div className="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
-                    <section>
-                        <div className="mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                Academic Overview
-                            </h3>
-
-                            <p className="mt-1 text-sm text-gray-500">
-                                A summary of your current academic activity.
-                            </p>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            {enrollments && (
-                                <>
-                                    <StatCard
-                                        title="Total Enrollments"
-                                        value={enrollments.total}
-                                    />
-
-                                    <StatCard
-                                        title="Active Enrollments"
-                                        value={
-                                            enrollments.by_status.active ??
-                                            0
-                                        }
-                                    />
-                                </>
-                            )}
-
-                            {classes && (
-                                <>
-                                    <StatCard
-                                        title="Total Classes"
-                                        value={classes.total}
-                                    />
-
-                                    <StatCard
-                                        title="Active Classes"
-                                        value={
-                                            classes.by_status.active ??
-                                            0
-                                        }
-                                    />
-                                </>
-                            )}
-                        </div>
-                    </section>
-
-                    {attendance && (
-                        <section>
-                            <div className="mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    Attendance
-                                </h3>
-
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Attendance information from recorded sessions.
-                                </p>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                <StatCard
-                                    title="Attendance Rate"
-                                    value={
-                                        attendance.attendance_percentage ===
-                                            null
-                                            ? '—'
-                                            : `${attendance.attendance_percentage}%`
-                                    }
-                                    description={
-                                        attendance.attendance_percentage ===
-                                            null
-                                            ? 'No attendance has been recorded yet.'
-                                            : undefined
-                                    }
-                                />
-
-                                <StatCard
-                                    title="Recorded Sessions"
-                                    value={
-                                        attendance.recorded_sessions
-                                    }
-                                />
-
-                                <StatCard
-                                    title="Attendance Equivalent"
-                                    value={
-                                        attendance.attendance_equivalent
-                                    }
-                                />
-
-                                <StatCard
-                                    title="Absence Equivalent"
-                                    value={
-                                        attendance.absence_equivalent
-                                    }
-                                />
-                            </div>
-                        </section>
-                    )}
-
-                    {scope.role === 'student' &&
-                        studentFinance && (
-                            <section>
-                                <div className="mb-4">
-                                    <h3 className="text-lg font-semibold text-gray-900">
-                                        Financial Summary
-                                    </h3>
-
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        Your current financial position.
-                                    </p>
-                                </div>
-
-                                {Object.keys(
-                                    financialTotals,
-                                ).length === 0 ? (
-                                    <div className="rounded-lg bg-white p-6 text-sm text-gray-500 shadow-sm ring-1 ring-gray-200">
-                                        No financial obligations are currently recorded.
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {Object.entries(
-                                            financialTotals,
-                                        ).map(
-                                            ([
-                                                currency,
-                                                totals,
-                                            ]) => (
-                                                <div
-                                                    key={
-                                                        currency
-                                                    }
-                                                    className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200"
-                                                >
-                                                    <div className="mb-5 flex items-center justify-between gap-4">
-                                                        <div>
-                                                            <p className="text-sm font-medium text-gray-500">
-                                                                Currency
-                                                            </p>
-
-                                                            <p className="mt-1 text-lg font-semibold text-gray-900">
-                                                                {
-                                                                    currency
-                                                                }
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="text-right">
-                                                            <p className="text-sm font-medium text-gray-500">
-                                                                Balance
-                                                            </p>
-
-                                                            <p className="mt-1 text-2xl font-semibold text-gray-900">
-                                                                {
-                                                                    totals.balance
-                                                                }{' '}
-                                                                {
-                                                                    currency
-                                                                }
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid gap-4 border-t border-gray-100 pt-5 sm:grid-cols-2">
-                                                        <div>
-                                                            <p className="text-sm text-gray-500">
-                                                                Total Obligation
-                                                            </p>
-
-                                                            <p className="mt-1 font-medium text-gray-900">
-                                                                {
-                                                                    totals.obligation
-                                                                }{' '}
-                                                                {
-                                                                    currency
-                                                                }
-                                                            </p>
-                                                        </div>
-
-                                                        <div>
-                                                            <p className="text-sm text-gray-500">
-                                                                Paid
-                                                            </p>
-
-                                                            <p className="mt-1 font-medium text-gray-900">
-                                                                {
-                                                                    totals.paid
-                                                                }{' '}
-                                                                {
-                                                                    currency
-                                                                }
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ),
-                                        )}
-                                    </div>
-                                )}
-                            </section>
-                        )}
-                </div>
-            </div>
-        </AuthenticatedLayout>
-    );
+      </div>
+    </StudentLayout>
+  );
 }

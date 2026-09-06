@@ -1,0 +1,696 @@
+/* Shared styles for Student Attendance and Payments pages.
+   Critical grids/tables are explicit CSS to avoid utility-generation issues. */
+
+.student-records-page {
+    width: 100%;
+}
+
+.records-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.records-card {
+    overflow: hidden;
+    border: 1px solid #e7eaf0;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+}
+
+.records-card-pad {
+    padding: 20px 22px;
+}
+
+.records-heading {
+    margin: 0;
+    color: #062f85;
+    font-size: 15px;
+    line-height: 1.3;
+    font-weight: 800;
+}
+
+.records-subtitle {
+    margin: 5px 0 0;
+    color: #aeb7c4;
+    font-size: 10px;
+}
+
+/* alerts */
+
+.records-alert {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 70px;
+    border: 1px solid;
+    border-radius: 13px;
+    padding: 14px 18px;
+}
+
+.records-alert.danger {
+    border-color: #ff8b90;
+    background: #ffe2e2;
+    color: #e62d36;
+}
+
+.records-alert.info {
+    border-color: #b8c9ec;
+    background: #e9eefb;
+    color: #07358a;
+}
+
+.records-alert-icon {
+    flex: 0 0 auto;
+}
+
+.records-alert-title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.records-alert-copy {
+    margin: 5px 0 0;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+/* stats */
+
+.attendance-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.payment-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.record-stat {
+    min-height: 82px;
+    border: 1px solid #e8ebf0;
+    border-radius: 14px;
+    background: #fff;
+    padding: 17px 16px;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+}
+
+.record-stat.centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.record-stat.cyan {
+    background: #ddf6fa;
+}
+
+.record-stat.red {
+    background: #ffe0e0;
+}
+
+.record-stat.yellow {
+    background: #fff9e7;
+}
+
+.record-stat.blue {
+    background: #e9eef9;
+}
+
+.record-stat-label {
+    margin: 0;
+    color: #abb5c1;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.record-stat.centered .record-stat-label {
+    margin-top: 5px;
+    color: #7b8491;
+    text-transform: none;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.record-stat-value {
+    margin: 7px 0 0;
+    color: #252a32;
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.record-stat.centered .record-stat-value {
+    margin: 0;
+    font-size: 24px;
+}
+
+.record-stat-value.cyan-text {
+    color: #02a7bd;
+}
+
+.record-stat-value.red-text {
+    color: #e32931;
+}
+
+.record-stat-value.yellow-text {
+    color: #ed9500;
+}
+
+.record-stat-value.blue-text {
+    color: #07358a;
+}
+
+/* attendance by course */
+
+.attendance-course-list {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.attendance-course-row {
+    min-width: 0;
+}
+
+.attendance-course-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.attendance-course-name {
+    margin: 0;
+    color: #30353d;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.attendance-course-rate {
+    color: #03a8bd;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.attendance-progress-track {
+    height: 5px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e8ecf0;
+}
+
+.attendance-progress-value {
+    height: 100%;
+    border-radius: 999px;
+    background: #04a9bf;
+}
+
+.attendance-course-breakdown {
+    margin-top: 7px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 9px;
+}
+
+.attendance-course-breakdown .present {
+    color: #02a8bd;
+}
+
+.attendance-course-breakdown .absent {
+    color: #ed2d36;
+}
+
+.attendance-course-breakdown .late {
+    color: #ef9800;
+}
+
+/* weekly chart */
+
+.weekly-chart {
+    margin-top: 18px;
+}
+
+.weekly-chart-body {
+    position: relative;
+    height: 190px;
+    padding-left: 32px;
+    padding-bottom: 26px;
+}
+
+.weekly-chart-y {
+    position: absolute;
+    inset: 0 auto 26px 0;
+    width: 26px;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-between;
+    color: #c0c8d2;
+    font-size: 9px;
+    text-align: right;
+}
+
+.weekly-chart-grid {
+    position: absolute;
+    left: 32px;
+    right: 0;
+    top: 0;
+    bottom: 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.weekly-chart-grid-line {
+    border-top: 1px dashed #e9edf2;
+}
+
+.weekly-chart-bars {
+    position: absolute;
+    left: 32px;
+    right: 0;
+    top: 0;
+    bottom: 26px;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    align-items: end;
+    gap: 8px;
+}
+
+.weekly-chart-group {
+    height: 100%;
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    gap: 4px;
+}
+
+.weekly-bar {
+    width: 14px;
+    min-height: 0;
+    border-radius: 4px 4px 0 0;
+}
+
+.weekly-bar.present {
+    background: #04a9bf;
+}
+
+.weekly-bar.absent {
+    background: #ee5c62;
+}
+
+.weekly-chart-x {
+    position: absolute;
+    left: 32px;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    color: #adb6c2;
+    font-size: 9px;
+    text-align: center;
+}
+
+.weekly-legend {
+    margin-top: 9px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    color: #abb4c1;
+    font-size: 9px;
+}
+
+.weekly-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.weekly-legend-box {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.weekly-legend-box.present {
+    background: #04a9bf;
+}
+
+.weekly-legend-box.absent {
+    background: #ee5c62;
+}
+
+/* generic record table */
+
+.records-table-header {
+    padding: 18px 16px 0;
+}
+
+.records-toolbar {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.records-export-button {
+    height: 34px;
+    border: 1px solid #dfe4ec;
+    border-radius: 8px;
+    background: #fff;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #505968;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.records-search {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #5e6877;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.records-search-input {
+    width: 170px;
+    height: 34px;
+    border: 1px solid #dfe4ec;
+    border-radius: 8px;
+    background: #fff;
+    padding: 0 11px;
+    color: #404751;
+    font-size: 10px;
+    outline: none;
+}
+
+.records-search-input::placeholder {
+    color: #a7b0bc;
+}
+
+.records-search-input:focus {
+    border-color: #123b94;
+    box-shadow: 0 0 0 2px rgba(18, 59, 148, 0.08);
+}
+
+.records-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.records-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #536071;
+    font-size: 10px;
+}
+
+.records-table.attendance-table {
+    min-width: 760px;
+}
+
+.records-table.payment-table {
+    min-width: 980px;
+}
+
+.records-table thead,
+.records-table tfoot {
+    background: #f0f3f7;
+}
+
+.records-table th {
+    height: 38px;
+    padding: 0 13px;
+    color: #6e7887;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.records-table td {
+    height: 43px;
+    padding: 0 13px;
+    border-bottom: 1px solid #edf0f4;
+    white-space: nowrap;
+}
+
+.records-table tbody tr:hover {
+    background: #fbfcfe;
+}
+
+.records-sort-button {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+}
+
+.records-checkbox {
+    width: 12px;
+    height: 12px;
+    accent-color: #073997;
+}
+
+.records-status {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.records-status.present,
+.records-status.paid {
+    background: #ddf7fb;
+    color: #03a7bd;
+}
+
+.records-status.absent,
+.records-status.overdue {
+    background: #ffe0e0;
+    color: #e52b34;
+}
+
+.records-status.late,
+.records-status.pending {
+    background: #fff8e5;
+    color: #ed9800;
+}
+
+.records-receipt {
+    border: 0;
+    background: transparent;
+    color: #07358a;
+    font-size: 9px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.records-receipt:hover {
+    text-decoration: underline;
+}
+
+.records-table-footer {
+    min-height: 51px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    color: #7d8795;
+    font-size: 10px;
+}
+
+.records-pagination {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.records-page-button {
+    min-width: 30px;
+    height: 30px;
+    border: 1px solid #e0e5ec;
+    border-radius: 7px;
+    background: #fff;
+    color: #87909e;
+    font-size: 10px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.records-page-button.active {
+    border-color: #07358a;
+    background: #07358a;
+    color: #fff;
+}
+
+.records-page-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* payment banner + table */
+
+.payment-info {
+    min-height: 47px;
+}
+
+.payment-overdue-alert {
+    min-height: 72px;
+}
+
+.payment-receipt-muted {
+    color: #aeb7c4;
+}
+
+.payment-amount {
+    color: #384252;
+    font-weight: 800;
+}
+
+/* responsive */
+
+@media (max-width: 1023px) {
+    .attendance-stats-grid,
+    .payment-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .record-stat {
+        min-height: 86px;
+    }
+
+    .records-card-pad {
+        padding: 20px 22px;
+    }
+
+    .weekly-chart-body {
+        height: 190px;
+    }
+
+    .weekly-bar {
+        width: 7px;
+    }
+}
+
+@media (max-width: 640px) {
+    .records-stack {
+        gap: 16px;
+    }
+
+    .records-alert {
+        align-items: flex-start;
+        padding: 16px 18px;
+    }
+
+    .records-alert-icon {
+        margin-top: 14px;
+    }
+
+    .records-alert-title {
+        font-size: 12px;
+    }
+
+    .records-alert-copy {
+        font-size: 11px;
+    }
+
+    .record-stat.centered {
+        min-height: 86px;
+    }
+
+    .record-stat.centered .record-stat-value {
+        font-size: 24px;
+    }
+
+    .attendance-course-list {
+        gap: 19px;
+    }
+
+    .weekly-chart-body {
+        height: 205px;
+        padding-left: 28px;
+    }
+
+    .weekly-chart-y {
+        width: 22px;
+    }
+
+    .weekly-chart-grid,
+    .weekly-chart-bars,
+    .weekly-chart-x {
+        left: 28px;
+    }
+
+    .weekly-chart-bars {
+        gap: 3px;
+    }
+
+    .records-table-header {
+        padding: 18px 16px 0;
+    }
+
+    .records-toolbar {
+        padding: 14px 16px 12px;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .records-search {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .records-search-input {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .records-export-button {
+        flex: 0 0 auto;
+    }
+
+    .records-table-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 12px 16px;
+    }
+
+    .payment-info {
+        align-items: flex-start;
+    }
+}
