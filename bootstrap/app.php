@@ -35,6 +35,9 @@ return Application::configure(
                 'student.portal' =>
                 \App\Http\Middleware\EnsureStudentPortalAccess::class,
 
+                'teacher.portal' =>
+                \App\Http\Middleware\EnsureTeacherPortalAccess::class,
+
                 'password.change.completed' =>
                 \App\Http\Middleware\EnsurePasswordChangeCompleted::class,
 
