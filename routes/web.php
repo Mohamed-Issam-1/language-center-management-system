@@ -1,14 +1,14 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationRequestPersonalPictureController;
 use App\Http\Middleware\EstablishFilamentBranchContext;
-use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use App\Services\Reports\DashboardReadService;
 use App\Support\Enums\SystemRole;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -19,64 +19,42 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get(
-    '/dashboard',
-    function (
-        Request $request,
-        DashboardReadService $dashboards
-    ) {
-        $actor =
-            $request->user();
+/*
+|--------------------------------------------------------------------------
+| Demo Student Portal
+|--------------------------------------------------------------------------
+|
+| These routes intentionally contain no authentication or production
+| persistence. They exist only for viewing the Student frontend with
+| its demo data.
+|
+*/
 
 Route::get('/demo/dashboard', function () {
     return Inertia::render('Dashboard');
 })->name('demo.dashboard');
+
 Route::get('/demo/courses', function () {
     return Inertia::render('Student/MyCourses');
 })->name('demo.courses');
-Route::get('/my-courses/{course}', function () {
-    return Inertia::render('Student/CourseDetails');
-})->middleware(['auth', 'verified'])->name('student.courses.show');
 
 Route::get('/demo/courses/{course}', function () {
     return Inertia::render('Student/CourseDetails');
-})->name('demo.courses.show');
-
-
-Route::get('/my-schedule', function () {
-    return Inertia::render('Student/MySchedule');
-})->middleware(['auth', 'verified'])->name('student.schedule');
-
+})
+    ->whereNumber('course')
+    ->name('demo.courses.show');
 
 Route::get('/demo/schedule', function () {
     return Inertia::render('Student/MySchedule');
 })->name('demo.schedule');
 
-
-Route::get('/my-attendance', function () {
-    return Inertia::render('Student/MyAttendance');
-})->middleware(['auth', 'verified'])->name('student.attendance');
-
 Route::get('/demo/attendance', function () {
     return Inertia::render('Student/MyAttendance');
 })->name('demo.attendance');
 
-Route::get('/payments', function () {
-    return Inertia::render('Student/Payments');
-})->middleware(['auth', 'verified'])->name('student.payments');
-
 Route::get('/demo/payments', function () {
     return Inertia::render('Student/Payments');
 })->name('demo.payments');
-
-
-Route::get('/student/profile', function () {
-    return Inertia::render('Student/Profile');
-})->middleware(['auth', 'verified'])->name('student.profile');
-
-Route::get('/student/profile/edit', function () {
-    return Inertia::render('Student/EditProfile');
-})->middleware(['auth', 'verified'])->name('student.profile.edit');
 
 Route::get('/demo/profile', function () {
     return Inertia::render('Student/Profile');
@@ -86,12 +64,21 @@ Route::get('/demo/profile/edit', function () {
     return Inertia::render('Student/EditProfile');
 })->name('demo.profile.edit');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-        $role =
-            $actor->systemRole();
+/*
+|--------------------------------------------------------------------------
+| Authenticated Dashboard
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/dashboard',
+    function (
+        Request $request,
+        DashboardReadService $dashboards
+    ) {
+        $actor = $request->user();
+
+        $role = $actor->systemRole();
 
         if (
             in_array(
@@ -105,19 +92,16 @@ Route::middleware('auth')->group(function () {
                 true
             )
         ) {
-            return redirect(
-                '/admin'
-            );
+            return redirect('/admin');
         }
 
         return Inertia::render(
             'Dashboard',
             [
                 'dashboard' =>
-                $dashboards
-                    ->forUser(
-                        $actor
-                    ),
+                $dashboards->forUser(
+                    $actor
+                ),
             ]
         );
     }
@@ -129,6 +113,73 @@ Route::middleware('auth')->group(function () {
         'verified',
     ])
     ->name('dashboard');
+
+/*
+|--------------------------------------------------------------------------
+| Student Portal
+|--------------------------------------------------------------------------
+|
+| Production Student pages require the same authenticated tenant and
+| account lifecycle boundaries as the rest of the application.
+|
+*/
+
+Route::middleware([
+    'auth',
+    'tenant.context',
+    'password.change.completed',
+    'verified',
+])->group(function () {
+    Route::get('/my-courses', function () {
+        return Inertia::render(
+            'Student/MyCourses'
+        );
+    })->name('student.courses.index');
+
+    Route::get('/my-courses/{course}', function () {
+        return Inertia::render(
+            'Student/CourseDetails'
+        );
+    })
+        ->whereNumber('course')
+        ->name('student.courses.show');
+
+    Route::get('/my-schedule', function () {
+        return Inertia::render(
+            'Student/MySchedule'
+        );
+    })->name('student.schedule');
+
+    Route::get('/my-attendance', function () {
+        return Inertia::render(
+            'Student/MyAttendance'
+        );
+    })->name('student.attendance');
+
+    Route::get('/payments', function () {
+        return Inertia::render(
+            'Student/Payments'
+        );
+    })->name('student.payments');
+
+    Route::get('/student/profile', function () {
+        return Inertia::render(
+            'Student/Profile'
+        );
+    })->name('student.profile');
+
+    Route::get('/student/profile/edit', function () {
+        return Inertia::render(
+            'Student/EditProfile'
+        );
+    })->name('student.profile.edit');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Existing Account Profile
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware([
     'auth',
@@ -145,6 +196,12 @@ Route::middleware([
         [ProfileController::class, 'update']
     )->name('profile.update');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Administrative Files
+|--------------------------------------------------------------------------
+*/
 
 Route::get(
     '/admin/registration-requests/{registrationRequest}/personal-picture',
