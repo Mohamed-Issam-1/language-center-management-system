@@ -1,0 +1,1116 @@
+/*
+|--------------------------------------------------------------------------
+| LCMS Filament Admin Design System
+|--------------------------------------------------------------------------
+|
+| Panel-only visual layer.
+| It does not affect the React / Inertia application UI.
+|
+*/
+
+:root {
+    --lcms-navy: #24364d;
+    --lcms-navy-dark: #18283d;
+
+    --lcms-blue: #18aeea;
+    --lcms-blue-dark: #0e96cf;
+    --lcms-blue-light: #eaf8fe;
+    --lcms-blue-soft: #f4fbfe;
+
+    --lcms-page: #f6f8fb;
+    --lcms-card: #ffffff;
+
+    --lcms-border: #e6eaf0;
+    --lcms-border-strong: #d9e0e8;
+
+    --lcms-text: #24364d;
+    --lcms-muted: #7b8798;
+
+    --lcms-success: #16a36a;
+    --lcms-warning: #eaa42b;
+    --lcms-danger: #e24b4b;
+
+    --lcms-radius-sm: 8px;
+    --lcms-radius: 12px;
+    --lcms-radius-lg: 16px;
+
+    --lcms-shadow:
+        0 1px 2px rgb(15 23 42 / 0.03),
+        0 4px 14px rgb(15 23 42 / 0.035);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Application Surface
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) body {
+    background-color: var(--lcms-page);
+    color: var(--lcms-text);
+}
+
+html:not(.dark) .fi-main-ctn {
+    background-color: var(--lcms-page);
+}
+
+html:not(.dark) .fi-main {
+    background-color: transparent;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Sidebar
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-sidebar {
+    background-color: var(--lcms-card);
+    border-right: 1px solid var(--lcms-border);
+    box-shadow: none;
+}
+
+html:not(.dark) .fi-sidebar-header {
+    background-color: var(--lcms-card);
+    border-bottom: 1px solid var(--lcms-border);
+    box-shadow: none;
+}
+
+.fi-sidebar-nav {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.fi-sidebar-group {
+    margin-bottom: 0.8rem;
+}
+
+html:not(.dark) .fi-sidebar-group-label {
+    color: #9aa5b4;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.fi-sidebar-item a {
+    min-height: 2.45rem;
+    border-radius: 9px;
+    transition:
+        background-color 150ms ease,
+        color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+html:not(.dark) .fi-sidebar-item:not(.fi-sidebar-item-active) a:hover {
+    background-color: var(--lcms-blue-soft);
+}
+
+html:not(.dark) .fi-sidebar-item-active a {
+    background-color: var(--lcms-blue-light);
+    box-shadow: inset 3px 0 0 var(--lcms-blue);
+}
+
+html:not(.dark) .fi-sidebar-item-active .fi-sidebar-item-label {
+    color: var(--lcms-blue-dark);
+    font-weight: 650;
+}
+
+html:not(.dark) .fi-sidebar-item-active svg {
+    color: var(--lcms-blue);
+}
+
+html:not(.dark) .fi-sidebar-item:not(.fi-sidebar-item-active) .fi-sidebar-item-label {
+    color: #59687a;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Topbar
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-topbar>nav {
+    background-color: rgb(255 255 255 / 0.97);
+    border-bottom: 1px solid var(--lcms-border);
+    box-shadow: none;
+    backdrop-filter: blur(12px);
+}
+
+.fi-topbar>nav {
+    min-height: 4rem;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Page Header
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-header-heading {
+    color: var(--lcms-navy);
+}
+
+.fi-header-heading {
+    font-weight: 750;
+    letter-spacing: -0.025em;
+}
+
+html:not(.dark) .fi-header-subheading {
+    color: var(--lcms-muted);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Sections / Cards
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-section:not(.fi-section-not-contained) {
+    background-color: var(--lcms-card);
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius);
+    box-shadow: var(--lcms-shadow);
+}
+
+html:not(.dark) .fi-section-header {
+    border-bottom-color: var(--lcms-border);
+}
+
+html:not(.dark) .fi-section-header-heading {
+    color: var(--lcms-navy);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Stats Overview
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-wi-stats-overview-stat {
+    background-color: var(--lcms-card);
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius);
+    box-shadow: var(--lcms-shadow);
+    transition:
+        transform 150ms ease,
+        box-shadow 150ms ease,
+        border-color 150ms ease;
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat:hover {
+    transform: translateY(-1px);
+    border-color: #d7e8f2;
+    box-shadow:
+        0 2px 5px rgb(15 23 42 / 0.04),
+        0 8px 20px rgb(15 23 42 / 0.05);
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat-value {
+    color: var(--lcms-navy);
+    font-weight: 750;
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat-description {
+    color: var(--lcms-muted);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Tables
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-ta {
+    background-color: var(--lcms-card);
+    border-radius: var(--lcms-radius);
+}
+
+html:not(.dark) .fi-ta-ctn {
+    overflow: hidden;
+    background-color: var(--lcms-card);
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius);
+    box-shadow: var(--lcms-shadow);
+}
+
+html:not(.dark) .fi-ta-header {
+    background-color: var(--lcms-card);
+    border-bottom-color: var(--lcms-border);
+}
+
+html:not(.dark) .fi-ta-table thead {
+    background-color: #f8fafc;
+}
+
+html:not(.dark) .fi-ta-table thead th {
+    color: #738094;
+    font-size: 0.69rem;
+    font-weight: 700;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+}
+
+html:not(.dark) .fi-ta-table tbody tr {
+    transition: background-color 120ms ease;
+}
+
+html:not(.dark) .fi-ta-table tbody tr:hover {
+    background-color: #f8fcfe;
+}
+
+html:not(.dark) .fi-ta-table tbody td {
+    color: #445268;
+}
+
+html:not(.dark) .fi-ta-table tbody tr:not(:last-child) {
+    border-bottom-color: #eef1f5;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Forms
+|--------------------------------------------------------------------------
+*/
+
+.fi-input-wrp {
+    border-radius: 9px;
+    transition:
+        box-shadow 120ms ease,
+        border-color 120ms ease;
+}
+
+html:not(.dark) .fi-input-wrp {
+    background-color: var(--lcms-card);
+}
+
+html:not(.dark) .fi-input-wrp:focus-within {
+    box-shadow:
+        0 0 0 1px rgb(24 174 234 / 0.35),
+        0 0 0 3px rgb(24 174 234 / 0.08);
+}
+
+html:not(.dark) .fi-fo-field-wrp-label {
+    color: #445268;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Buttons
+|--------------------------------------------------------------------------
+*/
+
+.fi-btn {
+    border-radius: 9px;
+    font-weight: 650;
+    transition:
+        transform 120ms ease,
+        box-shadow 120ms ease,
+        background-color 120ms ease;
+}
+
+.fi-btn:hover {
+    transform: translateY(-1px);
+}
+
+.fi-btn:active {
+    transform: translateY(0);
+}
+
+html:not(.dark) .fi-btn-color-primary {
+    box-shadow: 0 3px 9px rgb(24 174 234 / 0.16);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Badges
+|--------------------------------------------------------------------------
+*/
+
+.fi-badge {
+    border-radius: 999px;
+    font-weight: 650;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Dropdowns / Modals
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-dropdown-panel {
+    background-color: var(--lcms-card);
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius);
+    box-shadow:
+        0 12px 30px rgb(15 23 42 / 0.12);
+}
+
+html:not(.dark) .fi-modal-window {
+    background-color: var(--lcms-card);
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius-lg);
+    box-shadow:
+        0 24px 60px rgb(15 23 42 / 0.16);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Breadcrumbs
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-breadcrumbs-item-label {
+    color: var(--lcms-muted);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Pagination
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-pagination {
+    color: #64748b;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Empty States
+|--------------------------------------------------------------------------
+*/
+
+html:not(.dark) .fi-ta-empty-state {
+    background-color: #fbfcfe;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Scrollbars
+|--------------------------------------------------------------------------
+*/
+
+.fi-sidebar-nav::-webkit-scrollbar {
+    width: 5px;
+}
+
+.fi-sidebar-nav::-webkit-scrollbar-thumb {
+    background-color: #d9e1e9;
+    border-radius: 999px;
+}
+
+.fi-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Responsive Spacing
+|--------------------------------------------------------------------------
+*/
+
+@media (min-width: 1024px) {
+    .fi-main {
+        padding-top: 1.6rem;
+        padding-bottom: 2rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .fi-main {
+        padding-left: 1.75rem;
+        padding-right: 1.75rem;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| LCMS Visual Polish — UI-1.1
+|--------------------------------------------------------------------------
+*/
+
+/* Compact application identity */
+html:not(.dark) .fi-logo {
+    color: var(--lcms-navy);
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+/* Sidebar proportions */
+.fi-sidebar {
+    width: 16.5rem;
+}
+
+.fi-sidebar-nav {
+    padding: 0.85rem 0.75rem 1.25rem;
+}
+
+.fi-sidebar-item {
+    margin-bottom: 0.15rem;
+}
+
+.fi-sidebar-item>a {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+/* Stronger LCMS selected state */
+html:not(.dark) .fi-sidebar-item-active>a {
+    background: #eaf8fe !important;
+    color: var(--lcms-blue-dark) !important;
+    box-shadow: inset 3px 0 0 var(--lcms-blue) !important;
+}
+
+html:not(.dark) .fi-sidebar-item-active .fi-sidebar-item-label {
+    color: var(--lcms-blue-dark) !important;
+    font-weight: 700;
+}
+
+html:not(.dark) .fi-sidebar-item-active .fi-sidebar-item-icon {
+    color: var(--lcms-blue) !important;
+}
+
+/* Less empty header space */
+.fi-topbar>nav {
+    min-height: 3.65rem;
+}
+
+/* Main layout */
+.fi-main {
+    max-width: none;
+}
+
+@media (min-width: 1024px) {
+    .fi-main {
+        padding-top: 1.4rem;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+/* Page heading closer to Figma */
+.fi-header {
+    gap: 0.75rem;
+}
+
+.fi-header-heading {
+    font-size: 1.65rem;
+    line-height: 1.2;
+}
+
+/* Stats container */
+.fi-wi-stats-overview {
+    gap: 0.9rem;
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat {
+    min-height: 7rem;
+    padding: 1.15rem 1.3rem;
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat-label {
+    color: #65758b;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat-value {
+    margin-top: 0.2rem;
+    font-size: 1.7rem;
+    line-height: 1.1;
+}
+
+/* Cleaner widget heading */
+.fi-wi-stats-overview>.fi-section-header,
+.fi-wi-stats-overview-header {
+    margin-bottom: 0.3rem;
+}
+
+/* Table header */
+html:not(.dark) .fi-ta-header {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+html:not(.dark) .fi-ta-table thead th {
+    height: 2.8rem;
+}
+
+/* More compact rows */
+html:not(.dark) .fi-ta-table tbody td {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+
+/* Slightly softer table hover */
+html:not(.dark) .fi-ta-table tbody tr:hover {
+    background-color: #f5fbfe;
+}
+
+/* Search field like the reference */
+.fi-ta-search-field .fi-input-wrp {
+    min-width: 15rem;
+    border-radius: 9px;
+}
+
+/* Avoid overly large primary actions */
+.fi-header-actions .fi-btn {
+    min-height: 2.35rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Softer content cards */
+html:not(.dark) .fi-section:not(.fi-section-not-contained),
+html:not(.dark) .fi-ta-ctn,
+html:not(.dark) .fi-wi-stats-overview-stat {
+    box-shadow:
+        0 1px 2px rgb(15 23 42 / 0.025),
+        0 3px 10px rgb(15 23 42 / 0.03);
+}
+
+/* Keep dashboard visually tight */
+.fi-page-dashboard .fi-main {
+    padding-top: 1.25rem;
+}
+
+.fi-page-dashboard .fi-header {
+    margin-bottom: 1rem;
+}
+
+/*
+|--------------------------------------------------------------------------
+| LCMS Reports
+|--------------------------------------------------------------------------
+*/
+
+.lcms-reports {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.lcms-reports__intro {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.lcms-reports__title {
+    margin: 0;
+    color: var(--lcms-navy);
+    font-size: 1.05rem;
+    font-weight: 750;
+}
+
+.lcms-reports__description {
+    margin: 0.25rem 0 0;
+    color: var(--lcms-muted);
+    font-size: 0.875rem;
+}
+
+.lcms-reports__tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem;
+    border: 1px solid var(--lcms-border);
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.lcms-report-tab {
+    appearance: none;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #66758a;
+    cursor: pointer;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 650;
+    transition:
+        background-color 120ms ease,
+        color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.lcms-report-tab:hover {
+    background: var(--lcms-blue-soft);
+    color: var(--lcms-blue-dark);
+}
+
+.lcms-report-tab.is-active {
+    background: var(--lcms-blue-light);
+    color: var(--lcms-blue-dark);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.lcms-report-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.lcms-report-button {
+    appearance: none;
+    min-height: 2.35rem;
+    border-radius: 9px;
+    cursor: pointer;
+    padding: 0.55rem 0.95rem;
+    font-size: 0.82rem;
+    font-weight: 650;
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease,
+        transform 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.lcms-report-button:hover {
+    transform: translateY(-1px);
+}
+
+.lcms-report-button:active {
+    transform: translateY(0);
+}
+
+.lcms-report-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.lcms-report-button--primary {
+    border: 1px solid var(--lcms-blue);
+    background: var(--lcms-blue);
+    color: #ffffff;
+    box-shadow: 0 3px 8px rgb(24 174 234 / 0.15);
+}
+
+.lcms-report-button--primary:hover {
+    border-color: var(--lcms-blue-dark);
+    background: var(--lcms-blue-dark);
+}
+
+.lcms-report-button--secondary {
+    border: 1px solid var(--lcms-border-strong);
+    background: #ffffff;
+    color: #536174;
+}
+
+.lcms-report-button--secondary:hover {
+    border-color: #cbd7e3;
+    background: #f8fbfd;
+    color: var(--lcms-navy);
+}
+
+.lcms-report-card {
+    overflow: hidden;
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius);
+    background: #ffffff;
+    box-shadow: var(--lcms-shadow);
+}
+
+.lcms-report-card__header {
+    padding: 1rem 1.15rem;
+    border-bottom: 1px solid var(--lcms-border);
+}
+
+.lcms-report-card__title {
+    margin: 0;
+    color: var(--lcms-navy);
+    font-size: 0.95rem;
+    font-weight: 750;
+}
+
+.lcms-report-card__description {
+    margin: 0.2rem 0 0;
+    color: var(--lcms-muted);
+    font-size: 0.8rem;
+}
+
+.lcms-report-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+    padding: 1rem 1.15rem;
+}
+
+.lcms-report-field {
+    min-width: 0;
+}
+
+.lcms-report-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #536174;
+    font-size: 0.76rem;
+    font-weight: 650;
+}
+
+.lcms-report-control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 2.5rem;
+    border: 1px solid #d6dee8;
+    border-radius: 8px;
+    outline: none;
+    background: #ffffff;
+    color: var(--lcms-text);
+    padding: 0.55rem 0.7rem;
+    font: inherit;
+    font-size: 0.83rem;
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.lcms-report-control:focus {
+    border-color: var(--lcms-blue);
+    box-shadow: 0 0 0 3px rgb(24 174 234 / 0.09);
+}
+
+.lcms-report-error {
+    margin: 0 1.15rem;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fff5f5;
+    color: #c53030;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.8rem;
+}
+
+.lcms-report-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0 1.15rem 1rem;
+}
+
+.lcms-report-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.lcms-report-stat {
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius);
+    background: #ffffff;
+    padding: 1rem 1.1rem;
+    box-shadow: var(--lcms-shadow);
+}
+
+.lcms-report-stat__label {
+    display: block;
+    color: var(--lcms-muted);
+    font-size: 0.75rem;
+    font-weight: 550;
+}
+
+.lcms-report-stat__value {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--lcms-navy);
+    font-size: 1.2rem;
+    font-weight: 750;
+}
+
+.lcms-report-table-card {
+    overflow: hidden;
+    border: 1px solid var(--lcms-border);
+    border-radius: var(--lcms-radius);
+    background: #ffffff;
+    box-shadow: var(--lcms-shadow);
+}
+
+.lcms-report-table-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid var(--lcms-border);
+}
+
+.lcms-report-table-heading h3 {
+    margin: 0;
+    color: var(--lcms-navy);
+    font-size: 0.9rem;
+    font-weight: 750;
+}
+
+.lcms-report-table-heading p {
+    margin: 0.15rem 0 0;
+    color: var(--lcms-muted);
+    font-size: 0.75rem;
+}
+
+.lcms-report-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.lcms-report-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.lcms-report-table thead {
+    background: #f8fafc;
+}
+
+.lcms-report-table th {
+    padding: 0.72rem 0.9rem;
+    border-bottom: 1px solid var(--lcms-border);
+    color: #748196;
+    font-size: 0.68rem;
+    font-weight: 750;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.lcms-report-table td {
+    padding: 0.72rem 0.9rem;
+    border-bottom: 1px solid #eef1f5;
+    color: #445268;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.lcms-report-table tbody tr {
+    transition: background-color 100ms ease;
+}
+
+.lcms-report-table tbody tr:hover {
+    background: #f7fcfe;
+}
+
+.lcms-report-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.lcms-report-empty-value {
+    color: #a8b2c0;
+}
+
+.lcms-report-empty {
+    border: 1px dashed #ccd6e2;
+    border-radius: var(--lcms-radius);
+    background: #ffffff;
+    padding: 2.5rem 1rem;
+    text-align: center;
+}
+
+.lcms-report-empty__title {
+    color: var(--lcms-navy);
+    font-weight: 700;
+}
+
+.lcms-report-empty p {
+    margin: 0.3rem 0 0;
+    color: var(--lcms-muted);
+    font-size: 0.82rem;
+}
+
+@media (max-width: 1100px) {
+    .lcms-report-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .lcms-reports__intro {
+        align-items: stretch;
+    }
+
+    .lcms-reports__tabs {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .lcms-report-toolbar {
+        justify-content: flex-start;
+    }
+
+    .lcms-report-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .lcms-report-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| LCMS Reports — Dark Mode
+|--------------------------------------------------------------------------
+*/
+
+html.dark .lcms-reports__title,
+html.dark .lcms-report-card__title,
+html.dark .lcms-report-stat__value,
+html.dark .lcms-report-table-heading h3,
+html.dark .lcms-report-empty__title {
+    color: #f8fafc;
+}
+
+html.dark .lcms-reports__description,
+html.dark .lcms-report-card__description,
+html.dark .lcms-report-stat__label,
+html.dark .lcms-report-table-heading p,
+html.dark .lcms-report-empty p {
+    color: #94a3b8;
+}
+
+
+/* Report type tabs */
+
+html.dark .lcms-reports__tabs {
+    border-color: #263247;
+    background: #111a2d;
+}
+
+html.dark .lcms-report-tab {
+    color: #a8b4c7;
+}
+
+html.dark .lcms-report-tab:hover {
+    background: #172338;
+    color: #e5f5fc;
+}
+
+html.dark .lcms-report-tab.is-active {
+    background: rgb(24 174 234 / 0.16);
+    color: #5ccaf4;
+    box-shadow: none;
+}
+
+
+/* Secondary buttons */
+
+html.dark .lcms-report-button--secondary {
+    border-color: #334155;
+    background: #111a2d;
+    color: #d5deea;
+}
+
+html.dark .lcms-report-button--secondary:hover {
+    border-color: #475569;
+    background: #172338;
+    color: #ffffff;
+}
+
+
+/* Main report cards */
+
+html.dark .lcms-report-card,
+html.dark .lcms-report-stat,
+html.dark .lcms-report-table-card {
+    border-color: #263247;
+    background: #111a2d;
+    box-shadow: none;
+}
+
+html.dark .lcms-report-card__header,
+html.dark .lcms-report-table-heading {
+    border-bottom-color: #263247;
+}
+
+
+/* Filter labels and controls */
+
+html.dark .lcms-report-label {
+    color: #cbd5e1;
+}
+
+html.dark .lcms-report-control {
+    border-color: #334155;
+    background: #0d1628;
+    color: #f8fafc;
+    color-scheme: dark;
+}
+
+html.dark .lcms-report-control:hover {
+    border-color: #475569;
+}
+
+html.dark .lcms-report-control:focus {
+    border-color: #18aeea;
+    box-shadow:
+        0 0 0 1px rgb(24 174 234 / 0.3),
+        0 0 0 3px rgb(24 174 234 / 0.08);
+}
+
+html.dark .lcms-report-control::placeholder {
+    color: #64748b;
+}
+
+
+/* Errors */
+
+html.dark .lcms-report-error {
+    border-color: rgb(239 68 68 / 0.3);
+    background: rgb(239 68 68 / 0.1);
+    color: #fca5a5;
+}
+
+
+/* Results table */
+
+html.dark .lcms-report-table thead {
+    background: #172136;
+}
+
+html.dark .lcms-report-table th {
+    border-bottom-color: #2b374b;
+    color: #94a3b8;
+}
+
+html.dark .lcms-report-table td {
+    border-bottom-color: #202c40;
+    color: #dbe5f1;
+}
+
+html.dark .lcms-report-table tbody tr:hover {
+    background: #152035;
+}
+
+html.dark .lcms-report-empty-value {
+    color: #64748b;
+}
+
+
+/* Empty report state */
+
+html.dark .lcms-report-empty {
+    border-color: #334155;
+    background: #111a2d;
+}

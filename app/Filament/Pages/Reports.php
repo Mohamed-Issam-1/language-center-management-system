@@ -21,8 +21,11 @@ class Reports extends Page
     protected static ?string $navigationLabel =
     'Reports';
 
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Reporting';
+
     protected static ?int $navigationSort =
-    20;
+    10;
 
     protected string $view =
     'filament.pages.reports';

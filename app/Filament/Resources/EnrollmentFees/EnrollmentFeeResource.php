@@ -32,6 +32,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 use LogicException;
+use Filament\Actions\ActionGroup;
 
 class EnrollmentFeeResource extends Resource
 {
@@ -46,6 +47,12 @@ class EnrollmentFeeResource extends Resource
 
     protected static ?string $pluralModelLabel =
     'Enrollment Fees';
+
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Finance';
+
+    protected static ?int $navigationSort =
+    10;
 
     public static function infolist(
         Schema $schema
@@ -75,6 +82,14 @@ class EnrollmentFeeResource extends Resource
                                     mixed $state
                                 ): string =>
                                 static::statusLabel(
+                                    $state
+                                )
+                            )
+                            ->color(
+                                fn(
+                                    mixed $state
+                                ): string =>
+                                static::statusColor(
                                     $state
                                 )
                             ),
@@ -284,7 +299,10 @@ class EnrollmentFeeResource extends Resource
                     ->label(
                         'Class Code'
                     )
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
+                    ),
 
                 TextColumn::make(
                     'branch.name'
@@ -320,6 +338,14 @@ class EnrollmentFeeResource extends Resource
                             mixed $state
                         ): string =>
                         static::statusLabel(
+                            $state
+                        )
+                    )
+                    ->color(
+                        fn(
+                            mixed $state
+                        ): string =>
+                        static::statusColor(
                             $state
                         )
                     ),
@@ -360,105 +386,112 @@ class EnrollmentFeeResource extends Resource
             ->recordActions([
                 ViewAction::make(),
 
-                Action::make(
-                    'voidFee'
-                )
-                    ->label(
-                        'Void Fee'
+                ActionGroup::make([
+
+                    Action::make(
+                        'voidFee'
                     )
-                    ->color('danger')
-                    ->visible(
-                        fn(
-                            EnrollmentFee $record
-                        ): bool =>
-                        static::actorCanVoidFee(
-                            $record
+                        ->label(
+                            'Void Fee'
                         )
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Void Enrollment Fee'
-                    )
-                    ->modalDescription(
-                        'This will void the Fee while preserving the Fee and Installment history. A Fee with Posted Payments cannot be voided until those Payments are reversed.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Void Fee'
-                    )
-                    ->schema([
-                        Textarea::make(
-                            'reason'
-                        )
-                            ->label(
-                                'Void Reason'
+                        ->color('danger')
+                        ->visible(
+                            fn(
+                                EnrollmentFee $record
+                            ): bool =>
+                            static::actorCanVoidFee(
+                                $record
                             )
-                            ->required()
-                            ->maxLength(255)
-                            ->rows(3),
-                    ])
-                    ->action(
-                        function (
-                            EnrollmentFee $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading(
+                            'Void Enrollment Fee'
+                        )
+                        ->modalDescription(
+                            'This will void the Fee while preserving the Fee and Installment history. A Fee with Posted Payments cannot be voided until those Payments are reversed.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Void Fee'
+                        )
+                        ->schema([
+                            Textarea::make(
+                                'reason'
+                            )
+                                ->label(
+                                    'Void Reason'
+                                )
+                                ->required()
+                                ->maxLength(255)
+                                ->rows(3),
+                        ])
+                        ->action(
+                            function (
+                                EnrollmentFee $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                            if (
-                                ! $actor instanceof User
-                            ) {
-                                static::feeVoidFailure(
-                                    'The authenticated User Account could not be resolved.'
-                                );
-
-                                return;
-                            }
-
-                            try {
-                                $fee =
-                                    static::resolveScopedFee(
-                                        $record
+                                if (
+                                    ! $actor instanceof User
+                                ) {
+                                    static::feeVoidFailure(
+                                        'The authenticated User Account could not be resolved.'
                                     );
 
-                                $fee =
-                                    app(
-                                        FinanceManagementService::class
-                                    )->voidFee(
-                                        $actor,
-                                        $fee,
-                                        $data['reason']
-                                            ?? null
-                                    );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::feeVoidFailure(
+                                    return;
+                                }
+
+                                try {
+                                    $fee =
+                                        static::resolveScopedFee(
+                                            $record
+                                        );
+
+                                    $fee =
+                                        app(
+                                            FinanceManagementService::class
+                                        )->voidFee(
+                                            $actor,
+                                            $fee,
+                                            $data['reason']
+                                                ?? null
+                                        );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
                                     $exception
-                                        ->getMessage()
-                                );
+                                ) {
+                                    static::feeVoidFailure(
+                                        $exception
+                                            ->getMessage()
+                                    );
 
-                                return;
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Fee voided'
+                                    )
+                                    ->body(
+                                        'Enrollment Fee #'
+                                            . $fee->id
+                                            . ' was voided successfully.'
+                                    )
+                                    ->success()
+                                    ->send();
                             }
-
-                            Notification::make()
-                                ->title(
-                                    'Fee voided'
-                                )
-                                ->body(
-                                    'Enrollment Fee #'
-                                        . $fee->id
-                                        . ' was voided successfully.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-            ]);
+                        ),
+                ]),
+            ])
+            ->defaultSort(
+                'created_at',
+                'desc'
+            );
     }
 
     public static function getEloquentQuery(): Builder
@@ -858,6 +891,31 @@ class EnrollmentFeeResource extends Resource
             ->whereRaw(
                 '1 = 0'
             );
+    }
+
+    private static function statusColor(
+        mixed $state
+    ): string {
+        $status =
+            $state instanceof EnrollmentFeeStatus
+            ? $state
+            : EnrollmentFeeStatus::tryFrom(
+                (string) (
+                    $state->value
+                    ?? $state
+                )
+            );
+
+        return match ($status) {
+            EnrollmentFeeStatus::Active =>
+            'success',
+
+            EnrollmentFeeStatus::Voided =>
+            'danger',
+
+            default =>
+            'gray',
+        };
     }
 
     private static function statusLabel(

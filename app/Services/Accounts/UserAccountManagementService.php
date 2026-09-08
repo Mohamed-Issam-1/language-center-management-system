@@ -1470,6 +1470,9 @@ class UserAccountManagementService
             $account
                 ->account_login_identifier,
 
+            'recovery_email' =>
+            $account->recovery_email,
+
             'status' =>
             $account->status,
 

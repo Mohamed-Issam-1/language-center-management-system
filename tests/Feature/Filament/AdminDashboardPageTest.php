@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Support\Enums\SystemRole;
 use Database\Seeders\RoleSeeder;
 use Filament\Facades\Filament;
-use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,8 +27,7 @@ class AdminDashboardPageTest extends TestCase
         );
     }
 
-    public function test_admin_panel_registers_lcms_dashboard_widget_without_filament_info_widget(): void
-    {
+    public function test_admin_panel_registers_lcms_dashboard_widget_without_default_dashboard_widgets(): void    {
         $widgets =
             Filament::getPanel(
                 'admin'
@@ -37,11 +35,6 @@ class AdminDashboardPageTest extends TestCase
 
         $this->assertContains(
             DashboardOverviewWidget::class,
-            $widgets
-        );
-
-        $this->assertContains(
-            AccountWidget::class,
             $widgets
         );
 

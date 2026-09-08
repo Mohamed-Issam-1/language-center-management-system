@@ -42,6 +42,12 @@ class AttendanceStatusResource extends Resource
     protected static ?string $pluralModelLabel =
     'Attendance Statuses';
 
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Administration';
+
+    protected static ?int $navigationSort =
+    20;
+
     public static function infolist(
         Schema $schema
     ): Schema {
@@ -87,7 +93,15 @@ class AttendanceStatusResource extends Resource
                                     ? 'Active'
                                     : 'Inactive'
                             )
-                            ->badge(),
+                            ->badge()
+                            ->color(
+                                fn(
+                                    bool $state
+                                ): string =>
+                                $state
+                                    ? 'success'
+                                    : 'danger'
+                            ),
                     ])
                     ->columns(2),
 
@@ -165,7 +179,15 @@ class AttendanceStatusResource extends Resource
                             ? 'Active'
                             : 'Inactive'
                     )
-                    ->badge(),
+                    ->badge()
+                    ->color(
+                        fn(
+                            bool $state
+                        ): string =>
+                        $state
+                            ? 'success'
+                            : 'danger'
+                    ),
 
                 TextColumn::make(
                     'updated_at'
@@ -176,7 +198,10 @@ class AttendanceStatusResource extends Resource
                     ->dateTime(
                         'Y-m-d H:i'
                     )
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
+                    ),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -507,7 +532,11 @@ class AttendanceStatusResource extends Resource
                                 ->send();
                         }
                     ),
-            ]);
+            ])
+            ->defaultSort(
+                'name',
+                'asc'
+            );
     }
 
     public static function getEloquentQuery(): Builder

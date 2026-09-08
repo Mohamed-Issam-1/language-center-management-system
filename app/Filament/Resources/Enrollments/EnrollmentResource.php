@@ -36,6 +36,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Actions\ActionGroup;
 
 class EnrollmentResource extends Resource
 {
@@ -50,6 +51,12 @@ class EnrollmentResource extends Resource
 
     protected static ?string $pluralModelLabel =
     'Enrollments';
+
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Operations';
+
+    protected static ?int $navigationSort =
+    10;
 
     public static function infolist(
         Schema $schema
@@ -69,11 +76,20 @@ class EnrollmentResource extends Resource
                             'enrollment_status'
                         )
                             ->label('Status')
+                            ->badge()
                             ->formatStateUsing(
                                 fn(
                                     mixed $state
                                 ): string =>
                                 static::statusLabel(
+                                    $state
+                                )
+                            )
+                            ->color(
+                                fn(
+                                    mixed $state
+                                ): string =>
+                                static::statusColor(
                                     $state
                                 )
                             ),
@@ -170,6 +186,7 @@ class EnrollmentResource extends Resource
                             ->label(
                                 'Class Status'
                             )
+                            ->badge()
                             ->formatStateUsing(
                                 fn(
                                     mixed $state
@@ -323,6 +340,9 @@ class EnrollmentResource extends Resource
                 )
                     ->label(
                         'Class'
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
 
                 TextColumn::make(
@@ -342,6 +362,14 @@ class EnrollmentResource extends Resource
                             mixed $state
                         ): string =>
                         static::statusLabel(
+                            $state
+                        )
+                    )
+                    ->color(
+                        fn(
+                            mixed $state
+                        ): string =>
+                        static::statusColor(
                             $state
                         )
                     ),
@@ -378,433 +406,440 @@ class EnrollmentResource extends Resource
             ->recordActions([
                 ViewAction::make(),
 
-                Action::make('withdraw')
-                    ->label('Withdraw')
-                    ->color('danger')
-                    ->visible(
-                        fn(
-                            Enrollment $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Withdraw Enrollment'
-                    )
-                    ->modalDescription(
-                        'This will mark the active Enrollment as withdrawn. The operation will be recorded in Enrollment History and Audit.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Withdraw Enrollment'
-                    )
-                    ->schema([
-                        Textarea::make('reason')
-                            ->label(
-                                'Withdrawal Reason'
-                            )
-                            ->maxLength(255)
-                            ->rows(3),
-                    ])
-                    ->action(
-                        function (
-                            Enrollment $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
+                ActionGroup::make([
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                Notification::make()
-                                    ->title(
-                                        'Enrollment could not be withdrawn'
-                                    )
-                                    ->body(
-                                        'The authenticated User Account could not be resolved.'
-                                    )
-                                    ->danger()
-                                    ->send();
-
-                                return;
-                            }
-
-                            try {
-                                $enrollment =
-                                    app(
-                                        EnrollmentManagementService::class
-                                    )->withdraw(
-                                        $actor,
-                                        $record,
-                                        $data['reason']
-                                            ?? null
-                                    );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                Notification::make()
-                                    ->title(
-                                        'Enrollment could not be withdrawn'
-                                    )
-                                    ->body(
-                                        $exception
-                                            ->getMessage()
-                                    )
-                                    ->danger()
-                                    ->send();
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title(
-                                    'Enrollment withdrawn'
-                                )
-                                ->body(
-                                    'Enrollment '
-                                        . $enrollment
-                                        ->enrollment_number
-                                        . ' was withdrawn successfully.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-                Action::make('transfer')
-                    ->label('Transfer')
-                    ->color('warning')
-                    ->visible(
-                        fn(
-                            Enrollment $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->modalHeading(
-                        'Transfer Enrollment'
-                    )
-                    ->modalDescription(
-                        'Transfer this Student to another eligible Course Class. The current Enrollment will remain as historical Transferred data and a new active Enrollment will be created.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Transfer Enrollment'
-                    )
-                    ->schema([
-                        Select::make(
-                            'target_class_id'
-                        )
-                            ->label(
-                                'Target Course Class'
-                            )
-                            ->options(
-                                fn(
-                                    Enrollment $record
-                                ): array =>
-                                static::transferTargetClassOptions(
+                    Action::make('withdraw')
+                        ->label('Withdraw')
+                        ->color('danger')
+                        ->visible(
+                            fn(
+                                Enrollment $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
                                     $record
                                 )
-                            )
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-
-                        TextInput::make(
-                            'enrollment_number'
                         )
-                            ->label(
-                                'New Enrollment Number'
-                            )
-                            ->required()
-                            ->maxLength(50),
-
-                        DatePicker::make(
-                            'enrollment_date'
+                        ->requiresConfirmation()
+                        ->modalHeading(
+                            'Withdraw Enrollment'
                         )
-                            ->label(
-                                'New Enrollment Date'
+                        ->modalDescription(
+                            'This will mark the active Enrollment as withdrawn. The operation will be recorded in Enrollment History and Audit.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Withdraw Enrollment'
+                        )
+                        ->schema([
+                            Textarea::make('reason')
+                                ->label(
+                                    'Withdrawal Reason'
+                                )
+                                ->maxLength(255)
+                                ->rows(3),
+                        ])
+                        ->action(
+                            function (
+                                Enrollment $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
+
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be withdrawn'
+                                        )
+                                        ->body(
+                                            'The authenticated User Account could not be resolved.'
+                                        )
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
+                                try {
+                                    $enrollment =
+                                        app(
+                                            EnrollmentManagementService::class
+                                        )->withdraw(
+                                            $actor,
+                                            $record,
+                                            $data['reason']
+                                                ?? null
+                                        );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be withdrawn'
+                                        )
+                                        ->body(
+                                            $exception
+                                                ->getMessage()
+                                        )
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Enrollment withdrawn'
+                                    )
+                                    ->body(
+                                        'Enrollment '
+                                            . $enrollment
+                                            ->enrollment_number
+                                            . ' was withdrawn successfully.'
+                                    )
+                                    ->success()
+                                    ->send();
+                            }
+                        ),
+                    Action::make('transfer')
+                        ->label('Transfer')
+                        ->color('warning')
+                        ->visible(
+                            fn(
+                                Enrollment $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
+                                    $record
+                                )
+                        )
+                        ->modalHeading(
+                            'Transfer Enrollment'
+                        )
+                        ->modalDescription(
+                            'Transfer this Student to another eligible Course Class. The current Enrollment will remain as historical Transferred data and a new active Enrollment will be created.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Transfer Enrollment'
+                        )
+                        ->schema([
+                            Select::make(
+                                'target_class_id'
                             )
-                            ->default(
-                                now()->toDateString()
+                                ->label(
+                                    'Target Course Class'
+                                )
+                                ->options(
+                                    fn(
+                                        Enrollment $record
+                                    ): array =>
+                                    static::transferTargetClassOptions(
+                                        $record
+                                    )
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+
+                            TextInput::make(
+                                'enrollment_number'
                             )
-                            ->required(),
-                    ])
-                    ->action(
-                        function (
-                            Enrollment $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
-
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                Notification::make()
-                                    ->title(
-                                        'Enrollment could not be transferred'
-                                    )
-                                    ->body(
-                                        'The authenticated User Account could not be resolved.'
-                                    )
-                                    ->danger()
-                                    ->send();
-
-                                return;
-                            }
-
-                            try {
-                                $targetClass =
-                                    static::resolveTransferTargetClass(
-                                        $record,
-                                        (int) $data['target_class_id'],
-                                        $actor
-                                    );
-
-                                $targetEnrollment =
-                                    app(
-                                        EnrollmentManagementService::class
-                                    )->transfer(
-                                        $actor,
-                                        $record,
-                                        $targetClass,
-                                        [
-                                            'enrollment_number' =>
-                                            (string) $data['enrollment_number'],
-
-                                            'enrollment_date' =>
-                                            (string) $data['enrollment_date'],
-                                        ]
-                                    );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                Notification::make()
-                                    ->title(
-                                        'Enrollment could not be transferred'
-                                    )
-                                    ->body(
-                                        $exception->getMessage()
-                                    )
-                                    ->danger()
-                                    ->send();
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title(
-                                    'Enrollment transferred'
+                                ->label(
+                                    'New Enrollment Number'
                                 )
-                                ->body(
-                                    'New Enrollment '
-                                        . $targetEnrollment
-                                        ->enrollment_number
-                                        . ' was created successfully.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
+                                ->required()
+                                ->maxLength(50),
 
-                Action::make('complete')
-                    ->label('Complete')
-                    ->color('success')
-                    ->visible(
-                        fn(
-                            Enrollment $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
+                            DatePicker::make(
+                                'enrollment_date'
                             )
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Complete Enrollment'
-                    )
-                    ->modalDescription(
-                        'This will mark the active Enrollment as completed. This is a terminal lifecycle state.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Complete Enrollment'
-                    )
-                    ->action(
-                        function (
-                            Enrollment $record
-                        ): void {
-                            $actor =
-                                auth()->user();
+                                ->label(
+                                    'New Enrollment Date'
+                                )
+                                ->default(
+                                    now()->toDateString()
+                                )
+                                ->required(),
+                        ])
+                        ->action(
+                            function (
+                                Enrollment $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be transferred'
+                                        )
+                                        ->body(
+                                            'The authenticated User Account could not be resolved.'
+                                        )
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
+                                try {
+                                    $targetClass =
+                                        static::resolveTransferTargetClass(
+                                            $record,
+                                            (int) $data['target_class_id'],
+                                            $actor
+                                        );
+
+                                    $targetEnrollment =
+                                        app(
+                                            EnrollmentManagementService::class
+                                        )->transfer(
+                                            $actor,
+                                            $record,
+                                            $targetClass,
+                                            [
+                                                'enrollment_number' =>
+                                                (string) $data['enrollment_number'],
+
+                                                'enrollment_date' =>
+                                                (string) $data['enrollment_date'],
+                                            ]
+                                        );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be transferred'
+                                        )
+                                        ->body(
+                                            $exception->getMessage()
+                                        )
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
                                 Notification::make()
                                     ->title(
-                                        'Enrollment could not be completed'
+                                        'Enrollment transferred'
                                     )
                                     ->body(
-                                        'The authenticated User Account could not be resolved.'
+                                        'New Enrollment '
+                                            . $targetEnrollment
+                                            ->enrollment_number
+                                            . ' was created successfully.'
                                     )
-                                    ->danger()
+                                    ->success()
                                     ->send();
-
-                                return;
                             }
+                        ),
 
-                            try {
-                                $enrollment =
-                                    app(
-                                        EnrollmentManagementService::class
-                                    )->updateStatus(
-                                        $actor,
-                                        $record,
-                                        EnrollmentStatus::Completed
-                                    );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
+                    Action::make('complete')
+                        ->label('Complete')
+                        ->color('success')
+                        ->visible(
+                            fn(
+                                Enrollment $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
+                                    $record
+                                )
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading(
+                            'Complete Enrollment'
+                        )
+                        ->modalDescription(
+                            'This will mark the active Enrollment as completed. This is a terminal lifecycle state.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Complete Enrollment'
+                        )
+                        ->action(
+                            function (
+                                Enrollment $record
+                            ): void {
+                                $actor =
+                                    auth()->user();
+
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be completed'
+                                        )
+                                        ->body(
+                                            'The authenticated User Account could not be resolved.'
+                                        )
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
+                                try {
+                                    $enrollment =
+                                        app(
+                                            EnrollmentManagementService::class
+                                        )->updateStatus(
+                                            $actor,
+                                            $record,
+                                            EnrollmentStatus::Completed
+                                        );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be completed'
+                                        )
+                                        ->body(
+                                            $exception->getMessage()
+                                        )
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
                                 Notification::make()
                                     ->title(
-                                        'Enrollment could not be completed'
+                                        'Enrollment completed'
                                     )
                                     ->body(
-                                        $exception->getMessage()
+                                        'Enrollment '
+                                            . $enrollment
+                                            ->enrollment_number
+                                            . ' was completed successfully.'
                                     )
-                                    ->danger()
+                                    ->success()
                                     ->send();
-
-                                return;
                             }
+                        ),
 
-                            Notification::make()
-                                ->title(
-                                    'Enrollment completed'
+                    Action::make('cancel')
+                        ->label('Cancel')
+                        ->color('danger')
+                        ->visible(
+                            fn(
+                                Enrollment $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
+                                    $record
                                 )
-                                ->body(
-                                    'Enrollment '
-                                        . $enrollment
-                                        ->enrollment_number
-                                        . ' was completed successfully.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading(
+                            'Cancel Enrollment'
+                        )
+                        ->modalDescription(
+                            'This will permanently mark the active Enrollment as cancelled. This is a terminal lifecycle state.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Cancel Enrollment'
+                        )
+                        ->action(
+                            function (
+                                Enrollment $record
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                Action::make('cancel')
-                    ->label('Cancel')
-                    ->color('danger')
-                    ->visible(
-                        fn(
-                            Enrollment $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Cancel Enrollment'
-                    )
-                    ->modalDescription(
-                        'This will permanently mark the active Enrollment as cancelled. This is a terminal lifecycle state.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Cancel Enrollment'
-                    )
-                    ->action(
-                        function (
-                            Enrollment $record
-                        ): void {
-                            $actor =
-                                auth()->user();
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be cancelled'
+                                        )
+                                        ->body(
+                                            'The authenticated User Account could not be resolved.'
+                                        )
+                                        ->danger()
+                                        ->send();
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
+                                    return;
+                                }
+
+                                try {
+                                    $enrollment =
+                                        app(
+                                            EnrollmentManagementService::class
+                                        )->updateStatus(
+                                            $actor,
+                                            $record,
+                                            EnrollmentStatus::Cancelled
+                                        );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    Notification::make()
+                                        ->title(
+                                            'Enrollment could not be cancelled'
+                                        )
+                                        ->body(
+                                            $exception->getMessage()
+                                        )
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
                                 Notification::make()
                                     ->title(
-                                        'Enrollment could not be cancelled'
+                                        'Enrollment cancelled'
                                     )
                                     ->body(
-                                        'The authenticated User Account could not be resolved.'
+                                        'Enrollment '
+                                            . $enrollment
+                                            ->enrollment_number
+                                            . ' was cancelled successfully.'
                                     )
-                                    ->danger()
+                                    ->success()
                                     ->send();
-
-                                return;
                             }
-
-                            try {
-                                $enrollment =
-                                    app(
-                                        EnrollmentManagementService::class
-                                    )->updateStatus(
-                                        $actor,
-                                        $record,
-                                        EnrollmentStatus::Cancelled
-                                    );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                Notification::make()
-                                    ->title(
-                                        'Enrollment could not be cancelled'
-                                    )
-                                    ->body(
-                                        $exception->getMessage()
-                                    )
-                                    ->danger()
-                                    ->send();
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title(
-                                    'Enrollment cancelled'
-                                )
-                                ->body(
-                                    'Enrollment '
-                                        . $enrollment
-                                        ->enrollment_number
-                                        . ' was cancelled successfully.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-            ]);
+                        ),
+                ]),
+            ])
+            ->defaultSort(
+                'enrollment_date',
+                'desc'
+            );
     }
 
     public static function getEloquentQuery(): Builder
@@ -1349,6 +1384,37 @@ class EnrollmentResource extends Resource
         return $query->whereRaw(
             '1 = 0'
         );
+    }
+
+    private static function statusColor(
+        mixed $state
+    ): string {
+        $value =
+            strtolower(
+                (string) (
+                    $state->value
+                    ?? $state
+                )
+            );
+
+        return match ($value) {
+            'active' =>
+            'success',
+
+            'completed' =>
+            'info',
+
+            'pending',
+            'transferred',
+            'withdrawn' =>
+            'warning',
+
+            'cancelled' =>
+            'danger',
+
+            default =>
+            'gray',
+        };
     }
 
     private static function statusLabel(

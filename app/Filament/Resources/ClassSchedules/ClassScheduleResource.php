@@ -39,6 +39,7 @@ use LogicException;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
 use App\Services\Scheduling\SessionManagementService;
+use Filament\Actions\ActionGroup;
 
 class ClassScheduleResource extends Resource
 {
@@ -53,6 +54,12 @@ class ClassScheduleResource extends Resource
 
     protected static ?string $pluralModelLabel =
     'Class Schedules';
+
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Operations';
+
+    protected static ?int $navigationSort =
+    20;
 
     public static function infolist(
         Schema $schema
@@ -90,11 +97,20 @@ class ClassScheduleResource extends Resource
                             ->label(
                                 'Schedule Status'
                             )
+                            ->badge()
                             ->formatStateUsing(
                                 fn(
                                     mixed $state
                                 ): string =>
                                 static::statusLabel(
+                                    $state
+                                )
+                            )
+                            ->color(
+                                fn(
+                                    mixed $state
+                                ): string =>
+                                static::statusColor(
                                     $state
                                 )
                             ),
@@ -199,7 +215,10 @@ class ClassScheduleResource extends Resource
                     ->label(
                         'Class'
                     )
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
+                    ),
 
                 TextColumn::make(
                     'courseClass.branch.name'
@@ -266,6 +285,14 @@ class ClassScheduleResource extends Resource
                         static::statusLabel(
                             $state
                         )
+                    )
+                    ->color(
+                        fn(
+                            mixed $state
+                        ): string =>
+                        static::statusColor(
+                            $state
+                        )
                     ),
 
                 TextColumn::make(
@@ -277,7 +304,10 @@ class ClassScheduleResource extends Resource
                     ->date(
                         'Y-m-d'
                     )
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
+                    ),
 
                 TextColumn::make(
                     'effective_until'
@@ -288,7 +318,10 @@ class ClassScheduleResource extends Resource
                     ->date(
                         'Y-m-d'
                     )
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
+                    ),
             ])
             ->filters([
                 SelectFilter::make(
@@ -315,522 +348,528 @@ class ClassScheduleResource extends Resource
             ->recordActions([
                 ViewAction::make(),
 
-                Action::make(
-                    'updateResources'
-                )
-                    ->label(
-                        'Update Resources'
+                ActionGroup::make([
+                    Action::make(
+                        'updateResources'
                     )
-                    ->visible(
-                        fn(
-                            ClassSchedule $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->modalHeading(
-                        'Update Schedule Resources'
-                    )
-                    ->modalDescription(
-                        'Change the Classroom or Teacher assigned to this Class Schedule.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Update Resources'
-                    )
-                    ->schema([
-                        Select::make(
-                            'classroom_id'
+                        ->label(
+                            'Update Resources'
                         )
-                            ->label(
-                                'Classroom'
-                            )
-                            ->options(
-                                fn(
-                                    ClassSchedule $record
-                                ): array =>
-                                static::classroomOptionsForSchedule(
+                        ->visible(
+                            fn(
+                                ClassSchedule $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
                                     $record
                                 )
-                            )
-                            ->default(
-                                fn(
-                                    ClassSchedule $record
-                                ): int =>
-                                $record->classroom_id
-                            )
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-
-                        Select::make(
-                            'teacher_id'
                         )
-                            ->label(
-                                'Teacher'
+                        ->modalHeading(
+                            'Update Schedule Resources'
+                        )
+                        ->modalDescription(
+                            'Change the Classroom or Teacher assigned to this Class Schedule.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Update Resources'
+                        )
+                        ->schema([
+                            Select::make(
+                                'classroom_id'
                             )
-                            ->options(
-                                fn(
-                                    ClassSchedule $record
-                                ): array =>
-                                static::teacherOptionsForSchedule(
+                                ->label(
+                                    'Classroom'
+                                )
+                                ->options(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): array =>
+                                    static::classroomOptionsForSchedule(
+                                        $record
+                                    )
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): int =>
+                                    $record->classroom_id
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+
+                            Select::make(
+                                'teacher_id'
+                            )
+                                ->label(
+                                    'Teacher'
+                                )
+                                ->options(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): array =>
+                                    static::teacherOptionsForSchedule(
+                                        $record
+                                    )
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): int =>
+                                    $record->teacher_id
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+                        ])
+                        ->action(
+                            function (
+                                ClassSchedule $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
+
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Schedule resources could not be updated.',
+                                        'The authenticated User Account could not be resolved.'
+                                    );
+
+                                    return;
+                                }
+
+                                try {
+                                    $classroom =
+                                        static::resolveClassroomForSchedule(
+                                            $record,
+                                            (int) $data['classroom_id']
+                                        );
+
+                                    $teacher =
+                                        static::resolveTeacherForSchedule(
+                                            $record,
+                                            (int) $data['teacher_id']
+                                        );
+
+                                    app(
+                                        ScheduleManagementService::class
+                                    )->update(
+                                        $actor,
+                                        $record,
+                                        [
+                                            'classroom_id' =>
+                                            $classroom->id,
+
+                                            'teacher_id' =>
+                                            $teacher->id,
+                                        ]
+                                    );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Schedule resources could not be updated.',
+                                        $exception->getMessage()
+                                    );
+
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Schedule resources updated'
+                                    )
+                                    ->success()
+                                    ->send();
+                            }
+                        ),
+                    Action::make(
+                        'reschedule'
+                    )
+                        ->label(
+                            'Reschedule'
+                        )
+                        ->visible(
+                            fn(
+                                ClassSchedule $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
                                     $record
                                 )
+                        )
+                        ->modalHeading(
+                            'Reschedule Class Schedule'
+                        )
+                        ->modalDescription(
+                            'Change the recurring day, time, or effective period for this Class Schedule.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Reschedule'
+                        )
+                        ->schema([
+                            Select::make(
+                                'day_of_week'
                             )
-                            ->default(
-                                fn(
-                                    ClassSchedule $record
-                                ): int =>
-                                $record->teacher_id
-                            )
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-                    ])
-                    ->action(
-                        function (
-                            ClassSchedule $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
-
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Schedule resources could not be updated.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
-
-                                return;
-                            }
-
-                            try {
-                                $classroom =
-                                    static::resolveClassroomForSchedule(
-                                        $record,
-                                        (int) $data['classroom_id']
-                                    );
-
-                                $teacher =
-                                    static::resolveTeacherForSchedule(
-                                        $record,
-                                        (int) $data['teacher_id']
-                                    );
-
-                                app(
-                                    ScheduleManagementService::class
-                                )->update(
-                                    $actor,
-                                    $record,
-                                    [
-                                        'classroom_id' =>
-                                        $classroom->id,
-
-                                        'teacher_id' =>
-                                        $teacher->id,
-                                    ]
-                                );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Schedule resources could not be updated.',
-                                    $exception->getMessage()
-                                );
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title(
-                                    'Schedule resources updated'
+                                ->label(
+                                    'Day of Week'
                                 )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-                Action::make(
-                    'reschedule'
-                )
-                    ->label(
-                        'Reschedule'
-                    )
-                    ->visible(
-                        fn(
-                            ClassSchedule $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->modalHeading(
-                        'Reschedule Class Schedule'
-                    )
-                    ->modalDescription(
-                        'Change the recurring day, time, or effective period for this Class Schedule.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Reschedule'
-                    )
-                    ->schema([
-                        Select::make(
-                            'day_of_week'
-                        )
-                            ->label(
-                                'Day of Week'
-                            )
-                            ->options([
-                                1 => 'Monday',
-                                2 => 'Tuesday',
-                                3 => 'Wednesday',
-                                4 => 'Thursday',
-                                5 => 'Friday',
-                                6 => 'Saturday',
-                                7 => 'Sunday',
-                            ])
-                            ->default(
-                                fn(
-                                    ClassSchedule $record
-                                ): int =>
-                                $record->day_of_week
-                            )
-                            ->required(),
+                                ->options([
+                                    1 => 'Monday',
+                                    2 => 'Tuesday',
+                                    3 => 'Wednesday',
+                                    4 => 'Thursday',
+                                    5 => 'Friday',
+                                    6 => 'Saturday',
+                                    7 => 'Sunday',
+                                ])
+                                ->default(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): int =>
+                                    $record->day_of_week
+                                )
+                                ->required(),
 
-                        TimePicker::make(
-                            'start_time'
-                        )
-                            ->label(
-                                'Start Time'
+                            TimePicker::make(
+                                'start_time'
                             )
-                            ->seconds(false)
-                            ->default(
-                                fn(
-                                    ClassSchedule $record
-                                ): string =>
-                                $record->start_time
-                            )
-                            ->required(),
+                                ->label(
+                                    'Start Time'
+                                )
+                                ->seconds(false)
+                                ->default(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): string =>
+                                    $record->start_time
+                                )
+                                ->required(),
 
-                        TimePicker::make(
-                            'end_time'
-                        )
-                            ->label(
-                                'End Time'
+                            TimePicker::make(
+                                'end_time'
                             )
-                            ->seconds(false)
-                            ->default(
-                                fn(
-                                    ClassSchedule $record
-                                ): string =>
-                                $record->end_time
-                            )
-                            ->required(),
+                                ->label(
+                                    'End Time'
+                                )
+                                ->seconds(false)
+                                ->default(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): string =>
+                                    $record->end_time
+                                )
+                                ->required(),
 
-                        DatePicker::make(
-                            'effective_from'
-                        )
-                            ->label(
-                                'Effective From'
+                            DatePicker::make(
+                                'effective_from'
                             )
-                            ->default(
-                                fn(
-                                    ClassSchedule $record
-                                ): string =>
-                                $record
-                                    ->effective_from
-                                    ->toDateString()
+                                ->label(
+                                    'Effective From'
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): string =>
+                                    $record
+                                        ->effective_from
+                                        ->toDateString()
+                                )
+                                ->required(),
+
+                            DatePicker::make(
+                                'effective_until'
                             )
-                            ->required(),
+                                ->label(
+                                    'Effective Until'
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSchedule $record
+                                    ): string =>
+                                    $record
+                                        ->effective_until
+                                        ->toDateString()
+                                )
+                                ->required(),
+                        ])
+                        ->action(
+                            function (
+                                ClassSchedule $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                        DatePicker::make(
-                            'effective_until'
-                        )
-                            ->label(
-                                'Effective Until'
-                            )
-                            ->default(
-                                fn(
-                                    ClassSchedule $record
-                                ): string =>
-                                $record
-                                    ->effective_until
-                                    ->toDateString()
-                            )
-                            ->required(),
-                    ])
-                    ->action(
-                        function (
-                            ClassSchedule $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Schedule could not be rescheduled.',
+                                        'The authenticated User Account could not be resolved.'
+                                    );
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Schedule could not be rescheduled.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
+                                    return;
+                                }
 
-                                return;
-                            }
-
-                            try {
-                                /*
+                                try {
+                                    /*
                                     * Re-resolve the record through the scoped
                                     * Resource query before sending it to the
                                     * domain Service.
                                     */
-                                $schedule =
-                                    static::getEloquentQuery()
-                                    ->whereKey(
-                                        $record->getKey()
+                                    $schedule =
+                                        static::getEloquentQuery()
+                                        ->whereKey(
+                                            $record->getKey()
+                                        )
+                                        ->firstOrFail();
+
+                                    app(
+                                        ScheduleManagementService::class
+                                    )->reschedule(
+                                        $actor,
+                                        $schedule,
+                                        [
+                                            'day_of_week' =>
+                                            (int) $data['day_of_week'],
+
+                                            'start_time' =>
+                                            (string) $data['start_time'],
+
+                                            'end_time' =>
+                                            (string) $data['end_time'],
+
+                                            'effective_from' =>
+                                            (string) $data['effective_from'],
+
+                                            'effective_until' =>
+                                            (string) $data['effective_until'],
+                                        ]
+                                    );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Schedule could not be rescheduled.',
+                                        $exception->getMessage()
+                                    );
+
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Schedule rescheduled'
                                     )
-                                    ->firstOrFail();
-
-                                app(
-                                    ScheduleManagementService::class
-                                )->reschedule(
-                                    $actor,
-                                    $schedule,
-                                    [
-                                        'day_of_week' =>
-                                        (int) $data['day_of_week'],
-
-                                        'start_time' =>
-                                        (string) $data['start_time'],
-
-                                        'end_time' =>
-                                        (string) $data['end_time'],
-
-                                        'effective_from' =>
-                                        (string) $data['effective_from'],
-
-                                        'effective_until' =>
-                                        (string) $data['effective_until'],
-                                    ]
-                                );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Schedule could not be rescheduled.',
-                                    $exception->getMessage()
-                                );
-
-                                return;
+                                    ->success()
+                                    ->send();
                             }
-
-                            Notification::make()
-                                ->title(
-                                    'Schedule rescheduled'
+                        ),
+                    Action::make(
+                        'cancelSchedule'
+                    )
+                        ->label(
+                            'Cancel'
+                        )
+                        ->color(
+                            'danger'
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading(
+                            'Cancel Class Schedule'
+                        )
+                        ->modalDescription(
+                            'This will cancel the recurring Class Schedule without deleting its historical record.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Cancel Schedule'
+                        )
+                        ->visible(
+                            fn(
+                                ClassSchedule $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
+                                    $record
                                 )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-                Action::make(
-                    'cancelSchedule'
-                )
-                    ->label(
-                        'Cancel'
-                    )
-                    ->color(
-                        'danger'
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Cancel Class Schedule'
-                    )
-                    ->modalDescription(
-                        'This will cancel the recurring Class Schedule without deleting its historical record.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Cancel Schedule'
-                    )
-                    ->visible(
-                        fn(
-                            ClassSchedule $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->action(
-                        function (
-                            ClassSchedule $record
-                        ): void {
-                            $actor =
-                                auth()->user();
+                        )
+                        ->action(
+                            function (
+                                ClassSchedule $record
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Schedule could not be cancelled.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Schedule could not be cancelled.',
+                                        'The authenticated User Account could not be resolved.'
+                                    );
 
-                                return;
-                            }
+                                    return;
+                                }
 
-                            try {
-                                /*
+                                try {
+                                    /*
                  * Re-resolve through the scoped Resource query
                  * before invoking the domain Service.
                  */
-                                $schedule =
-                                    static::getEloquentQuery()
-                                    ->whereKey(
-                                        $record->getKey()
-                                    )
-                                    ->firstOrFail();
+                                    $schedule =
+                                        static::getEloquentQuery()
+                                        ->whereKey(
+                                            $record->getKey()
+                                        )
+                                        ->firstOrFail();
 
-                                app(
-                                    ScheduleManagementService::class
-                                )->cancel(
-                                    $actor,
-                                    $schedule
-                                );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Schedule could not be cancelled.',
-                                    $exception->getMessage()
-                                );
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title(
-                                    'Schedule cancelled'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-                Action::make(
-                    'generateSessions'
-                )
-                    ->label(
-                        'Generate Sessions'
-                    )
-                    ->color(
-                        'success'
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Generate Class Sessions'
-                    )
-                    ->modalDescription(
-                        'Generate any missing concrete Sessions for this recurring Class Schedule. Existing occurrences will be preserved.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Generate Sessions'
-                    )
-                    ->visible(
-                        fn(
-                            ClassSchedule $record
-                        ): bool =>
-                        $record->isActive()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->action(
-                        function (
-                            ClassSchedule $record
-                        ): void {
-                            $actor =
-                                auth()->user();
-
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Sessions could not be generated.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
-
-                                return;
-                            }
-
-                            try {
-                                /*
-                 * Re-resolve the Schedule through the scoped
-                 * Resource query before invoking the Service.
-                 */
-                                $schedule =
-                                    static::getEloquentQuery()
-                                    ->whereKey(
-                                        $record->getKey()
-                                    )
-                                    ->firstOrFail();
-
-                                $generated =
                                     app(
-                                        SessionManagementService::class
-                                    )->generateForSchedule(
+                                        ScheduleManagementService::class
+                                    )->cancel(
                                         $actor,
                                         $schedule
                                     );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::scheduleActionFailure(
-                                    'Sessions could not be generated.',
-                                    $exception->getMessage()
-                                );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Schedule could not be cancelled.',
+                                        $exception->getMessage()
+                                    );
 
-                                return;
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Schedule cancelled'
+                                    )
+                                    ->success()
+                                    ->send();
                             }
+                        ),
+                    Action::make(
+                        'generateSessions'
+                    )
+                        ->label(
+                            'Generate Sessions'
+                        )
+                        ->color(
+                            'success'
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading(
+                            'Generate Class Sessions'
+                        )
+                        ->modalDescription(
+                            'Generate any missing concrete Sessions for this recurring Class Schedule. Existing occurrences will be preserved.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Generate Sessions'
+                        )
+                        ->visible(
+                            fn(
+                                ClassSchedule $record
+                            ): bool =>
+                            $record->isActive()
+                                && static::canView(
+                                    $record
+                                )
+                        )
+                        ->action(
+                            function (
+                                ClassSchedule $record
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                            Notification::make()
-                                ->title(
-                                    'Sessions generated'
-                                )
-                                ->body(
-                                    $generated->count()
-                                        . ' new Class Session(s) generated.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-            ]);
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Sessions could not be generated.',
+                                        'The authenticated User Account could not be resolved.'
+                                    );
+
+                                    return;
+                                }
+
+                                try {
+                                    /*
+                 * Re-resolve the Schedule through the scoped
+                 * Resource query before invoking the Service.
+                 */
+                                    $schedule =
+                                        static::getEloquentQuery()
+                                        ->whereKey(
+                                            $record->getKey()
+                                        )
+                                        ->firstOrFail();
+
+                                    $generated =
+                                        app(
+                                            SessionManagementService::class
+                                        )->generateForSchedule(
+                                            $actor,
+                                            $schedule
+                                        );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::scheduleActionFailure(
+                                        'Sessions could not be generated.',
+                                        $exception->getMessage()
+                                    );
+
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Sessions generated'
+                                    )
+                                    ->body(
+                                        $generated->count()
+                                            . ' new Class Session(s) generated.'
+                                    )
+                                    ->success()
+                                    ->send();
+                            }
+                        ),
+                ]),
+            ])
+            ->defaultSort(
+                'effective_from',
+                'desc'
+            );
     }
 
     public static function getEloquentQuery(): Builder
@@ -1310,6 +1349,36 @@ class ClassScheduleResource extends Resource
             )
             ->danger()
             ->send();
+    }
+
+    private static function statusColor(
+        mixed $state
+    ): string {
+        $value =
+            strtolower(
+                (string) (
+                    $state->value
+                    ?? $state
+                )
+            );
+
+        return match ($value) {
+            'active' =>
+            'success',
+
+            'cancelled' =>
+            'danger',
+
+            'planned',
+            'pending' =>
+            'warning',
+
+            'completed' =>
+            'info',
+
+            default =>
+            'gray',
+        };
     }
 
     private static function statusLabel(

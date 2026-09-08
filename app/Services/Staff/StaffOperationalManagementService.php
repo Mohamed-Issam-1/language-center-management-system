@@ -19,12 +19,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
+use App\Services\Branches\StaffBranchAssignmentService;
 
 class StaffOperationalManagementService
 {
     public function __construct(
         private readonly TenantContext $tenant,
-        private readonly AuditRecorder $audit
+        private readonly AuditRecorder $audit,
+        private readonly StaffBranchAssignmentService $staffAssignments
     ) {}
 
     public function createTeacher(
@@ -125,6 +127,108 @@ class StaffOperationalManagementService
             expectedRole: SystemRole::FinanceEmployee,
             actionType: 'finance_employee.account_linked'
         );
+
+        return $record;
+    }
+
+    public function activateTeacher(
+        User $actor,
+        Teacher $teacher
+    ): Teacher {
+        /** @var Teacher $record */
+        $record =
+            $this->activateRecord(
+                actor: $actor,
+                record: $teacher,
+                modelClass: Teacher::class,
+                role: SystemRole::Teacher,
+                actionType: 'teacher.activated'
+            );
+
+        return $record;
+    }
+
+    public function deactivateTeacher(
+        User $actor,
+        Teacher $teacher
+    ): Teacher {
+        /** @var Teacher $record */
+        $record =
+            $this->deactivateRecord(
+                actor: $actor,
+                record: $teacher,
+                modelClass: Teacher::class,
+                role: SystemRole::Teacher,
+                actionType: 'teacher.deactivated'
+            );
+
+        return $record;
+    }
+
+    public function activateBranchManager(
+        User $actor,
+        BranchManager $branchManager
+    ): BranchManager {
+        /** @var BranchManager $record */
+        $record =
+            $this->activateRecord(
+                actor: $actor,
+                record: $branchManager,
+                modelClass: BranchManager::class,
+                role: SystemRole::BranchManager,
+                actionType: 'branch_manager.activated'
+            );
+
+        return $record;
+    }
+
+    public function deactivateBranchManager(
+        User $actor,
+        BranchManager $branchManager
+    ): BranchManager {
+        /** @var BranchManager $record */
+        $record =
+            $this->deactivateRecord(
+                actor: $actor,
+                record: $branchManager,
+                modelClass: BranchManager::class,
+                role: SystemRole::BranchManager,
+                actionType: 'branch_manager.deactivated'
+            );
+
+        return $record;
+    }
+
+    public function activateFinanceEmployee(
+        User $actor,
+        FinanceEmployee $financeEmployee
+    ): FinanceEmployee {
+        /** @var FinanceEmployee $record */
+        $record =
+            $this->activateRecord(
+                actor: $actor,
+                record: $financeEmployee,
+                modelClass: FinanceEmployee::class,
+                role: SystemRole::FinanceEmployee,
+                actionType: 'finance_employee.activated'
+            );
+
+        return $record;
+    }
+
+    public function deactivateFinanceEmployee(
+        User $actor,
+        FinanceEmployee $financeEmployee
+    ): FinanceEmployee {
+        /** @var FinanceEmployee $record */
+        $record =
+            $this->deactivateRecord(
+                actor: $actor,
+                record: $financeEmployee,
+                modelClass: FinanceEmployee::class,
+                role: SystemRole::FinanceEmployee,
+                actionType: 'finance_employee.deactivated'
+            );
 
         return $record;
     }
@@ -332,6 +436,251 @@ class StaffOperationalManagementService
                 $record->forceFill([
                     'user_id' =>
                     $account->id,
+                ])->save();
+
+                $record->refresh();
+
+                $this->audit->record(
+                    actor: $actor,
+                    actionType: $actionType,
+                    subject: $record,
+                    beforeValues: $beforeValues,
+                    afterValues: $this->staffAuditValues(
+                        $record
+                    )
+                );
+
+                return $record;
+            },
+            3
+        );
+    }
+
+    /**
+     * @param Teacher|BranchManager|FinanceEmployee $record
+     * @param class-string<Teacher|BranchManager|FinanceEmployee> $modelClass
+     */
+    private function activateRecord(
+        User $actor,
+        Model $record,
+        string $modelClass,
+        SystemRole $role,
+        string $actionType
+    ): Model {
+        return DB::transaction(
+            function () use (
+                $actor,
+                $record,
+                $modelClass,
+                $role,
+                $actionType
+            ): Model {
+                [
+                    $actor,
+                    $centerId,
+                ] = $this->authorizedActor(
+                    $actor
+                );
+
+                $record =
+                    $this->lockPersistedStaffRecord(
+                        $record,
+                        $modelClass,
+                        $centerId
+                    );
+
+                if (
+                    $record->status
+                    === StaffStatus::Active
+                ) {
+                    return $record;
+                }
+
+                /*
+             * An unlinked operational record may be active.
+             *
+             * When an account is already linked, however,
+             * reactivating the operational record while that
+             * account itself is deactivated would create an
+             * unusable/inconsistent Staff state.
+             */
+                if (
+                    $record->user_id
+                    !== null
+                ) {
+                    $account =
+                        $this->lockPersistedAccount(
+                            User::withoutGlobalScopes()
+                                ->whereKey(
+                                    $record->user_id
+                                )
+                                ->firstOrFail(),
+                            $centerId
+                        );
+
+                    if (
+                        ! $account->hasSystemRole(
+                            $role
+                        )
+                        || $account->person_id
+                        !== $record->person_id
+                    ) {
+                        throw new DomainException(
+                            'The linked User Account does not match the Staff operational record.'
+                        );
+                    }
+
+                    if (
+                        $account->status
+                        === AccountStatus::Deactivated
+                    ) {
+                        throw new DomainException(
+                            'The linked User Account must be activated before the Staff operational record can be reactivated.'
+                        );
+                    }
+                }
+
+                $beforeValues =
+                    $this->staffAuditValues(
+                        $record
+                    );
+
+                $record->forceFill([
+                    'status' =>
+                    StaffStatus::Active,
+
+                    'deactivated_at' =>
+                    null,
+                ])->save();
+
+                $record->refresh();
+
+                $this->audit->record(
+                    actor: $actor,
+                    actionType: $actionType,
+                    subject: $record,
+                    beforeValues: $beforeValues,
+                    afterValues: $this->staffAuditValues(
+                        $record
+                    )
+                );
+
+                return $record;
+            },
+            3
+        );
+    }
+
+    /**
+     * @param Teacher|BranchManager|FinanceEmployee $record
+     * @param class-string<Teacher|BranchManager|FinanceEmployee> $modelClass
+     */
+    private function deactivateRecord(
+        User $actor,
+        Model $record,
+        string $modelClass,
+        SystemRole $role,
+        string $actionType
+    ): Model {
+        return DB::transaction(
+            function () use (
+                $actor,
+                $record,
+                $modelClass,
+                $role,
+                $actionType
+            ): Model {
+                [
+                    $actor,
+                    $centerId,
+                ] = $this->authorizedActor(
+                    $actor
+                );
+
+                $record =
+                    $this->lockPersistedStaffRecord(
+                        $record,
+                        $modelClass,
+                        $centerId
+                    );
+
+                if (
+                    $record->status
+                    === StaffStatus::Deactivated
+                ) {
+                    return $record;
+                }
+
+                /*
+             * Branch-scoped Staff must not retain an active
+             * operational Branch assignment after their
+             * operational Staff record is deactivated.
+             *
+             * Assignment history is preserved by the existing
+             * StaffBranchAssignmentService.
+             */
+                if (
+                    $record->user_id
+                    !== null
+                ) {
+                    $account =
+                        $this->lockPersistedAccount(
+                            User::withoutGlobalScopes()
+                                ->whereKey(
+                                    $record->user_id
+                                )
+                                ->firstOrFail(),
+                            $centerId
+                        );
+
+                    if (
+                        ! $account->hasSystemRole(
+                            $role
+                        )
+                        || $account->person_id
+                        !== $record->person_id
+                    ) {
+                        throw new DomainException(
+                            'The linked User Account does not match the Staff operational record.'
+                        );
+                    }
+
+                    match ($role) {
+                        SystemRole::BranchManager =>
+                        $this->staffAssignments
+                            ->endBranchManagerAssignment(
+                                $actor,
+                                $account
+                            ),
+
+                        SystemRole::FinanceEmployee =>
+                        $this->staffAssignments
+                            ->endFinanceEmployeeAssignment(
+                                $actor,
+                                $account
+                            ),
+
+                        SystemRole::Teacher =>
+                        null,
+
+                        default =>
+                        throw new DomainException(
+                            'Unsupported Staff operational role.'
+                        ),
+                    };
+                }
+
+                $beforeValues =
+                    $this->staffAuditValues(
+                        $record
+                    );
+
+                $record->forceFill([
+                    'status' =>
+                    StaffStatus::Deactivated,
+
+                    'deactivated_at' =>
+                    now(),
                 ])->save();
 
                 $record->refresh();

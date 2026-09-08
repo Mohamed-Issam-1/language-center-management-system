@@ -41,6 +41,12 @@ class StudentBalanceResource extends Resource
     protected static ?string $pluralModelLabel =
     'Student Balances';
 
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Finance';
+
+    protected static ?int $navigationSort =
+    30;
+
     public static function infolist(
         Schema $schema
     ): Schema {
@@ -222,6 +228,14 @@ class StudentBalanceResource extends Resource
                                 )
                                     ->label(
                                         'Remaining'
+                                    )
+                                    ->color(
+                                        fn(
+                                            mixed $state
+                                        ): string =>
+                                        (float) $state > 0
+                                            ? 'warning'
+                                            : 'success'
                                     ),
 
                                 TextEntry::make(
@@ -250,6 +264,14 @@ class StudentBalanceResource extends Resource
                                                 (string) $state
                                             ),
                                         }
+                                    )
+                                    ->color(
+                                        fn(
+                                            mixed $state
+                                        ): string =>
+                                        static::installmentStatusColor(
+                                            $state
+                                        )
                                     ),
                             ])
                             ->columns(3),
@@ -284,6 +306,9 @@ class StudentBalanceResource extends Resource
                 )
                     ->label(
                         'Current Branch'
+                    )
+                    ->placeholder(
+                        'No current Branch'
                     ),
 
                 TextColumn::make(
@@ -291,6 +316,12 @@ class StudentBalanceResource extends Resource
                 )
                     ->label(
                         'Phone Number'
+                    )
+                    ->placeholder(
+                        'Not provided'
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
             ])
             ->recordActions([
@@ -523,6 +554,26 @@ class StudentBalanceResource extends Resource
                 '/{record}'
             ),
         ];
+    }
+
+    private static function installmentStatusColor(
+        mixed $state
+    ): string {
+        return match (strtolower(
+            (string) $state
+        )) {
+            'paid' =>
+            'success',
+
+            'overdue' =>
+            'danger',
+
+            'outstanding' =>
+            'warning',
+
+            default =>
+            'gray',
+        };
     }
 
     /**

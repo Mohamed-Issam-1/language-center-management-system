@@ -1,6 +1,6 @@
 import { FormEventHandler, useEffect, useState } from "react";
 import { ArrowRight, Check, TriangleAlert } from "lucide-react";
-import { Head, Link, router, useForm } from "@inertiajs/react";
+import { Head, Link, useForm } from "@inertiajs/react";
 
 import Checkbox from "@/Components/Checkbox";
 import InputLabel from "@/Components/InputLabel";
@@ -37,7 +37,7 @@ export default function Login({
     }
 
     const timeout = window.setTimeout(() => {
-      router.visit(successRedirectTo);
+      window.location.assign(successRedirectTo);
     }, 1200);
 
     return () => window.clearTimeout(timeout);
