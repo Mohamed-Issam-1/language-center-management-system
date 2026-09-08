@@ -40,5 +40,7 @@ enum SystemPermission: string
 
     case ManageFinancialOperations = 'manage_financial_operations';
 
+    case ViewAuditRecords = 'view_audit_records';
+
     case ViewReports = 'view_reports';
 }

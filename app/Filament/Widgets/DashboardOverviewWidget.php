@@ -8,13 +8,62 @@ use App\Support\Enums\CourseClassStatus;
 use App\Support\Enums\EnrollmentStatus;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use App\Support\Enums\SystemRole;
 
 class DashboardOverviewWidget extends StatsOverviewWidget
 {
-    protected ?string $heading = 'Overview';
 
-    protected ?string $description =
-    'Current operational summary based on your authorized scope.';
+    protected function getHeading(): ?string
+    {
+        return match ($this->actorRole()) {
+            SystemRole::PlatformOwner =>
+            'Platform Overview',
+
+            SystemRole::CenterOwner =>
+            'Center Overview',
+
+            SystemRole::BranchManager =>
+            'Branch Overview',
+
+            SystemRole::FinanceEmployee =>
+            'Finance Overview',
+
+            default =>
+            'Overview',
+        };
+    }
+
+    protected function getDescription(): ?string
+    {
+        return match ($this->actorRole()) {
+            SystemRole::PlatformOwner =>
+            'Platform-wide academic and enrollment summary across authorized LCMS data.',
+
+            SystemRole::CenterOwner =>
+            'Center-wide operational summary across academics, attendance, and finance.',
+
+            SystemRole::BranchManager =>
+            'Operational summary limited to your currently assigned branch.',
+
+            SystemRole::FinanceEmployee =>
+            'Financial summary limited to your currently assigned branch.',
+
+            default =>
+            'Current operational summary based on your authorized scope.',
+        };
+    }
+
+    private function actorRole(): ?SystemRole
+    {
+        $actor =
+            auth()->user();
+
+        if (! $actor instanceof User) {
+            return null;
+        }
+
+        return $actor->systemRole();
+    }
 
     /**
      * @return array<Stat>

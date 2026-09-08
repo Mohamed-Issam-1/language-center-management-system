@@ -53,6 +53,12 @@ class RolePermissionAuthorizationTest extends TestCase
                 SystemPermission::ManageFinancialOperations
             )
         );
+
+        $this->assertFalse(
+            $user->hasPermission(
+                SystemPermission::ViewAuditRecords
+            )
+        );
     }
 
     public function test_center_owner_has_center_administration_and_financial_capabilities(): void
@@ -76,6 +82,12 @@ class RolePermissionAuthorizationTest extends TestCase
         $this->assertTrue(
             $user->hasPermission(
                 SystemPermission::ManageFinancialOperations
+            )
+        );
+
+        $this->assertTrue(
+            $user->hasPermission(
+                SystemPermission::ViewAuditRecords
             )
         );
 
@@ -103,6 +115,18 @@ class RolePermissionAuthorizationTest extends TestCase
                 SystemPermission::ViewReports,
             ] as $permission
         ) {
+            $this->assertTrue(
+                $branchManager->hasPermission(
+                    SystemPermission::ViewAuditRecords
+                )
+            );
+
+            $this->assertFalse(
+                $financeEmployee->hasPermission(
+                    SystemPermission::ViewAuditRecords
+                )
+            );
+
             $this->assertTrue(
                 $financeEmployee->hasPermission(
                     $permission
@@ -177,6 +201,12 @@ class RolePermissionAuthorizationTest extends TestCase
                 SystemPermission::ManageFinancialOperations
             )
         );
+
+        $this->assertFalse(
+            $user->hasPermission(
+                SystemPermission::ViewAuditRecords
+            )
+        );
     }
 
     public function test_student_has_self_facing_capabilities_without_management_permissions(): void
@@ -206,6 +236,12 @@ class RolePermissionAuthorizationTest extends TestCase
         $this->assertFalse(
             $user->hasPermission(
                 SystemPermission::ManageFinancialOperations
+            )
+        );
+
+        $this->assertFalse(
+            $user->hasPermission(
+                SystemPermission::ViewAuditRecords
             )
         );
     }

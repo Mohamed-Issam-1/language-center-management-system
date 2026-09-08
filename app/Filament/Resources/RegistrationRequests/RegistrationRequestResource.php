@@ -53,6 +53,12 @@ class RegistrationRequestResource extends Resource
     protected static ?string $pluralModelLabel =
     'Registration Requests';
 
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Administration';
+
+    protected static ?int $navigationSort =
+    10;
+
     public static function infolist(
         Schema $schema
     ): Schema {
@@ -142,11 +148,20 @@ class RegistrationRequestResource extends Resource
                             ->label(
                                 'Status'
                             )
+                            ->badge()
                             ->formatStateUsing(
                                 fn(
                                     mixed $state
                                 ): string =>
                                 static::statusLabel(
+                                    $state
+                                )
+                            )
+                            ->color(
+                                fn(
+                                    mixed $state
+                                ): string =>
+                                static::statusColor(
                                     $state
                                 )
                             ),
@@ -240,7 +255,10 @@ class RegistrationRequestResource extends Resource
                     ->label(
                         'Email'
                     )
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
+                    ),
 
                 TextColumn::make(
                     'selectedRole.name'
@@ -268,6 +286,7 @@ class RegistrationRequestResource extends Resource
                     ->label(
                         'Status'
                     )
+                    ->badge()
                     ->formatStateUsing(
                         fn(
                             mixed $state
@@ -275,15 +294,24 @@ class RegistrationRequestResource extends Resource
                         static::statusLabel(
                             $state
                         )
+                    )
+                    ->color(
+                        fn(
+                            mixed $state
+                        ): string =>
+                        static::statusColor(
+                            $state
+                        )
                     ),
-
                 TextColumn::make(
                     'created_at'
                 )
                     ->label(
                         'Submitted At'
                     )
-                    ->dateTime()
+                    ->dateTime(
+                        'Y-m-d H:i'
+                    )
                     ->sortable(),
             ])
             ->filters([
@@ -1666,6 +1694,35 @@ class RegistrationRequestResource extends Resource
                 $record->getKey(),
             ]
         );
+    }
+
+    private static function statusColor(
+        mixed $state
+    ): string {
+        $status =
+            $state instanceof
+            RegistrationRequestStatus
+            ? $state
+            : RegistrationRequestStatus::tryFrom(
+                (string) (
+                    $state->value
+                    ?? $state
+                )
+            );
+
+        return match ($status) {
+            RegistrationRequestStatus::Pending =>
+            'warning',
+
+            RegistrationRequestStatus::Approved =>
+            'success',
+
+            RegistrationRequestStatus::Rejected =>
+            'danger',
+
+            default =>
+            'gray',
+        };
     }
 
     private static function statusLabel(

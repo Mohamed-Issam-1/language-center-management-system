@@ -48,6 +48,12 @@ class AttendanceResource extends Resource
     protected static ?string $pluralModelLabel =
     'Attendance Records';
 
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Operations';
+
+    protected static ?int $navigationSort =
+    40;
+
     public static function infolist(
         Schema $schema
     ): Schema {
@@ -114,7 +120,8 @@ class AttendanceResource extends Resource
                         )
                             ->label(
                                 'Attendance Status'
-                            ),
+                            )
+                            ->badge(),
 
                         TextEntry::make(
                             'attendanceStatus.code'
@@ -123,22 +130,15 @@ class AttendanceResource extends Resource
                                 'Status Code'
                             ),
 
-                        TextInput::make(
+                        TextEntry::make(
                             'late_minutes'
                         )
                             ->label(
                                 'Late Minutes'
                             )
-                            ->integer()
-                            ->minValue(0)
-                            ->default(
-                                fn(
-                                    Attendance $record
-                                ): int =>
-                                (int) $record
-                                    ->late_minutes
-                            )
-                            ->required(),
+                            ->suffix(
+                                ' min'
+                            ),
 
                         TextEntry::make(
                             'excuse'
@@ -227,6 +227,9 @@ class AttendanceResource extends Resource
                 )
                     ->label(
                         'Class'
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
 
                 TextColumn::make(
@@ -234,6 +237,9 @@ class AttendanceResource extends Resource
                 )
                     ->label(
                         'Branch'
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
 
                 TextColumn::make(
@@ -270,6 +276,9 @@ class AttendanceResource extends Resource
                 )
                     ->label(
                         'Recorded By'
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
 
                 TextColumn::make(
@@ -518,7 +527,11 @@ class AttendanceResource extends Resource
                                 ->send();
                         }
                     ),
-            ]);
+            ])
+            ->defaultSort(
+                'recorded_at',
+                'desc'
+            );
     }
 
     public static function getEloquentQuery(): Builder

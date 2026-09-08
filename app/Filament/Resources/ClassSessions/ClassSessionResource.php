@@ -40,6 +40,7 @@ use LogicException;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Textarea;
+use Filament\Actions\ActionGroup;
 
 class ClassSessionResource extends Resource
 {
@@ -54,6 +55,12 @@ class ClassSessionResource extends Resource
 
     protected static ?string $pluralModelLabel =
     'Class Sessions';
+
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Operations';
+
+    protected static ?int $navigationSort =
+    30;
 
     public static function infolist(
         Schema $schema
@@ -91,11 +98,20 @@ class ClassSessionResource extends Resource
                             ->label(
                                 'Status'
                             )
+                            ->badge()
                             ->formatStateUsing(
                                 fn(
                                     mixed $state
                                 ): string =>
                                 static::statusLabel(
+                                    $state
+                                )
+                            )
+                            ->color(
+                                fn(
+                                    mixed $state
+                                ): string =>
+                                static::statusColor(
                                     $state
                                 )
                             ),
@@ -220,13 +236,19 @@ class ClassSessionResource extends Resource
                     ->label(
                         'Class'
                     )
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
+                    ),
 
                 TextColumn::make(
                     'courseClass.branch.name'
                 )
                     ->label(
                         'Branch'
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
 
                 TextColumn::make(
@@ -260,8 +282,17 @@ class ClassSessionResource extends Resource
                     ->label(
                         'Topic'
                     )
-                    ->placeholder(
-                        'No topic'
+                    ->limit(
+                        28
+                    )
+                    ->tooltip(
+                        fn(
+                            mixed $state
+                        ): ?string =>
+                        is_string($state)
+                            && mb_strlen($state) > 28
+                            ? $state
+                            : null
                     ),
 
                 TextColumn::make(
@@ -269,6 +300,12 @@ class ClassSessionResource extends Resource
                 )
                     ->label(
                         'Classroom'
+                    )
+                    ->placeholder(
+                        'Not assigned'
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
 
                 TextColumn::make(
@@ -290,6 +327,14 @@ class ClassSessionResource extends Resource
                             mixed $state
                         ): string =>
                         static::statusLabel(
+                            $state
+                        )
+                    )
+                    ->color(
+                        fn(
+                            mixed $state
+                        ): string =>
+                        static::statusColor(
                             $state
                         )
                     ),
@@ -319,504 +364,511 @@ class ClassSessionResource extends Resource
             ->recordActions([
                 ViewAction::make(),
 
-                Action::make(
-                    'updateSession'
-                )
-                    ->label(
-                        'Update Session'
-                    )
-                    ->visible(
-                        fn(
-                            ClassSession $record
-                        ): bool =>
-                        $record->isScheduled()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->modalHeading(
-                        'Update Class Session'
-                    )
-                    ->modalDescription(
-                        'Update the topic, Classroom, or Teacher for this scheduled Session.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Update Session'
-                    )
-                    ->schema([
-                        TextInput::make(
-                            'topic'
-                        )
-                            ->label(
-                                'Topic'
-                            )
-                            ->default(
-                                fn(
-                                    ClassSession $record
-                                ): ?string =>
-                                $record->topic
-                            ),
+                ActionGroup::make([
 
-                        Select::make(
-                            'classroom_id'
+                    Action::make(
+                        'updateSession'
+                    )
+                        ->label(
+                            'Update Session'
                         )
-                            ->label(
-                                'Classroom'
-                            )
-                            ->options(
-                                fn(
-                                    ClassSession $record
-                                ): array =>
-                                static::classroomOptionsForSession(
+                        ->visible(
+                            fn(
+                                ClassSession $record
+                            ): bool =>
+                            $record->isScheduled()
+                                && static::canView(
                                     $record
                                 )
-                            )
-                            ->default(
-                                fn(
-                                    ClassSession $record
-                                ): int =>
-                                $record->classroom_id
-                            )
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-
-                        Select::make(
-                            'teacher_id'
                         )
-                            ->label(
-                                'Teacher'
+                        ->modalHeading(
+                            'Update Class Session'
+                        )
+                        ->modalDescription(
+                            'Update the topic, Classroom, or Teacher for this scheduled Session.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Update Session'
+                        )
+                        ->schema([
+                            TextInput::make(
+                                'topic'
                             )
-                            ->options(
-                                fn(
-                                    ClassSession $record
-                                ): array =>
-                                static::teacherOptionsForSession(
+                                ->label(
+                                    'Topic'
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSession $record
+                                    ): ?string =>
+                                    $record->topic
+                                ),
+
+                            Select::make(
+                                'classroom_id'
+                            )
+                                ->label(
+                                    'Classroom'
+                                )
+                                ->options(
+                                    fn(
+                                        ClassSession $record
+                                    ): array =>
+                                    static::classroomOptionsForSession(
+                                        $record
+                                    )
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSession $record
+                                    ): int =>
+                                    $record->classroom_id
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+
+                            Select::make(
+                                'teacher_id'
+                            )
+                                ->label(
+                                    'Teacher'
+                                )
+                                ->options(
+                                    fn(
+                                        ClassSession $record
+                                    ): array =>
+                                    static::teacherOptionsForSession(
+                                        $record
+                                    )
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSession $record
+                                    ): int =>
+                                    $record->teacher_id
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+                        ])
+                        ->action(
+                            function (
+                                ClassSession $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
+
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be updated.',
+                                        'The authenticated User Account could not be resolved.'
+                                    );
+
+                                    return;
+                                }
+
+                                try {
+                                    $session =
+                                        static::getEloquentQuery()
+                                        ->whereKey(
+                                            $record->getKey()
+                                        )
+                                        ->firstOrFail();
+
+                                    $classroom =
+                                        static::resolveClassroomForSession(
+                                            $session,
+                                            (int) $data['classroom_id']
+                                        );
+
+                                    $teacher =
+                                        static::resolveTeacherForSession(
+                                            $session,
+                                            (int) $data['teacher_id']
+                                        );
+
+                                    app(
+                                        SessionManagementService::class
+                                    )->update(
+                                        $actor,
+                                        $session,
+                                        [
+                                            'topic' =>
+                                            $data['topic']
+                                                ?? null,
+
+                                            'classroom_id' =>
+                                            $classroom->id,
+
+                                            'teacher_id' =>
+                                            $teacher->id,
+                                        ]
+                                    );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be updated.',
+                                        $exception->getMessage()
+                                    );
+
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Session updated'
+                                    )
+                                    ->success()
+                                    ->send();
+                            }
+                        ),
+                    Action::make(
+                        'rescheduleSession'
+                    )
+                        ->label(
+                            'Reschedule'
+                        )
+                        ->visible(
+                            fn(
+                                ClassSession $record
+                            ): bool =>
+                            $record->isScheduled()
+                                && static::canView(
                                     $record
                                 )
+                        )
+                        ->modalHeading(
+                            'Reschedule Class Session'
+                        )
+                        ->modalDescription(
+                            'Change the date or time of this scheduled Class Session.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Reschedule Session'
+                        )
+                        ->schema([
+                            DatePicker::make(
+                                'session_date'
                             )
-                            ->default(
-                                fn(
-                                    ClassSession $record
-                                ): int =>
-                                $record->teacher_id
+                                ->label(
+                                    'Session Date'
+                                )
+                                ->default(
+                                    fn(
+                                        ClassSession $record
+                                    ): string =>
+                                    $record
+                                        ->session_date
+                                        ->toDateString()
+                                )
+                                ->required(),
+
+                            TimePicker::make(
+                                'start_time'
                             )
-                            ->searchable()
-                            ->preload()
-                            ->required(),
-                    ])
-                    ->action(
-                        function (
-                            ClassSession $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
+                                ->label(
+                                    'Start Time'
+                                )
+                                ->seconds(false)
+                                ->default(
+                                    fn(
+                                        ClassSession $record
+                                    ): string =>
+                                    $record->start_time
+                                )
+                                ->required(),
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be updated.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
+                            TimePicker::make(
+                                'end_time'
+                            )
+                                ->label(
+                                    'End Time'
+                                )
+                                ->seconds(false)
+                                ->default(
+                                    fn(
+                                        ClassSession $record
+                                    ): string =>
+                                    $record->end_time
+                                )
+                                ->required(),
+                        ])
+                        ->action(
+                            function (
+                                ClassSession $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                                return;
-                            }
-
-                            try {
-                                $session =
-                                    static::getEloquentQuery()
-                                    ->whereKey(
-                                        $record->getKey()
-                                    )
-                                    ->firstOrFail();
-
-                                $classroom =
-                                    static::resolveClassroomForSession(
-                                        $session,
-                                        (int) $data['classroom_id']
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be rescheduled.',
+                                        'The authenticated User Account could not be resolved.'
                                     );
 
-                                $teacher =
-                                    static::resolveTeacherForSession(
+                                    return;
+                                }
+
+                                try {
+                                    $session =
+                                        static::getEloquentQuery()
+                                        ->whereKey(
+                                            $record->getKey()
+                                        )
+                                        ->firstOrFail();
+
+                                    app(
+                                        SessionManagementService::class
+                                    )->reschedule(
+                                        $actor,
                                         $session,
-                                        (int) $data['teacher_id']
+                                        [
+                                            'session_date' =>
+                                            (string) $data['session_date'],
+
+                                            'start_time' =>
+                                            (string) $data['start_time'],
+
+                                            'end_time' =>
+                                            (string) $data['end_time'],
+                                        ]
+                                    );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be rescheduled.',
+                                        $exception->getMessage()
                                     );
 
-                                app(
-                                    SessionManagementService::class
-                                )->update(
-                                    $actor,
-                                    $session,
-                                    [
-                                        'topic' =>
-                                        $data['topic']
-                                            ?? null,
+                                    return;
+                                }
 
-                                        'classroom_id' =>
-                                        $classroom->id,
-
-                                        'teacher_id' =>
-                                        $teacher->id,
-                                    ]
-                                );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be updated.',
-                                    $exception->getMessage()
-                                );
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title(
-                                    'Session updated'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-                Action::make(
-                    'rescheduleSession'
-                )
-                    ->label(
-                        'Reschedule'
-                    )
-                    ->visible(
-                        fn(
-                            ClassSession $record
-                        ): bool =>
-                        $record->isScheduled()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->modalHeading(
-                        'Reschedule Class Session'
-                    )
-                    ->modalDescription(
-                        'Change the date or time of this scheduled Class Session.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Reschedule Session'
-                    )
-                    ->schema([
-                        DatePicker::make(
-                            'session_date'
-                        )
-                            ->label(
-                                'Session Date'
-                            )
-                            ->default(
-                                fn(
-                                    ClassSession $record
-                                ): string =>
-                                $record
-                                    ->session_date
-                                    ->toDateString()
-                            )
-                            ->required(),
-
-                        TimePicker::make(
-                            'start_time'
-                        )
-                            ->label(
-                                'Start Time'
-                            )
-                            ->seconds(false)
-                            ->default(
-                                fn(
-                                    ClassSession $record
-                                ): string =>
-                                $record->start_time
-                            )
-                            ->required(),
-
-                        TimePicker::make(
-                            'end_time'
-                        )
-                            ->label(
-                                'End Time'
-                            )
-                            ->seconds(false)
-                            ->default(
-                                fn(
-                                    ClassSession $record
-                                ): string =>
-                                $record->end_time
-                            )
-                            ->required(),
-                    ])
-                    ->action(
-                        function (
-                            ClassSession $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
-
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be rescheduled.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
-
-                                return;
-                            }
-
-                            try {
-                                $session =
-                                    static::getEloquentQuery()
-                                    ->whereKey(
-                                        $record->getKey()
+                                Notification::make()
+                                    ->title(
+                                        'Session rescheduled'
                                     )
-                                    ->firstOrFail();
-
-                                app(
-                                    SessionManagementService::class
-                                )->reschedule(
-                                    $actor,
-                                    $session,
-                                    [
-                                        'session_date' =>
-                                        (string) $data['session_date'],
-
-                                        'start_time' =>
-                                        (string) $data['start_time'],
-
-                                        'end_time' =>
-                                        (string) $data['end_time'],
-                                    ]
-                                );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be rescheduled.',
-                                    $exception->getMessage()
-                                );
-
-                                return;
+                                    ->success()
+                                    ->send();
                             }
-
-                            Notification::make()
-                                ->title(
-                                    'Session rescheduled'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-                Action::make(
-                    'cancelSession'
-                )
-                    ->label(
-                        'Cancel'
+                        ),
+                    Action::make(
+                        'cancelSession'
                     )
-                    ->color(
-                        'danger'
-                    )
-                    ->requiresConfirmation()
-                    ->visible(
-                        fn(
-                            ClassSession $record
-                        ): bool =>
-                        $record->isScheduled()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->modalHeading(
-                        'Cancel Class Session'
-                    )
-                    ->modalDescription(
-                        'Cancel this Class Session while preserving its historical record.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Cancel Session'
-                    )
-                    ->schema([
-                        Textarea::make(
-                            'reason'
+                        ->label(
+                            'Cancel'
                         )
-                            ->label(
-                                'Cancellation Reason'
+                        ->color(
+                            'danger'
+                        )
+                        ->requiresConfirmation()
+                        ->visible(
+                            fn(
+                                ClassSession $record
+                            ): bool =>
+                            $record->isScheduled()
+                                && static::canView(
+                                    $record
+                                )
+                        )
+                        ->modalHeading(
+                            'Cancel Class Session'
+                        )
+                        ->modalDescription(
+                            'Cancel this Class Session while preserving its historical record.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Cancel Session'
+                        )
+                        ->schema([
+                            Textarea::make(
+                                'reason'
                             )
-                            ->required()
-                            ->rows(3),
-                    ])
-                    ->action(
-                        function (
-                            ClassSession $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
+                                ->label(
+                                    'Cancellation Reason'
+                                )
+                                ->required()
+                                ->rows(3),
+                        ])
+                        ->action(
+                            function (
+                                ClassSession $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be cancelled.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be cancelled.',
+                                        'The authenticated User Account could not be resolved.'
+                                    );
 
-                                return;
-                            }
+                                    return;
+                                }
 
-                            try {
-                                /*
+                                try {
+                                    /*
                  * Re-resolve through the scoped Resource query
                  * before invoking the domain Service.
                  */
-                                $session =
-                                    static::getEloquentQuery()
-                                    ->whereKey(
-                                        $record->getKey()
+                                    $session =
+                                        static::getEloquentQuery()
+                                        ->whereKey(
+                                            $record->getKey()
+                                        )
+                                        ->firstOrFail();
+
+                                    app(
+                                        SessionManagementService::class
+                                    )->cancel(
+                                        $actor,
+                                        $session,
+                                        (string) $data['reason']
+                                    );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be cancelled.',
+                                        $exception->getMessage()
+                                    );
+
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Session cancelled'
                                     )
-                                    ->firstOrFail();
-
-                                app(
-                                    SessionManagementService::class
-                                )->cancel(
-                                    $actor,
-                                    $session,
-                                    (string) $data['reason']
-                                );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be cancelled.',
-                                    $exception->getMessage()
-                                );
-
-                                return;
+                                    ->success()
+                                    ->send();
                             }
+                        ),
 
-                            Notification::make()
-                                ->title(
-                                    'Session cancelled'
+                    Action::make(
+                        'completeSession'
+                    )
+                        ->label(
+                            'Complete'
+                        )
+                        ->color(
+                            'success'
+                        )
+                        ->requiresConfirmation()
+                        ->visible(
+                            fn(
+                                ClassSession $record
+                            ): bool =>
+                            $record->isScheduled()
+                                && static::canView(
+                                    $record
                                 )
-                                ->success()
-                                ->send();
-                        }
-                    ),
+                        )
+                        ->modalHeading(
+                            'Complete Class Session'
+                        )
+                        ->modalDescription(
+                            'Mark this Class Session as completed. This lifecycle change will be recorded in the audit history.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Complete Session'
+                        )
+                        ->action(
+                            function (
+                                ClassSession $record
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                Action::make(
-                    'completeSession'
-                )
-                    ->label(
-                        'Complete'
-                    )
-                    ->color(
-                        'success'
-                    )
-                    ->requiresConfirmation()
-                    ->visible(
-                        fn(
-                            ClassSession $record
-                        ): bool =>
-                        $record->isScheduled()
-                            && static::canView(
-                                $record
-                            )
-                    )
-                    ->modalHeading(
-                        'Complete Class Session'
-                    )
-                    ->modalDescription(
-                        'Mark this Class Session as completed. This lifecycle change will be recorded in the audit history.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Complete Session'
-                    )
-                    ->action(
-                        function (
-                            ClassSession $record
-                        ): void {
-                            $actor =
-                                auth()->user();
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be completed.',
+                                        'The authenticated User Account could not be resolved.'
+                                    );
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be completed.',
-                                    'The authenticated User Account could not be resolved.'
-                                );
+                                    return;
+                                }
 
-                                return;
-                            }
-
-                            try {
-                                /*
+                                try {
+                                    /*
                  * Re-resolve through the scoped Resource query
                  * before invoking the domain Service.
                  */
-                                $session =
-                                    static::getEloquentQuery()
-                                    ->whereKey(
-                                        $record->getKey()
+                                    $session =
+                                        static::getEloquentQuery()
+                                        ->whereKey(
+                                            $record->getKey()
+                                        )
+                                        ->firstOrFail();
+
+                                    app(
+                                        SessionManagementService::class
+                                    )->complete(
+                                        $actor,
+                                        $session
+                                    );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
+                                    $exception
+                                ) {
+                                    static::sessionActionFailure(
+                                        'Session could not be completed.',
+                                        $exception->getMessage()
+                                    );
+
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Session completed'
                                     )
-                                    ->firstOrFail();
-
-                                app(
-                                    SessionManagementService::class
-                                )->complete(
-                                    $actor,
-                                    $session
-                                );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::sessionActionFailure(
-                                    'Session could not be completed.',
-                                    $exception->getMessage()
-                                );
-
-                                return;
+                                    ->success()
+                                    ->send();
                             }
-
-                            Notification::make()
-                                ->title(
-                                    'Session completed'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-            ]);
+                        ),
+                ])
+            ])
+            ->defaultSort(
+                'session_date',
+                'desc'
+            );
     }
 
     public static function getEloquentQuery(): Builder
@@ -1297,6 +1349,35 @@ class ClassSessionResource extends Resource
             )
             ->danger()
             ->send();
+    }
+
+    private static function statusColor(
+        mixed $state
+    ): string {
+        $value =
+            strtolower(
+                (string) (
+                    $state->value
+                    ?? $state
+                )
+            );
+
+        return match ($value) {
+            'scheduled' =>
+            'info',
+
+            'completed' =>
+            'success',
+
+            'cancelled' =>
+            'danger',
+
+            'rescheduled' =>
+            'warning',
+
+            default =>
+            'gray',
+        };
     }
 
     private static function statusLabel(

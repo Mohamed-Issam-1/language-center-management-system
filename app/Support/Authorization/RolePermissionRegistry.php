@@ -36,6 +36,7 @@ final class RolePermissionRegistry
                 SystemPermission::ViewStudentRecords,
                 SystemPermission::ViewFinancialData,
                 SystemPermission::ManageFinancialOperations,
+                SystemPermission::ViewAuditRecords,
                 SystemPermission::ViewReports,
             ],
 
@@ -52,6 +53,7 @@ final class RolePermissionRegistry
                 SystemPermission::ViewStudentRecords,
                 SystemPermission::ViewFinancialData,
                 SystemPermission::ManageFinancialOperations,
+                SystemPermission::ViewAuditRecords,
                 SystemPermission::ViewReports,
             ],
 

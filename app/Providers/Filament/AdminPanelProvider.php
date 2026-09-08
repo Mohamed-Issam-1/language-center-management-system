@@ -10,17 +10,17 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Support\Assets\Css;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\Navigation\NavigationGroup;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -31,6 +31,27 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->brandLogo(
+                asset('images/logo.svg')
+            )
+            ->darkModeBrandLogo(
+                asset('images/logo-dark.svg')
+            )
+            ->brandLogoHeight(
+                '64px'
+            )
+            ->favicon(asset('images/favicon.png'))
+
+            ->navigationGroups([
+                NavigationGroup::make('Platform'),
+                NavigationGroup::make('Organization'),
+                NavigationGroup::make('People'),
+                NavigationGroup::make('Academics'),
+                NavigationGroup::make('Operations'),
+                NavigationGroup::make('Finance'),
+                NavigationGroup::make('Administration'),
+                NavigationGroup::make('Reporting'),
+            ])
 
             /*
              * Keep Filament's login route so its Authenticate
@@ -43,8 +64,28 @@ class AdminPanelProvider extends PanelProvider
                 RedirectToApplicationLoginController::class
             )
 
+            /*
+             * LCMS visual identity.
+             *
+             * The custom panel stylesheet is intentionally isolated
+             * from the React / Inertia application UI.
+             */
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::hex('#18AEEA'),
+                'info' => Color::Sky,
+                'success' => Color::Emerald,
+                'warning' => Color::Amber,
+                'danger' => Color::Red,
+                'gray' => Color::Slate,
+            ])
+
+            ->assets([
+                Css::make(
+                    'lcms-admin-design-system',
+                    resource_path(
+                        'css/filament/admin/lcms-admin.css'
+                    )
+                ),
             ])
 
             ->discoverResources(
@@ -57,18 +98,14 @@ class AdminPanelProvider extends PanelProvider
                 for: 'App\Filament\Pages'
             )
 
-            ->pages([
-                Dashboard::class,
-            ])
+            ->pages([])
 
             ->discoverWidgets(
                 in: app_path('Filament/Widgets'),
                 for: 'App\Filament\Widgets'
             )
 
-            ->widgets([
-                AccountWidget::class,
-            ])
+            ->widgets([])
 
             ->middleware([
                 EncryptCookies::class,

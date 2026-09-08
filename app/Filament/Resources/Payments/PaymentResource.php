@@ -32,6 +32,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 use LogicException;
+use Filament\Actions\ActionGroup;
 
 class PaymentResource extends Resource
 {
@@ -46,6 +47,12 @@ class PaymentResource extends Resource
 
     protected static ?string $pluralModelLabel =
     'Payments';
+
+    protected static string | \UnitEnum | null $navigationGroup =
+    'Finance';
+
+    protected static ?int $navigationSort =
+    20;
 
     public static function infolist(
         Schema $schema
@@ -66,13 +73,23 @@ class PaymentResource extends Resource
                         TextEntry::make(
                             'status'
                         )
-                            ->label('Status')
+                            ->label(
+                                'Status'
+                            )
                             ->badge()
                             ->formatStateUsing(
                                 fn(
                                     mixed $state
                                 ): string =>
                                 static::statusLabel(
+                                    $state
+                                )
+                            )
+                            ->color(
+                                fn(
+                                    mixed $state
+                                ): string =>
+                                static::statusColor(
                                     $state
                                 )
                             ),
@@ -343,6 +360,9 @@ class PaymentResource extends Resource
                                 (string) $state
                             )
                         )
+                    )
+                    ->toggleable(
+                        isToggledHiddenByDefault: true
                     ),
 
                 TextColumn::make(
@@ -357,6 +377,14 @@ class PaymentResource extends Resource
                             mixed $state
                         ): string =>
                         static::statusLabel(
+                            $state
+                        )
+                    )
+                    ->color(
+                        fn(
+                            mixed $state
+                        ): string =>
+                        static::statusColor(
                             $state
                         )
                     ),
@@ -397,63 +425,65 @@ class PaymentResource extends Resource
             ->recordActions([
                 ViewAction::make(),
 
-                Action::make(
-                    'reversePayment'
-                )
-                    ->label(
-                        'Reverse Payment'
+                ActionGroup::make([
+
+                    Action::make(
+                        'reversePayment'
                     )
-                    ->color('danger')
-                    ->visible(
-                        fn(
-                            Payment $record
-                        ): bool =>
-                        static::actorCanReversePayment(
-                            $record
+                        ->label(
+                            'Reverse Payment'
                         )
-                    )
-                    ->requiresConfirmation()
-                    ->modalHeading(
-                        'Reverse Payment'
-                    )
-                    ->modalDescription(
-                        'This will reverse the posted Payment while preserving the Payment, Receipt, and Allocation history. The reversal will be recorded in Audit.'
-                    )
-                    ->modalSubmitActionLabel(
-                        'Reverse Payment'
-                    )
-                    ->schema([
-                        Textarea::make(
-                            'reason'
-                        )
-                            ->label(
-                                'Reversal Reason'
+                        ->color('danger')
+                        ->visible(
+                            fn(
+                                Payment $record
+                            ): bool =>
+                            static::actorCanReversePayment(
+                                $record
                             )
-                            ->required()
-                            ->maxLength(255)
-                            ->rows(3),
-                    ])
-                    ->action(
-                        function (
-                            Payment $record,
-                            array $data
-                        ): void {
-                            $actor =
-                                auth()->user();
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading(
+                            'Reverse Payment'
+                        )
+                        ->modalDescription(
+                            'This will reverse the posted Payment while preserving the Payment, Receipt, and Allocation history. The reversal will be recorded in Audit.'
+                        )
+                        ->modalSubmitActionLabel(
+                            'Reverse Payment'
+                        )
+                        ->schema([
+                            Textarea::make(
+                                'reason'
+                            )
+                                ->label(
+                                    'Reversal Reason'
+                                )
+                                ->required()
+                                ->maxLength(255)
+                                ->rows(3),
+                        ])
+                        ->action(
+                            function (
+                                Payment $record,
+                                array $data
+                            ): void {
+                                $actor =
+                                    auth()->user();
 
-                            if (
-                                ! $actor
-                                    instanceof User
-                            ) {
-                                static::paymentReversalFailure(
-                                    'The authenticated User Account could not be resolved.'
-                                );
+                                if (
+                                    ! $actor
+                                        instanceof User
+                                ) {
+                                    static::paymentReversalFailure(
+                                        'The authenticated User Account could not be resolved.'
+                                    );
 
-                                return;
-                            }
+                                    return;
+                                }
 
-                            try {
-                                /*
+                                try {
+                                    /*
                      * Resolve again through the current
                      * Filament Resource scope immediately
                      * before the domain operation.
@@ -461,51 +491,56 @@ class PaymentResource extends Resource
                      * Never trust a stale or externally
                      * supplied Payment model instance.
                      */
-                                $payment =
-                                    static::resolveScopedPayment(
-                                        $record
-                                    );
+                                    $payment =
+                                        static::resolveScopedPayment(
+                                            $record
+                                        );
 
-                                $payment =
-                                    app(
-                                        FinanceManagementService::class
-                                    )->reversePayment(
-                                        $actor,
-                                        $payment,
-                                        $data['reason']
-                                            ?? null
-                                    );
-                            } catch (
-                                AuthorizationException
-                                | DomainException
-                                | InvalidArgumentException
-                                | LogicException
-                                | ModelNotFoundException
-                                $exception
-                            ) {
-                                static::paymentReversalFailure(
+                                    $payment =
+                                        app(
+                                            FinanceManagementService::class
+                                        )->reversePayment(
+                                            $actor,
+                                            $payment,
+                                            $data['reason']
+                                                ?? null
+                                        );
+                                } catch (
+                                    AuthorizationException
+                                    | DomainException
+                                    | InvalidArgumentException
+                                    | LogicException
+                                    | ModelNotFoundException
                                     $exception
-                                        ->getMessage()
-                                );
+                                ) {
+                                    static::paymentReversalFailure(
+                                        $exception
+                                            ->getMessage()
+                                    );
 
-                                return;
+                                    return;
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Payment reversed'
+                                    )
+                                    ->body(
+                                        'Receipt '
+                                            . $payment
+                                            ->receipt_number
+                                            . ' was reversed successfully.'
+                                    )
+                                    ->success()
+                                    ->send();
                             }
-
-                            Notification::make()
-                                ->title(
-                                    'Payment reversed'
-                                )
-                                ->body(
-                                    'Receipt '
-                                        . $payment
-                                        ->receipt_number
-                                        . ' was reversed successfully.'
-                                )
-                                ->success()
-                                ->send();
-                        }
-                    ),
-            ]);
+                        ),
+                ]),
+            ])
+            ->defaultSort(
+                'paid_at',
+                'desc'
+            );
     }
 
     public static function getEloquentQuery(): Builder
@@ -859,6 +894,31 @@ class PaymentResource extends Resource
             ->whereRaw(
                 '1 = 0'
             );
+    }
+
+    private static function statusColor(
+        mixed $state
+    ): string {
+        $status =
+            $state instanceof PaymentStatus
+            ? $state
+            : PaymentStatus::tryFrom(
+                (string) (
+                    $state->value
+                    ?? $state
+                )
+            );
+
+        return match ($status) {
+            PaymentStatus::Posted =>
+            'success',
+
+            PaymentStatus::Reversed =>
+            'danger',
+
+            default =>
+            'gray',
+        };
     }
 
     private static function statusLabel(
