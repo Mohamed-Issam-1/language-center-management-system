@@ -129,6 +129,7 @@ Route::middleware([
     'tenant.context',
     'password.change.completed',
     'verified',
+    'student.portal',
 ])->group(function () {
     Route::get('/my-courses', function () {
         return Inertia::render(

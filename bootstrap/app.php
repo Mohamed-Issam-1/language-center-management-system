@@ -31,6 +31,10 @@ return Application::configure(
             );
 
             $middleware->alias([
+
+                'student.portal' =>
+                \App\Http\Middleware\EnsureStudentPortalAccess::class,
+
                 'password.change.completed' =>
                 \App\Http\Middleware\EnsurePasswordChangeCompleted::class,
 
