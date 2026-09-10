@@ -7,11 +7,14 @@ import SessionLog from '@/Features/Student/Attendance/SessionLog';
 import WeeklyAttendanceChart from '@/Features/Student/Attendance/WeeklyAttendanceChart';
 import StudentLayout from '@/Layouts/StudentLayout';
 import type {
+    AttendanceAlertData,
     AttendanceCourseSummary,
     AttendanceSessionRecord,
     AttendanceSummary,
+    StudentAttendancePageData,
     WeeklyAttendance,
 } from '@/types/student-attendance';
+import type { PageProps } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 
 const summary: AttendanceSummary = {
@@ -164,38 +167,87 @@ const sessionRecords: AttendanceSessionRecord[] = [
     },
 ];
 
-type OptionalAuthProps = {
-    auth?: {
-        user?: {
-            name?: string;
-        } | null;
-    };
+const demoAlert: AttendanceAlertData = {
+    title: 'Approaching Absence Limit',
+    message:
+        'You have 4 absences. The maximum allowed is 6. 2 absences remaining before limit is reached.',
+};
+
+const demoAttendanceData: StudentAttendancePageData = {
+    student: {
+        name: 'Mohammad Znaid',
+        studentId: 'STU-2026-0842',
+    },
+
+    center: {
+        name: 'Al-Hilal Language Center',
+        branch: 'Gaza – Palestine',
+    },
+
+    summary,
+
+    alert: demoAlert,
+
+    courses: courseSummaries,
+
+    weekly,
+
+    records: sessionRecords,
+};
+
+type MyAttendancePageProps = PageProps & {
+    studentAttendance?: StudentAttendancePageData;
 };
 
 export default function MyAttendance() {
-    const page = usePage();
-    const props = page.props as OptionalAuthProps;
+    const page =
+        usePage<MyAttendancePageProps>();
 
-    const studentName =
-        props.auth?.user?.name || 'Mohammad Znaid';
+    const demoMode =
+        page.url.startsWith('/demo');
+
+    const data =
+        demoMode
+            ? demoAttendanceData
+            : page.props.studentAttendance;
+
+    if (!data) {
+        throw new Error(
+            'Student attendance data was not provided by Laravel.',
+        );
+    }
 
     return (
         <StudentLayout
-            studentName={studentName}
-            studentId="STU-2024-0842"
-            centerName="Al-Hilal Language Center"
-            branchName="Riyadh – Main Branch"
+            studentName={data.student.name}
+            studentId={data.student.studentId}
+            centerName={data.center.name}
+            branchName={data.center.branch}
             pageTitle="My Attendance"
             activeNav="attendance"
         >
             <Head title="My Attendance" />
 
             <div className="student-records-page records-stack">
-                <AttendanceAlert summary={summary} />
-                <AttendanceStats summary={summary} />
-                <AttendanceByCourse courses={courseSummaries} />
-                <WeeklyAttendanceChart data={weekly} />
-                <SessionLog records={sessionRecords} />
+                <AttendanceAlert
+                    alert={data.alert}
+                />
+
+                <AttendanceStats
+                    summary={data.summary}
+                />
+
+                <AttendanceByCourse
+                    courses={data.courses}
+                />
+
+                <WeeklyAttendanceChart
+                    data={data.weekly}
+                />
+
+                <SessionLog
+                    records={data.records}
+                />
             </div>
         </StudentLayout>
     );

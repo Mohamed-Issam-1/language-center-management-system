@@ -5,6 +5,7 @@ use App\Http\Controllers\RegistrationRequestPersonalPictureController;
 use App\Http\Middleware\EstablishFilamentBranchContext;
 use App\Services\Reports\DashboardReadService;
 use App\Services\Students\StudentDashboardReadService;
+use App\Services\Students\StudentPortalRecordsReadService;
 use App\Support\Enums\SystemRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
@@ -164,14 +165,44 @@ Route::middleware([
     )
         ->whereNumber('course')
         ->name('student.courses.show');
-        
-    Route::get('/my-schedule', function () {
-        return Inertia::render('Student/MySchedule');
-    })->name('student.schedule');
 
-    Route::get('/my-attendance', function () {
-        return Inertia::render('Student/MyAttendance');
-    })->name('student.attendance');
+    Route::get(
+        '/my-schedule',
+        function (
+            Request $request,
+            StudentPortalRecordsReadService $studentRecords
+        ) {
+            return Inertia::render(
+                'Student/MySchedule',
+                [
+                    'studentSchedule' =>
+                    $studentRecords
+                        ->scheduleForUser(
+                            $request->user()
+                        ),
+                ]
+            );
+        }
+    )->name('student.schedule');
+
+    Route::get(
+        '/my-attendance',
+        function (
+            Request $request,
+            StudentPortalRecordsReadService $studentRecords
+        ) {
+            return Inertia::render(
+                'Student/MyAttendance',
+                [
+                    'studentAttendance' =>
+                    $studentRecords
+                        ->attendanceForUser(
+                            $request->user()
+                        ),
+                ]
+            );
+        }
+    )->name('student.attendance');
 
     Route::get('/payments', function () {
         return Inertia::render('Student/Payments');

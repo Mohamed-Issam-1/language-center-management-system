@@ -106,10 +106,6 @@
     color: #d6dde5;
 }
 
-.schedule-day.is-selected {
-    background: #e7edf9;
-}
-
 .schedule-day-number {
     width: 28px;
     height: 28px;
@@ -122,9 +118,22 @@
     font-weight: 500;
 }
 
-.schedule-day.is-selected .schedule-day-number {
+.schedule-day.is-today {
+    background: #eef4fd;
+}
+
+.schedule-day.is-today .schedule-day-number {
     background: #07358f;
     color: #ffffff;
+    font-weight: 800;
+}
+
+.schedule-day.is-selected {
+    background: #e7edf9;
+}
+
+.schedule-day.is-selected:not(.is-today) .schedule-day-number {
+    color: #07358f;
     font-weight: 800;
 }
 
@@ -301,6 +310,14 @@
     background: #073997;
 }
 
+.schedule-session-card.completed::before {
+    background: #03abc2;
+}
+
+.schedule-session-card.cancelled::before {
+    background: #ef3139;
+}
+
 .schedule-session-topline {
     display: flex;
     align-items: center;
@@ -326,6 +343,28 @@
     height: 6px;
     border-radius: 999px;
     background: #07358a;
+}
+
+.schedule-session-card.completed .schedule-session-type {
+    border-color: #84dfe9;
+    background: #e0f8fb;
+    color: #03a7bd;
+}
+
+.schedule-session-card.completed
+    .schedule-session-type-dot {
+    background: #03a7bd;
+}
+
+.schedule-session-card.cancelled .schedule-session-type {
+    border-color: #ff9da2;
+    background: #fff0f0;
+    color: #ed2d36;
+}
+
+.schedule-session-card.cancelled
+    .schedule-session-type-dot {
+    background: #ed2d36;
 }
 
 .schedule-status {
@@ -483,6 +522,7 @@
 }
 
 /* Desktop: one combined card, selected day left, calendar right */
+
 @media (min-width: 1024px) {
     .schedule-shell {
         display: flex;
@@ -518,6 +558,7 @@
 }
 
 /* Mobile: calendar first as its own card, selected day below as a second card */
+
 @media (max-width: 1023px) {
     .schedule-shell {
         display: flex;
