@@ -7,71 +7,118 @@ import ProfileHero from '@/Features/Student/Profile/ProfileHero';
 import {
     defaultStudentProfile,
     readDemoStudentProfile,
+    readLiveStudentProfileOverrides,
 } from '@/Features/Student/Profile/profileDemoStorage';
 import StudentLayout from '@/Layouts/StudentLayout';
+import type { PageProps } from '@/types';
 import type { StudentProfileData } from '@/types/student-profile';
-import { Head, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import {
+    Head,
+    usePage,
+} from '@inertiajs/react';
+import {
+    useEffect,
+    useState,
+} from 'react';
 
-type OptionalAuthProps = {
-    auth?: {
-        user?: {
-            name?: string;
-            email?: string;
-        } | null;
+type StudentProfilePageProps =
+    PageProps & {
+        studentProfile?: StudentProfileData;
     };
-};
 
 export default function Profile() {
-    const page = usePage();
-    const props = page.props as OptionalAuthProps;
-    const demoMode = page.url.startsWith('/demo');
+    const page =
+        usePage<StudentProfilePageProps>();
 
-    const [profile, setProfile] =
-        useState<StudentProfileData>(defaultStudentProfile);
+    const demoMode =
+        page.url.startsWith(
+            '/demo',
+        );
+
+    const [
+        profile,
+        setProfile,
+    ] =
+        useState<StudentProfileData>(
+            defaultStudentProfile,
+        );
 
     useEffect(() => {
-        const stored = readDemoStudentProfile();
+        if (demoMode) {
+            setProfile(
+                readDemoStudentProfile(),
+            );
+
+            return;
+        }
+
+        const backendProfile =
+            page.props
+                .studentProfile;
+
+        if (!backendProfile) {
+            return;
+        }
 
         setProfile({
-            ...stored,
-            fullName:
-                !demoMode && props.auth?.user?.name
-                    ? props.auth.user.name
-                    : stored.fullName,
-            email:
-                !demoMode && props.auth?.user?.email
-                    ? props.auth.user.email
-                    : stored.email,
+            ...backendProfile,
+            ...readLiveStudentProfileOverrides(),
         });
-    }, [demoMode, props.auth?.user?.email, props.auth?.user?.name]);
+    }, [
+        demoMode,
+        page.props
+            .studentProfile,
+    ]);
 
-    const editHref = demoMode
-        ? '/demo/profile/edit'
-        : '/student/profile/edit';
+    const editHref =
+        demoMode
+            ? '/demo/profile/edit'
+            : '/student/profile/edit';
 
     return (
         <StudentLayout
-            studentName={profile.fullName}
-            studentId={profile.studentId}
-            centerName={profile.centerName}
-            branchName={profile.branchName}
+            studentName={
+                profile.fullName
+            }
+            studentId={
+                profile.studentId
+            }
+            centerName={
+                profile.centerName
+            }
+            branchName={
+                profile.branchName
+            }
             pageTitle="My Profile"
             activeNav="profile"
+            fluid
         >
             <Head title="My Profile" />
 
             <div className="student-profile-page profile-stack">
                 <ProfileHero
-                    profile={profile}
-                    editHref={editHref}
+                    profile={
+                        profile
+                    }
+                    editHref={
+                        editHref
+                    }
                 />
 
                 <div className="profile-content-grid">
-                    <PersonalInformationCard profile={profile} />
+                    <PersonalInformationCard
+                        profile={
+                            profile
+                        }
+                    />
 
                     <div className="profile-right-stack">
-                        <CenterEnrollmentCard profile={profile} />
+                        <CenterEnrollmentCard
+                            profile={
+                                profile
+                            }
+                        />
+
                         <AccountSecurityCard />
                     </div>
                 </div>

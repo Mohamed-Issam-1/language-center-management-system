@@ -6,80 +6,151 @@ import ProfilePhotoEditor from '@/Features/Student/Profile/ProfilePhotoEditor';
 import {
     defaultStudentProfile,
     readDemoStudentProfile,
+    readLiveStudentProfileOverrides,
     saveDemoStudentProfile,
+    saveLiveStudentProfileOverrides,
 } from '@/Features/Student/Profile/profileDemoStorage';
 import StudentLayout from '@/Layouts/StudentLayout';
+import type { PageProps } from '@/types';
 import type { StudentProfileData } from '@/types/student-profile';
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Save } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react';
+import {
+    Head,
+    Link,
+    router,
+    usePage,
+} from '@inertiajs/react';
+import {
+    ArrowLeft,
+    Save,
+} from 'lucide-react';
+import {
+    FormEvent,
+    useEffect,
+    useState,
+} from 'react';
 
-type OptionalAuthProps = {
-    auth?: {
-        user?: {
-            name?: string;
-            email?: string;
-        } | null;
+type EditProfilePageProps =
+    PageProps & {
+        studentProfile?: StudentProfileData;
     };
-};
 
 export default function EditProfile() {
-    const page = usePage();
-    const props = page.props as OptionalAuthProps;
-    const demoMode = page.url.startsWith('/demo');
+    const page =
+        usePage<EditProfilePageProps>();
 
-    const [profile, setProfile] =
-        useState<StudentProfileData>(defaultStudentProfile);
+    const demoMode =
+        page.url.startsWith(
+            '/demo',
+        );
+
+    const [
+        profile,
+        setProfile,
+    ] =
+        useState<StudentProfileData>(
+            defaultStudentProfile,
+        );
 
     useEffect(() => {
-        const stored = readDemoStudentProfile();
+        if (demoMode) {
+            setProfile(
+                readDemoStudentProfile(),
+            );
+
+            return;
+        }
+
+        const backendProfile =
+            page.props
+                .studentProfile;
+
+        if (!backendProfile) {
+            return;
+        }
 
         setProfile({
-            ...stored,
-            fullName:
-                !demoMode && props.auth?.user?.name
-                    ? props.auth.user.name
-                    : stored.fullName,
-            email:
-                !demoMode && props.auth?.user?.email
-                    ? props.auth.user.email
-                    : stored.email,
+            ...backendProfile,
+            ...readLiveStudentProfileOverrides(),
         });
-    }, [demoMode, props.auth?.user?.email, props.auth?.user?.name]);
+    }, [
+        demoMode,
+        page.props
+            .studentProfile,
+    ]);
 
-    const profileHref = demoMode
-        ? '/demo/profile'
-        : '/student/profile';
+    const profileHref =
+        demoMode
+            ? '/demo/profile'
+            : '/student/profile';
 
     const patchProfile = (
         patch: Partial<StudentProfileData>,
     ) => {
-        setProfile((current) => ({
-            ...current,
-            ...patch,
-        }));
+        setProfile(
+            (current) => ({
+                ...current,
+                ...patch,
+            }),
+        );
     };
 
-    const save = (event: FormEvent) => {
+    const save = (
+        event: FormEvent,
+    ) => {
         event.preventDefault();
 
-        // Frontend implementation: persist all UI fields locally so the
-        // demo works across Profile -> Edit Profile -> Profile.
-        // The current backend ProfileController only covers its existing
-        // account fields; phone/address/photo need backend model/API work
-        // before they should be submitted to production persistence.
-        saveDemoStudentProfile(profile);
-        router.visit(profileHref);
+        if (demoMode) {
+            saveDemoStudentProfile(
+                profile,
+            );
+        } else {
+            /*
+             * The Student backend currently has no self-service
+             * Person update endpoint. Keep these UI-editable
+             * values local until the backend team exposes one.
+             */
+            saveLiveStudentProfileOverrides(
+                {
+                    email:
+                        profile.email,
+
+                    phone:
+                        profile.phone,
+
+                    address:
+                        profile.address,
+
+                    displayLanguage:
+                        profile.displayLanguage,
+
+                    photoDataUrl:
+                        profile.photoDataUrl,
+                },
+            );
+        }
+
+        router.visit(
+            profileHref,
+        );
     };
 
     return (
         <StudentLayout
-            studentName={profile.fullName}
-            studentId={profile.studentId}
-            centerName={profile.centerName}
-            branchName={profile.branchName}
+            studentName={
+                profile.fullName
+            }
+            studentId={
+                profile.studentId
+            }
+            centerName={
+                profile.centerName
+            }
+            branchName={
+                profile.branchName
+            }
             pageTitle="Edit Profile"
             activeNav="profile"
+            fluid
         >
             <Head title="Edit Profile" />
 
@@ -88,33 +159,60 @@ export default function EditProfile() {
                 onSubmit={save}
             >
                 <Link
-                    href={profileHref}
+                    href={
+                        profileHref
+                    }
                     className="edit-profile-back"
                 >
-                    <ArrowLeft size={13} />
+                    <ArrowLeft
+                        size={13}
+                    />
+
                     Back to Profile
                 </Link>
 
                 <div className="edit-profile-top-grid">
                     <ProfilePhotoEditor
-                        name={profile.fullName}
-                        photoDataUrl={profile.photoDataUrl}
-                        onPhotoChange={(photoDataUrl) =>
-                            patchProfile({ photoDataUrl })
+                        name={
+                            profile.fullName
+                        }
+                        photoDataUrl={
+                            profile.photoDataUrl
+                        }
+                        onPhotoChange={(
+                            photoDataUrl,
+                        ) =>
+                            patchProfile(
+                                {
+                                    photoDataUrl,
+                                },
+                            )
                         }
                     />
 
                     <DisplayLanguageCard
-                        value={profile.displayLanguage}
-                        onChange={(displayLanguage) =>
-                            patchProfile({ displayLanguage })
+                        value={
+                            profile.displayLanguage
+                        }
+                        onChange={(
+                            displayLanguage,
+                        ) =>
+                            patchProfile(
+                                {
+                                    displayLanguage,
+                                },
+                            )
                         }
                     />
                 </div>
 
                 <ContactInformationForm
-                    profile={profile}
-                    onChange={patchProfile}
+                    profile={
+                        profile
+                    }
+                    onChange={
+                        patchProfile
+                    }
                 />
 
                 <div className="edit-page-actions">
@@ -122,12 +220,19 @@ export default function EditProfile() {
                         type="submit"
                         className="edit-save"
                     >
-                        <Save size={15} />
+                        <Save
+                            size={
+                                15
+                            }
+                        />
+
                         Save Changes
                     </button>
 
                     <Link
-                        href={profileHref}
+                        href={
+                            profileHref
+                        }
                         className="edit-cancel"
                     >
                         Cancel
