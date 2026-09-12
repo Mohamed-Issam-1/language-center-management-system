@@ -1,269 +1,204 @@
-import {
-    CircleCheck,
-    KeyRound,
-} from 'lucide-react';
-import {
-    router,
-    usePage,
-} from '@inertiajs/react';
-import {
-    FormEvent,
-    useState,
-} from 'react';
+import { useForm, usePage } from "@inertiajs/react";
+import { CircleCheck, KeyRound } from "lucide-react";
+import { FormEvent, useState } from "react";
+
+type PasswordForm = {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+};
 
 export default function AccountSecurityCard() {
-    const page =
-        usePage();
+  const page = usePage();
 
-    const demoMode =
-        page.url.startsWith(
-            '/demo',
-        );
+  const demoMode = page.url.startsWith("/demo");
 
-    const [
-        expanded,
-        setExpanded,
-    ] =
-        useState(false);
+  const [mode, setMode] = useState<"collapsed" | "editing" | "success">(
+    "collapsed",
+  );
 
-    const [
-        currentPassword,
-        setCurrentPassword,
-    ] =
-        useState('');
+  const { data, setData, put, processing, errors, clearErrors, reset } =
+    useForm<PasswordForm>({
+      current_password: "",
+      password: "",
+      password_confirmation: "",
+    });
 
-    const [
-        newPassword,
-        setNewPassword,
-    ] =
-        useState('');
+  const openForm = () => {
+    clearErrors();
+    reset();
 
-    const [
-        error,
-        setError,
-    ] =
-        useState('');
+    setMode("editing");
+  };
 
-    const [
-        success,
-        setSuccess,
-    ] =
-        useState(false);
+  const cancel = () => {
+    clearErrors();
+    reset();
 
-    const [
-        processing,
-        setProcessing,
-    ] =
-        useState(false);
+    setMode("collapsed");
+  };
 
-    const reset = () => {
-        setCurrentPassword('');
-        setNewPassword('');
-        setError('');
-        setExpanded(false);
-    };
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-    const open = () => {
-        setSuccess(false);
-        setError('');
-        setExpanded(true);
-    };
+    /*
+     * Demo pages keep the interaction working
+     * without changing a real account.
+     */
+    if (demoMode) {
+      clearErrors();
+      reset();
 
-    const submit = (
-        event: FormEvent,
-    ) => {
-        event.preventDefault();
+      setMode("success");
 
-        if (
-            !currentPassword ||
-            !newPassword
-        ) {
-            setError(
-                'Enter both password fields.',
-            );
+      return;
+    }
 
-            return;
-        }
+    put("/password", {
+      preserveScroll: true,
 
-        if (demoMode) {
-            setCurrentPassword(
-                '',
-            );
+      onSuccess: () => {
+        clearErrors();
+        reset();
 
-            setNewPassword(
-                '',
-            );
+        setMode("success");
+      },
+    });
+  };
 
-            setError('');
-            setExpanded(false);
-            setSuccess(true);
+  const currentPasswordError = errors.current_password;
 
-            return;
-        }
+  const newPasswordError = errors.password;
 
-        setProcessing(true);
-        setError('');
+  return (
+    <section
+      className={[
+        "profile-card profile-security-card",
 
-        router.put(
-            '/password',
-            {
-                current_password:
-                    currentPassword,
+        mode === "collapsed" ? "is-collapsed" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <h2 className="profile-section-title">Account Security</h2>
 
-                password:
-                    newPassword,
+      {mode === "collapsed" && (
+        <div className="profile-security-collapsed">
+          <button
+            type="button"
+            className="profile-change-password-button"
+            onClick={openForm}
+          >
+            <KeyRound size={15} strokeWidth={1.8} />
+            Change Password
+          </button>
+        </div>
+      )}
 
-                password_confirmation:
-                    newPassword,
-            },
-            {
-                preserveScroll:
-                    true,
+      {mode === "editing" && (
+        <form className="profile-security-form is-expanded" onSubmit={submit}>
+          <div className="profile-security-inputs">
+            <div>
+              <input
+                type="password"
+                value={data.current_password}
+                onChange={(event) => {
+                  setData("current_password", event.target.value);
 
-                onSuccess: () => {
-                    setCurrentPassword(
-                        '',
-                    );
+                  if (currentPasswordError) {
+                    clearErrors("current_password");
+                  }
+                }}
+                className={[
+                  "profile-field-input",
 
-                    setNewPassword(
-                        '',
-                    );
+                  currentPasswordError ? "profile-field-input-error" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                placeholder="Current password"
+                autoComplete="current-password"
+                autoFocus
+              />
 
-                    setExpanded(
-                        false,
-                    );
+              {currentPasswordError && (
+                <p className="profile-field-error">{currentPasswordError}</p>
+              )}
+            </div>
 
-                    setSuccess(
-                        true,
-                    );
-                },
+            <div>
+              <input
+                type="password"
+                value={data.password}
+                onChange={(event) => {
+                  const value = event.target.value;
 
-                onError: () => {
-                    setError(
-                        'Password could not be updated. Check your current password and password requirements.',
-                    );
-                },
+                  /*
+                   * Backend requires the confirmed rule,
+                   * while the approved UI contains only
+                   * Current Password + New Password.
+                   *
+                   * Keep confirmation synchronized
+                   * internally instead of adding a third
+                   * visible field.
+                   */
+                  setData((current) => ({
+                    ...current,
 
-                onFinish: () =>
-                    setProcessing(
-                        false,
-                    ),
-            },
-        );
-    };
+                    password: value,
 
-    return (
-        <section className="profile-card profile-security-card">
-            <h2 className="profile-section-title">
-                Account Security
-            </h2>
+                    password_confirmation: value,
+                  }));
 
-            {success ? (
-                <div className="mt-4 flex min-h-[44px] items-center gap-2 rounded-[9px] bg-[#ddf6fa] px-4 text-[12px] font-semibold text-[#00a6bd]">
-                    <CircleCheck
-                        size={18}
-                    />
+                  if (newPasswordError) {
+                    clearErrors("password");
+                  }
+                }}
+                className={[
+                  "profile-field-input",
 
-                    Password changed
-                    successfully!
-                </div>
-            ) : expanded ? (
-                <form
-                    className="profile-security-form is-expanded"
-                    onSubmit={
-                        submit
-                    }
-                >
-                    <div className="profile-security-inputs">
-                        <input
-                            type="password"
-                            value={
-                                currentPassword
-                            }
-                            onChange={(
-                                event,
-                            ) =>
-                                setCurrentPassword(
-                                    event
-                                        .target
-                                        .value,
-                                )
-                            }
-                            className="profile-field-input"
-                            placeholder="Current password"
-                            autoComplete="current-password"
-                        />
+                  newPasswordError ? "profile-field-input-error" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                placeholder="New password"
+                autoComplete="new-password"
+              />
 
-                        <input
-                            type="password"
-                            value={
-                                newPassword
-                            }
-                            onChange={(
-                                event,
-                            ) =>
-                                setNewPassword(
-                                    event
-                                        .target
-                                        .value,
-                                )
-                            }
-                            className="profile-field-input"
-                            placeholder="New password"
-                            autoComplete="new-password"
-                        />
-                    </div>
+              {newPasswordError && (
+                <p className="profile-field-error">{newPasswordError}</p>
+              )}
+            </div>
+          </div>
 
-                    <div className="profile-security-actions">
-                        <button
-                            type="submit"
-                            className="profile-save-button"
-                            disabled={
-                                processing
-                            }
-                        >
-                            {processing
-                                ? 'Saving...'
-                                : 'Save'}
-                        </button>
+          <div className="profile-security-actions">
+            <button
+              type="submit"
+              className="profile-save-button"
+              disabled={processing}
+            >
+              {processing ? "Saving..." : "Save"}
+            </button>
 
-                        <button
-                            type="button"
-                            className="profile-cancel-button"
-                            onClick={
-                                reset
-                            }
-                        >
-                            Cancel
-                        </button>
-                    </div>
+            <button
+              type="button"
+              className="profile-cancel-button"
+              onClick={cancel}
+              disabled={processing}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
-                    {error && (
-                        <p className="profile-form-message">
-                            {error}
-                        </p>
-                    )}
-                </form>
-            ) : (
-                <div className="profile-security-collapsed">
-                    <button
-                        type="button"
-                        className="profile-change-password-button"
-                        onClick={
-                            open
-                        }
-                    >
-                        <KeyRound
-                            size={
-                                15
-                            }
-                        />
+      {mode === "success" && (
+        <div className="profile-password-success" role="status">
+          <CircleCheck size={18} strokeWidth={1.9} />
 
-                        Change
-                        Password
-                    </button>
-                </div>
-            )}
-        </section>
-    );
+          <span>Password changed successfully!</span>
+        </div>
+      )}
+    </section>
+  );
 }
