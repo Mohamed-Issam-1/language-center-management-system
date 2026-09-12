@@ -1,0 +1,142 @@
+.student-notifications-page {
+    width: 100%;
+}
+
+.student-notifications-topbar {
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    color: #a7b0bd;
+    font-size: 11px;
+}
+
+.student-notifications-topbar button {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: #07358f;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.student-notifications-topbar button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.student-notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.student-notification-card {
+    position: relative;
+    width: 100%;
+    min-height: 96px;
+    border: 1px solid #e0e5ec;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: 150ms ease;
+}
+
+.student-notification-card:hover {
+    border-color: #cad4e4;
+}
+
+.student-notification-card.unread {
+    border-color: #b8c8ed;
+    background: #edf2fc;
+}
+
+.student-notification-icon {
+    width: 41px;
+    height: 41px;
+    flex: 0 0 41px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+}
+
+.student-notification-icon.grade {
+    background: #ddf6fa;
+    color: #03a8bd;
+}
+
+.student-notification-icon.attendance {
+    background: #fff3bd;
+    color: #efa000;
+}
+
+.student-notification-icon.payment {
+    background: #ffe2e2;
+    color: #ed3038;
+}
+
+.student-notification-icon.general {
+    background: #e7edf9;
+    color: #07358f;
+}
+
+.student-notification-content {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.student-notification-content h2 {
+    margin: 1px 0 0;
+    color: #252b33;
+    font-size: 13px;
+    line-height: 1.3;
+    font-weight: 800;
+}
+
+.student-notification-content p {
+    margin: 5px 0 0;
+    color: #717c8b;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.student-notification-content time {
+    display: block;
+    margin-top: 8px;
+    color: #c0c8d3;
+    font-size: 9px;
+}
+
+.student-notification-unread-dot {
+    position: absolute;
+    right: 16px;
+    top: 18px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #07358f;
+}
+
+@media (max-width: 640px) {
+    .student-notification-card {
+        min-height: 105px;
+        padding: 14px;
+    }
+
+    .student-notification-icon {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+    }
+
+    .student-notification-content {
+        padding-right: 10px;
+    }
+}

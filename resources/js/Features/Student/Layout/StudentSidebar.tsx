@@ -9,6 +9,7 @@ import {
   UserRound,
   BarChart3,
   FileBadge2,
+  Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -20,6 +21,7 @@ export type StudentNavKey =
   | "grades"
   | "certificates"
   | "payments"
+  | "notifications"
   | "profile";
 
 type SidebarItem = {
@@ -79,6 +81,13 @@ const items: SidebarItem[] = [
     icon: CreditCard,
     authenticatedHref: "/payments",
     demoHref: "/demo/payments",
+  },
+  {
+    key: "notifications",
+    label: "Notifications",
+    icon: Bell,
+    authenticatedHref: "/notifications",
+    demoHref: "#",
   },
   {
     key: "profile",
