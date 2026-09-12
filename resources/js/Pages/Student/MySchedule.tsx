@@ -4,9 +4,11 @@ import ScheduleCalendar from '@/Features/Student/Schedule/ScheduleCalendar';
 import ScheduleSessionModal from '@/Features/Student/Schedule/ScheduleSessionModal';
 import SelectedDayPanel from '@/Features/Student/Schedule/SelectedDayPanel';
 import StudentLayout from '@/Layouts/StudentLayout';
+import type { PageProps } from '@/types';
 import type {
     ScheduleCourseOption,
     ScheduleSession,
+    StudentSchedulePageData,
 } from '@/types/student-schedule';
 import { Head, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -14,8 +16,14 @@ import { useMemo, useState } from 'react';
 const DEMO_TODAY = '2024-11-18';
 
 const courseOptions: ScheduleCourseOption[] = [
-    { id: 1, label: 'English – Intermediate' },
-    { id: 2, label: 'French – Beginner' },
+    {
+        id: 1,
+        label: 'English – Intermediate',
+    },
+    {
+        id: 2,
+        label: 'French – Beginner',
+    },
 ];
 
 const demoSessions: ScheduleSession[] = [
@@ -109,50 +117,109 @@ const demoSessions: ScheduleSession[] = [
     },
 ];
 
-type OptionalAuthProps = {
-    auth?: {
-        user?: {
-            name?: string;
-        } | null;
-    };
+const demoScheduleData: StudentSchedulePageData = {
+    student: {
+        name: 'Mohammad Znaid',
+        studentId: 'STU-2026-0842',
+    },
+
+    center: {
+        name: 'Al-Hilal Language Center',
+        branch: 'Gaza – Palestine',
+    },
+
+    today: DEMO_TODAY,
+
+    courseOptions,
+
+    sessions: demoSessions,
 };
 
-export default function MySchedule() {
-    const page = usePage();
-    const props = page.props as OptionalAuthProps;
+type MySchedulePageProps = PageProps & {
+    studentSchedule?: StudentSchedulePageData;
+};
 
-    const studentName =
-        props.auth?.user?.name || 'Mohammad Znaid';
+function monthFromDateKey(dateKey: string) {
+    const [year, month] = dateKey
+        .split('-')
+        .map(Number);
 
-    const [month, setMonth] = useState(
-        () => new Date(2024, 10, 1),
+    return new Date(
+        year,
+        month - 1,
+        1,
     );
+}
 
-    const [selectedDate, setSelectedDate] =
-        useState(DEMO_TODAY);
+export default function MySchedule() {
+    const page =
+        usePage<MySchedulePageProps>();
 
-    const [courseId, setCourseId] = useState('all');
+    const demoMode =
+        page.url.startsWith('/demo');
 
-    const [selectedSession, setSelectedSession] =
-        useState<ScheduleSession | null>(null);
+    const data =
+        demoMode
+            ? demoScheduleData
+            : page.props.studentSchedule;
 
-    const filteredCalendarSessions = useMemo(() => {
-        if (courseId === 'all') {
-            return demoSessions;
-        }
-
-        return demoSessions.filter(
-            (session) =>
-                session.courseId.toString() === courseId,
+    if (!data) {
+        throw new Error(
+            'Student schedule data was not provided by Laravel.',
         );
-    }, [courseId]);
+    }
 
-    const moveMonth = (amount: number) => {
+    const [month, setMonth] =
+        useState(
+            () =>
+                monthFromDateKey(
+                    data.today,
+                ),
+        );
+
+    const [
+        selectedDate,
+        setSelectedDate,
+    ] = useState(data.today);
+
+    const [
+        courseId,
+        setCourseId,
+    ] = useState('all');
+
+    const [
+        selectedSession,
+        setSelectedSession,
+    ] =
+        useState<ScheduleSession | null>(
+            null,
+        );
+
+    const filteredCalendarSessions =
+        useMemo(() => {
+            if (courseId === 'all') {
+                return data.sessions;
+            }
+
+            return data.sessions.filter(
+                (session) =>
+                    session.courseId.toString() ===
+                    courseId,
+            );
+        }, [
+            courseId,
+            data.sessions,
+        ]);
+
+    const moveMonth = (
+        amount: number,
+    ) => {
         setMonth(
             (current) =>
                 new Date(
                     current.getFullYear(),
-                    current.getMonth() + amount,
+                    current.getMonth() +
+                        amount,
                     1,
                 ),
         );
@@ -160,10 +227,18 @@ export default function MySchedule() {
 
     return (
         <StudentLayout
-            studentName={studentName}
-            studentId="STU-2024-0842"
-            centerName="Al-Hilal Language Center"
-            branchName="Riyadh – Main Branch"
+            studentName={
+                data.student.name
+            }
+            studentId={
+                data.student.studentId
+            }
+            centerName={
+                data.center.name
+            }
+            branchName={
+                data.center.branch
+            }
             pageTitle="My Schedule"
             activeNav="schedule"
             fluid
@@ -174,32 +249,67 @@ export default function MySchedule() {
                 <div className="schedule-shell">
                     <div className="schedule-selected-pane">
                         <SelectedDayPanel
-                            selectedDate={selectedDate}
-                            demoToday={DEMO_TODAY}
-                            courseId={courseId}
-                            courseOptions={courseOptions}
-                            sessions={demoSessions}
-                            onCourseChange={setCourseId}
-                            onOpenSession={setSelectedSession}
+                            selectedDate={
+                                selectedDate
+                            }
+                            today={
+                                data.today
+                            }
+                            courseId={
+                                courseId
+                            }
+                            courseOptions={
+                                data.courseOptions
+                            }
+                            sessions={
+                                data.sessions
+                            }
+                            onCourseChange={
+                                setCourseId
+                            }
+                            onOpenSession={
+                                setSelectedSession
+                            }
                         />
                     </div>
 
                     <div className="schedule-calendar-pane">
                         <ScheduleCalendar
                             month={month}
-                            selectedDate={selectedDate}
-                            sessions={filteredCalendarSessions}
-                            onPreviousMonth={() => moveMonth(-1)}
-                            onNextMonth={() => moveMonth(1)}
-                            onSelectDate={setSelectedDate}
-                            onOpenSession={setSelectedSession}
+                            today={
+                                data.today
+                            }
+                            selectedDate={
+                                selectedDate
+                            }
+                            sessions={
+                                filteredCalendarSessions
+                            }
+                            onPreviousMonth={() =>
+                                moveMonth(-1)
+                            }
+                            onNextMonth={() =>
+                                moveMonth(1)
+                            }
+                            onSelectDate={
+                                setSelectedDate
+                            }
+                            onOpenSession={
+                                setSelectedSession
+                            }
                         />
                     </div>
                 </div>
 
                 <ScheduleSessionModal
-                    session={selectedSession}
-                    onClose={() => setSelectedSession(null)}
+                    session={
+                        selectedSession
+                    }
+                    onClose={() =>
+                        setSelectedSession(
+                            null,
+                        )
+                    }
                 />
             </div>
         </StudentLayout>

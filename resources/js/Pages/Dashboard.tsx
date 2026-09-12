@@ -11,7 +11,7 @@ import type { PageProps } from "@/types";
 import type { StudentDashboardData } from "@/types/student-dashboard";
 import { Head, usePage } from "@inertiajs/react";
 
-const dashboardData: StudentDashboardData = {
+const demoDashboardData: StudentDashboardData = {
   student: {
     name: "Mohammad Znaid",
     studentId: "STU-2024-0842",
@@ -82,6 +82,7 @@ const dashboardData: StudentDashboardData = {
       time: "5:00 PM – 7:00 PM",
     },
   ],
+  todayScheduleLabel: "Mon, Nov 18",
   attendance: {
     average: 92,
     totalAbsent: 4,
@@ -101,56 +102,65 @@ const dashboardData: StudentDashboardData = {
   },
 };
 
+type DashboardPageProps = PageProps & {
+  dashboard?: StudentDashboardData;
+};
+
 export default function Dashboard() {
-  const { auth } = usePage<PageProps>().props;
-  const studentName = auth.user?.name || dashboardData.student.name;
+  const page = usePage<DashboardPageProps>();
+
+  const demoMode = page.url.startsWith("/demo");
+
+  const dashboard = demoMode ? demoDashboardData : page.props.dashboard;
+
+  if (!dashboard) {
+    throw new Error("Student dashboard data was not provided by Laravel.");
+  }
 
   return (
     <StudentLayout
-      studentName={studentName}
-      studentId={dashboardData.student.studentId}
-      centerName={dashboardData.center.name}
-      branchName={dashboardData.center.branch}
+      studentName={dashboard.student.name}
+      studentId={dashboard.student.studentId}
+      centerName={dashboard.center.name}
+      branchName={dashboard.center.branch}
       pageTitle="Dashboard"
       activeNav="dashboard"
+      fluid
     >
       <Head title="Dashboard" />
 
       <div className="space-y-4 lg:space-y-5">
         <WelcomeBanner
-          dateLabel={dashboardData.greeting.dateLabel}
-          title={
-            studentName === dashboardData.student.name
-              ? dashboardData.greeting.title
-              : `Good evening, ${studentName.split(" ")[0]}!`
-          }
-          centerName={dashboardData.center.name}
-          branchName={dashboardData.center.branch}
+          dateLabel={dashboard.greeting.dateLabel}
+          title={dashboard.greeting.title}
+          centerName={dashboard.center.name}
+          branchName={dashboard.center.branch}
         />
 
-        <DashboardStats stats={dashboardData.stats} />
+        <DashboardStats stats={dashboard.stats} />
 
         <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-5">
           <div className="space-y-4 lg:space-y-5">
-            <ActiveCoursesCard courses={dashboardData.courses} />
+            <ActiveCoursesCard courses={dashboard.courses} />
 
-            <NextSessionCard session={dashboardData.nextSession} />
+            <NextSessionCard session={dashboard.nextSession} />
 
-            <TodayScheduleCard sessions={dashboardData.todaySchedule} />
+            <TodayScheduleCard
+              sessions={dashboard.todaySchedule}
+              dateLabel={dashboard.todayScheduleLabel}
+            />
           </div>
 
           <div className="space-y-4 lg:space-y-5">
-            <AttendanceWarning
-              warningText={dashboardData.attendance.warningText}
-            />
+            <AttendanceWarning warningText={dashboard.attendance.warningText} />
 
             <AttendanceOverview
-              average={dashboardData.attendance.average}
-              totalAbsent={dashboardData.attendance.totalAbsent}
-              courses={dashboardData.courses}
+              average={dashboard.attendance.average}
+              totalAbsent={dashboard.attendance.totalAbsent}
+              courses={dashboard.courses}
             />
 
-            <FinancialSummary data={dashboardData.financial} />
+            <FinancialSummary data={dashboard.financial} />
           </div>
         </div>
       </div>

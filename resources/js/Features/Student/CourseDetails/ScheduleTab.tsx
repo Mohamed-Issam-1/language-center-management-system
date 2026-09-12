@@ -13,9 +13,16 @@ export default function ScheduleTab({
                 status="Upcoming"
                 sessions={sessions}
             />
+
             <SessionSection
                 title="Completed Sessions"
                 status="Completed"
+                sessions={sessions}
+            />
+
+            <SessionSection
+                title="Cancelled Sessions"
+                status="Cancelled"
                 sessions={sessions}
             />
         </div>

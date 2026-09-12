@@ -19,3 +19,21 @@ export type ScheduleSession = {
     calendarLabel: string;
     status: ScheduleSessionStatus;
 };
+
+export type StudentSchedulePageData = {
+    student: {
+        name: string;
+        studentId: string;
+    };
+
+    center: {
+        name: string;
+        branch: string;
+    };
+
+    today: string;
+
+    courseOptions: ScheduleCourseOption[];
+
+    sessions: ScheduleSession[];
+};

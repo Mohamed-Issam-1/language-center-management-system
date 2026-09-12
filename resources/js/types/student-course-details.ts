@@ -1,4 +1,9 @@
-export type CourseDetailsStatus = 'Active' | 'Completed' | 'Cancelled';
+export type CourseDetailsStatus =
+    | 'Active'
+    | 'Completed'
+    | 'Withdrawn'
+    | 'Transferred'
+    | 'Cancelled';
 
 export type CourseInformationRow = {
     label: string;
@@ -20,7 +25,10 @@ export type CoursePaymentSummary = {
     remaining: number;
 };
 
-export type CourseSessionStatus = 'Upcoming' | 'Completed';
+export type CourseSessionStatus =
+    | 'Upcoming'
+    | 'Completed'
+    | 'Cancelled';
 
 export type CourseSession = {
     id: number;
@@ -50,6 +58,7 @@ export type CourseInstallment = {
     paidDate?: string;
     paymentMethod?: string;
     receiptHref?: string;
+    currency?: string;
 };
 
 export type StudentCourseDetails = {
@@ -62,4 +71,18 @@ export type StudentCourseDetails = {
     payment: CoursePaymentSummary;
     installments: CourseInstallment[];
     sessions: CourseSession[];
+};
+
+export type StudentCourseDetailsPageData = {
+    student: {
+        name: string;
+        studentId: string;
+    };
+
+    center: {
+        name: string;
+        branch: string;
+    };
+
+    course: StudentCourseDetails;
 };

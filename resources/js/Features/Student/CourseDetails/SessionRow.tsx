@@ -1,13 +1,21 @@
 import type { CourseSession } from '@/types/student-course-details';
 
 const statusClasses = {
-    Upcoming: 'bg-[#e8edf8] text-[#07358a]',
-    Completed: 'bg-[#e9edf0] text-[#6f7881]',
+    Upcoming:
+        'bg-[#e8edf8] text-[#07358a]',
+    Completed:
+        'bg-[#e9edf0] text-[#6f7881]',
+    Cancelled:
+        'bg-[#ffe0e0] text-[#e52b34]',
 };
 
 const accentClasses = {
-    Upcoming: 'border-l-[#083b9d]',
-    Completed: 'border-l-[#08b3ca]',
+    Upcoming:
+        'border-l-[#083b9d]',
+    Completed:
+        'border-l-[#08b3ca]',
+    Cancelled:
+        'border-l-[#ef3139]',
 };
 
 export default function SessionRow({ session }: { session: CourseSession }) {

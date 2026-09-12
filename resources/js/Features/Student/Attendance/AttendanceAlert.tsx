@@ -1,15 +1,14 @@
+import type { AttendanceAlertData } from '@/types/student-attendance';
 import { TriangleAlert } from 'lucide-react';
-import type { AttendanceSummary } from '@/types/student-attendance';
 
 export default function AttendanceAlert({
-    summary,
+    alert,
 }: {
-    summary: AttendanceSummary;
+    alert: AttendanceAlertData | null;
 }) {
-    const remaining = Math.max(
-        0,
-        summary.maximumAbsences - summary.absent,
-    );
+    if (!alert) {
+        return null;
+    }
 
     return (
         <section className="records-alert danger">
@@ -20,12 +19,11 @@ export default function AttendanceAlert({
 
             <div>
                 <h2 className="records-alert-title">
-                    Approaching Absence Limit
+                    {alert.title}
                 </h2>
+
                 <p className="records-alert-copy">
-                    You have {summary.absent} absences. The maximum
-                    allowed is {summary.maximumAbsences}. {remaining}{' '}
-                    absences remaining before limit is reached.
+                    {alert.message}
                 </p>
             </div>
         </section>

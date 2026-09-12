@@ -1,4 +1,8 @@
-export type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Excused';
+export type AttendanceStatus =
+    | 'Present'
+    | 'Absent'
+    | 'Late'
+    | 'Excused';
 
 export type AttendanceSummary = {
     averageRate: number;
@@ -6,7 +10,18 @@ export type AttendanceSummary = {
     absent: number;
     late: number;
     excused: number;
-    maximumAbsences: number;
+
+    /**
+     * Legacy/demo design value.
+     * Real backend currently uses minimum attendance
+     * percentage policy instead.
+     */
+    maximumAbsences?: number | null;
+};
+
+export type AttendanceAlertData = {
+    title: string;
+    message: string;
 };
 
 export type AttendanceCourseSummary = {
@@ -32,4 +47,26 @@ export type AttendanceSessionRecord = {
     course: string;
     status: AttendanceStatus;
     note: string;
+};
+
+export type StudentAttendancePageData = {
+    student: {
+        name: string;
+        studentId: string;
+    };
+
+    center: {
+        name: string;
+        branch: string;
+    };
+
+    summary: AttendanceSummary;
+
+    alert: AttendanceAlertData | null;
+
+    courses: AttendanceCourseSummary[];
+
+    weekly: WeeklyAttendance[];
+
+    records: AttendanceSessionRecord[];
 };
