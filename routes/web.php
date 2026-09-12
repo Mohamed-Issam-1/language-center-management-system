@@ -204,6 +204,14 @@ Route::middleware([
         }
     )->name('student.attendance');
 
+    Route::get('/grades', function () {
+        return Inertia::render('Student/Grades');
+    })->name('student.grades');
+
+    Route::get('/certificates', function () {
+        return Inertia::render('Student/Certificates');
+    })->name('student.certificates');
+
     Route::get('/payments', function () {
         return Inertia::render('Student/Payments');
     })->name('student.payments');
