@@ -5,6 +5,7 @@ use App\Http\Controllers\RegistrationRequestPersonalPictureController;
 use App\Http\Middleware\EstablishFilamentBranchContext;
 use App\Services\Reports\DashboardReadService;
 use App\Services\Students\StudentDashboardReadService;
+use App\Services\Students\StudentFinalPagesReadService;
 use App\Services\Students\StudentPortalRecordsReadService;
 use App\Support\Enums\SystemRole;
 use Illuminate\Foundation\Application;
@@ -212,17 +213,102 @@ Route::middleware([
         return Inertia::render('Student/Certificates');
     })->name('student.certificates');
 
-    Route::get('/payments', function () {
-        return Inertia::render('Student/Payments');
-    })->name('student.payments');
+    Route::get(
+        '/payments',
+        function (
+            Request $request,
+            StudentFinalPagesReadService $finalPages
+        ) {
+            return Inertia::render(
+                'Student/Payments',
+                [
+                    'studentPayments' =>
+                    $finalPages
+                        ->paymentsForUser(
+                            $request->user()
+                        ),
+                ]
+            );
+        }
+    )->name('student.payments');
 
-    Route::get('/student/profile', function () {
-        return Inertia::render('Student/Profile');
-    })->name('student.profile');
+    Route::get(
+        '/payments/receipts/{receipt}',
+        function (
+            Request $request,
+            StudentFinalPagesReadService $finalPages,
+            string $receipt
+        ) {
+            return Inertia::render(
+                'Student/PaymentReceipt',
+                [
+                    'paymentReceipt' =>
+                    $finalPages
+                        ->receiptForUser(
+                            $request->user(),
+                            $receipt
+                        ),
+                ]
+            );
+        }
+    )->name('student.payments.receipt');
 
-    Route::get('/student/profile/edit', function () {
-        return Inertia::render('Student/EditProfile');
-    })->name('student.profile.edit');
+    Route::get(
+        '/notifications',
+        function (
+            Request $request,
+            StudentFinalPagesReadService $finalPages
+        ) {
+            return Inertia::render(
+                'Student/Notifications',
+                [
+                    'studentProfile' =>
+                    $finalPages
+                        ->profileForUser(
+                            $request->user()
+                        ),
+                ]
+            );
+        }
+    )->name('student.notifications');
+
+    Route::get(
+        '/student/profile',
+        function (
+            Request $request,
+            StudentFinalPagesReadService $finalPages
+        ) {
+            return Inertia::render(
+                'Student/Profile',
+                [
+                    'studentProfile' =>
+                    $finalPages
+                        ->profileForUser(
+                            $request->user()
+                        ),
+                ]
+            );
+        }
+    )->name('student.profile');
+
+    Route::get(
+        '/student/profile/edit',
+        function (
+            Request $request,
+            StudentFinalPagesReadService $finalPages
+        ) {
+            return Inertia::render(
+                'Student/EditProfile',
+                [
+                    'studentProfile' =>
+                    $finalPages
+                        ->profileForUser(
+                            $request->user()
+                        ),
+                ]
+            );
+        }
+    )->name('student.profile.edit');
 });
 
 /*
