@@ -225,6 +225,7 @@ export default function MyAttendance() {
             branchName={data.center.branch}
             pageTitle="My Attendance"
             activeNav="attendance"
+            fluid
         >
             <Head title="My Attendance" />
 

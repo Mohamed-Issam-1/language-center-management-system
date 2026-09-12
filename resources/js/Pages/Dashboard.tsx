@@ -7,7 +7,7 @@ import NextSessionCard from "@/Features/Student/Dashboard/NextSessionCard";
 import TodayScheduleCard from "@/Features/Student/Dashboard/TodayScheduleCard";
 import WelcomeBanner from "@/Features/Student/Dashboard/WelcomeBanner";
 import StudentLayout from "@/Layouts/StudentLayout";
-import type { PageProps } from '@/types';
+import type { PageProps } from "@/types";
 import type { StudentDashboardData } from "@/types/student-dashboard";
 import { Head, usePage } from "@inertiajs/react";
 
@@ -82,7 +82,7 @@ const demoDashboardData: StudentDashboardData = {
       time: "5:00 PM – 7:00 PM",
     },
   ],
-  todayScheduleLabel: 'Mon, Nov 18',
+  todayScheduleLabel: "Mon, Nov 18",
   attendance: {
     average: 92,
     totalAbsent: 4,
@@ -103,109 +103,67 @@ const demoDashboardData: StudentDashboardData = {
 };
 
 type DashboardPageProps = PageProps & {
-    dashboard?: StudentDashboardData;
+  dashboard?: StudentDashboardData;
 };
 
 export default function Dashboard() {
-    const page = usePage<DashboardPageProps>();
+  const page = usePage<DashboardPageProps>();
 
-    const demoMode = page.url.startsWith('/demo');
+  const demoMode = page.url.startsWith("/demo");
 
-    const dashboard = demoMode
-        ? demoDashboardData
-        : page.props.dashboard;
+  const dashboard = demoMode ? demoDashboardData : page.props.dashboard;
 
-    if (!dashboard) {
-        throw new Error(
-            'Student dashboard data was not provided by Laravel.',
-        );
-    }
+  if (!dashboard) {
+    throw new Error("Student dashboard data was not provided by Laravel.");
+  }
 
-    return (
-        <StudentLayout
-            studentName={dashboard.student.name}
-            studentId={dashboard.student.studentId}
-            centerName={dashboard.center.name}
-            branchName={dashboard.center.branch}
-            pageTitle="Dashboard"
-            activeNav="dashboard"
-        >
-            <Head title="Dashboard" />
+  return (
+    <StudentLayout
+      studentName={dashboard.student.name}
+      studentId={dashboard.student.studentId}
+      centerName={dashboard.center.name}
+      branchName={dashboard.center.branch}
+      pageTitle="Dashboard"
+      activeNav="dashboard"
+      fluid
+    >
+      <Head title="Dashboard" />
 
-            <div className="space-y-4 lg:space-y-5">
-                <WelcomeBanner
-                    dateLabel={
-                        dashboard.greeting.dateLabel
-                    }
-                    title={
-                        dashboard.greeting.title
-                    }
-                    centerName={
-                        dashboard.center.name
-                    }
-                    branchName={
-                        dashboard.center.branch
-                    }
-                />
+      <div className="space-y-4 lg:space-y-5">
+        <WelcomeBanner
+          dateLabel={dashboard.greeting.dateLabel}
+          title={dashboard.greeting.title}
+          centerName={dashboard.center.name}
+          branchName={dashboard.center.branch}
+        />
 
-                <DashboardStats
-                    stats={dashboard.stats}
-                />
+        <DashboardStats stats={dashboard.stats} />
 
-                <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-5">
-                    <div className="space-y-4 lg:space-y-5">
-                        <ActiveCoursesCard
-                            courses={
-                                dashboard.courses
-                            }
-                        />
+        <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-5">
+          <div className="space-y-4 lg:space-y-5">
+            <ActiveCoursesCard courses={dashboard.courses} />
 
-                        <NextSessionCard
-                            session={
-                                dashboard.nextSession
-                            }
-                        />
+            <NextSessionCard session={dashboard.nextSession} />
 
-                        <TodayScheduleCard
-                            sessions={
-                                dashboard.todaySchedule
-                            }
-                            dateLabel={
-                                dashboard.todayScheduleLabel
-                            }
-                        />
-                    </div>
+            <TodayScheduleCard
+              sessions={dashboard.todaySchedule}
+              dateLabel={dashboard.todayScheduleLabel}
+            />
+          </div>
 
-                    <div className="space-y-4 lg:space-y-5">
-                        <AttendanceWarning
-                            warningText={
-                                dashboard.attendance
-                                    .warningText
-                            }
-                        />
+          <div className="space-y-4 lg:space-y-5">
+            <AttendanceWarning warningText={dashboard.attendance.warningText} />
 
-                        <AttendanceOverview
-                            average={
-                                dashboard.attendance
-                                    .average
-                            }
-                            totalAbsent={
-                                dashboard.attendance
-                                    .totalAbsent
-                            }
-                            courses={
-                                dashboard.courses
-                            }
-                        />
+            <AttendanceOverview
+              average={dashboard.attendance.average}
+              totalAbsent={dashboard.attendance.totalAbsent}
+              courses={dashboard.courses}
+            />
 
-                        <FinancialSummary
-                            data={
-                                dashboard.financial
-                            }
-                        />
-                    </div>
-                </div>
-            </div>
-        </StudentLayout>
-    );
+            <FinancialSummary data={dashboard.financial} />
+          </div>
+        </div>
+      </div>
+    </StudentLayout>
+  );
 }

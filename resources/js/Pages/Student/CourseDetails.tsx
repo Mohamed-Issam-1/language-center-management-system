@@ -339,6 +339,7 @@ export default function CourseDetails() {
             mobileBackHref={
                 backHref
             }
+            fluid
         >
             <Head
                 title={`${course.title} - Course Details`}

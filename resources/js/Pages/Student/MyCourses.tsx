@@ -175,6 +175,7 @@ export default function MyCourses() {
             }
             pageTitle="My Courses"
             activeNav="courses"
+            fluid
         >
             <Head title="My Courses" />
 
