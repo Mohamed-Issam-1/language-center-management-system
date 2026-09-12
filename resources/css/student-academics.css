@@ -1,0 +1,414 @@
+.student-academic-page {
+    width: 100%;
+}
+
+/* =========================================================
+   Grades
+   ========================================================= */
+
+.grades-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.grades-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 194px);
+    gap: 12px;
+}
+
+.academic-summary-card {
+    min-height: 90px;
+    border: 1px solid #e5e9ef;
+    border-radius: 13px;
+    background: #ffffff;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+}
+
+.academic-summary-label {
+    margin: 0;
+    color: #a7b1bf;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 500;
+}
+
+.academic-summary-value {
+    margin: 12px 0 0;
+    font-size: 25px;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.academic-summary-value.cyan {
+    color: #03a6bd;
+}
+
+.academic-summary-value.blue {
+    color: #07358f;
+}
+
+.academic-summary-value.orange {
+    color: #ef9500;
+}
+
+.grade-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.grade-filter {
+    min-height: 33px;
+    border: 1px solid #dfe4eb;
+    border-radius: 999px;
+    background: #ffffff;
+    padding: 0 15px;
+    color: #707a88;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 150ms ease;
+}
+
+.grade-filter:hover {
+    border-color: #9daccc;
+    color: #07358f;
+}
+
+.grade-filter.active {
+    border-color: #073997;
+    background: #eef3ff;
+    color: #07358f;
+}
+
+.grade-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.grade-result-card {
+    min-height: 105px;
+    border: 1.5px solid;
+    border-left-width: 4px;
+    border-radius: 13px;
+    background: #ffffff;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.grade-result-card.indigo {
+    border-color: #4154e8;
+}
+
+.grade-result-card.violet {
+    border-color: #8137ff;
+}
+
+.grade-result-main {
+    min-width: 0;
+}
+
+.grade-result-title-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.grade-result-title {
+    margin: 0;
+    color: #252b34;
+    font-size: 14px;
+    line-height: 1.25;
+    font-weight: 800;
+}
+
+.grade-type-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 21px;
+    border-radius: 999px;
+    padding: 0 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.grade-type-badge.indigo {
+    background: #eef0ff;
+    color: #4655db;
+}
+
+.grade-type-badge.violet {
+    background: #f2ebff;
+    color: #7e3cff;
+}
+
+.grade-result-meta {
+    margin: 8px 0 0;
+    color: #a9b3c0;
+    font-size: 11px;
+}
+
+.grade-result-comment {
+    margin: 8px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #697382;
+    font-size: 10px;
+}
+
+.grade-result-comment svg {
+    color: #8e98a7;
+    flex: 0 0 auto;
+}
+
+.grade-result-score {
+    min-width: 88px;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.grade-letter {
+    font-size: 29px;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.grade-letter.cyan {
+    color: #06a5bc;
+}
+
+.grade-letter.orange {
+    color: #ee9500;
+}
+
+.grade-letter.blue {
+    color: #07358f;
+}
+
+.grade-score-number {
+    margin-top: 8px;
+    color: #a8b2bf;
+    font-size: 11px;
+}
+
+.grade-pending {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    border-radius: 999px;
+    background: #fff8e4;
+    padding: 0 14px;
+    color: #ed9500;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+/* =========================================================
+   Certificates
+   ========================================================= */
+
+.certificates-page {
+    position: relative;
+}
+
+.certificate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.certificate-card {
+    position: relative;
+    min-height: 138px;
+    overflow: hidden;
+    border: 1px solid #e6eaf0;
+    border-radius: 15px;
+    background: #ffffff;
+    padding: 28px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+}
+
+.certificate-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 5px;
+}
+
+.certificate-card.green::before {
+    background: #17aa57;
+}
+
+.certificate-card.cyan::before {
+    background: #08a6be;
+}
+
+.certificate-icon {
+    width: 53px;
+    height: 53px;
+    flex: 0 0 53px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+}
+
+.certificate-icon.green {
+    background: #e9f8ee;
+    color: #16a957;
+}
+
+.certificate-icon.cyan {
+    background: #e4f6f9;
+    color: #06a6bd;
+}
+
+.certificate-main {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.certificate-course {
+    margin: 0;
+    color: #282e36;
+    font-size: 16px;
+    line-height: 1.25;
+    font-weight: 800;
+}
+
+.certificate-level {
+    margin: 6px 0 0;
+    color: #abb4c0;
+    font-size: 11px;
+}
+
+.certificate-details {
+    margin-top: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 28px;
+    flex-wrap: wrap;
+}
+
+.certificate-detail-label {
+    display: block;
+    color: #c0c8d2;
+    font-size: 9px;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.certificate-detail-value {
+    display: block;
+    margin-top: 6px;
+    color: #2b3038;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.certificate-download {
+    min-width: 142px;
+    height: 37px;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 9px;
+    background: #e8edf8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 15px;
+    color: #07358f;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 150ms ease;
+}
+
+.certificate-download:hover {
+    background: #dde6f8;
+}
+
+.certificate-download-toast {
+    position: fixed;
+    z-index: 60;
+    top: 80px;
+    right: 24px;
+    max-width: 380px;
+    border-radius: 10px;
+    background: #202b3d;
+    padding: 14px 20px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+}
+
+@media (max-width: 640px) {
+    .grades-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .grade-filters {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .grade-filter {
+        flex: 0 0 auto;
+    }
+
+    .grade-result-card {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .grade-result-score {
+        min-width: 62px;
+    }
+
+    .grade-letter {
+        font-size: 25px;
+    }
+
+    .certificate-card {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        padding: 24px 18px 18px;
+    }
+
+    .certificate-main {
+        width: calc(100% - 70px);
+    }
+
+    .certificate-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 15px;
+    }
+
+    .certificate-download {
+        width: 100%;
+    }
+
+    .certificate-download-toast {
+        left: 16px;
+        right: 16px;
+        top: 72px;
+        max-width: none;
+    }
+}
